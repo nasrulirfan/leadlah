@@ -1,0 +1,14 @@
+node_modules
+.turbo
+.next
+dist
+build
+coverage
+pnpm-debug.log
+npm-debug.log
+auth.sqlite
+apps/web/.next
+apps/web/.env.local
+apps/web/node_modules
+apps/api/node_modules
+apps/api/dist

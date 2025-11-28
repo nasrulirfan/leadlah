@@ -1,0 +1,19 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "ts-node": {
+    "require": ["tsconfig-paths/register"]
+  },
+  "compilerOptions": {
+    "module": "CommonJS",
+    "declaration": true,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "paths": {
+      "@leadlah/core": ["../../packages/core/src/index.ts"],
+      "@leadlah/core/*": ["../../packages/core/src/*"],
+      "@/*": ["src/*"]
+    }
+  },
+  "include": ["src/**/*", "test/**/*"]
+}

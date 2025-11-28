@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2021",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "lib": ["DOM", "DOM.Iterable", "ES2021"],
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "useDefineForClassFields": false,
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "paths": {
+      "@leadlah/core": ["packages/core/src/index.ts"],
+      "@leadlah/core/*": ["packages/core/src/*"],
+      "@leadlah/ui": ["packages/ui/src/index.ts"],
+      "@leadlah/ui/*": ["packages/ui/src/*"]
+    }
+  },
+  "exclude": ["node_modules"]
+}

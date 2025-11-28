@@ -1,0 +1,11 @@
+node_modules
+pnpm-lock.yaml
+dist
+.next
+.turbo
+.vercel
+.DS_Store
+coverage
+build
+auth.sqlite
+*.log
