@@ -1,7 +1,7 @@
+import { ListingStatus } from "@leadlah/core";
 import { describe, beforeEach, expect, it, vi } from "vitest";
 import { ListingsController } from "../src/listings/listings.controller";
 import { ListingsService } from "../src/listings/listings.service";
-import { ListingStatus } from "@leadlah/core";
 
 describe("ListingsController", () => {
   let controller: ListingsController;
@@ -19,7 +19,7 @@ describe("ListingsController", () => {
     controller = new ListingsController(service);
   });
 
-  it("routes create requests", () => {
+  it("routes create requests", async () => {
     const payload = {
       propertyName: "Sunset Villa",
       type: "Condo",
@@ -31,28 +31,28 @@ describe("ListingsController", () => {
       status: ListingStatus.ACTIVE
     };
     const response = { id: "1", ...payload };
-    vi.spyOn(service, "create").mockReturnValue(response as any);
+    vi.spyOn(service, "create").mockResolvedValue(response as any);
 
-    expect(controller.create(payload as any)).toBe(response);
+    await expect(controller.create(payload as any)).resolves.toEqual(response);
     expect(service.create).toHaveBeenCalledWith(payload);
   });
 
-  it("routes read/update/delete operations", () => {
-    vi.spyOn(service, "findAll").mockReturnValue([]);
-    vi.spyOn(service, "findOne").mockReturnValue({ id: "1" } as any);
-    vi.spyOn(service, "update").mockReturnValue({ id: "1", price: 2 } as any);
-    vi.spyOn(service, "remove").mockReturnValue({ id: "1" });
+  it("routes read/update/delete operations", async () => {
+    vi.spyOn(service, "findAll").mockResolvedValue([]);
+    vi.spyOn(service, "findOne").mockResolvedValue({ id: "1" } as any);
+    vi.spyOn(service, "update").mockResolvedValue({ id: "1", price: 2 } as any);
+    vi.spyOn(service, "remove").mockResolvedValue({ id: "1" });
 
-    expect(controller.findAll()).toEqual([]);
+    await expect(controller.findAll()).resolves.toEqual([]);
     expect(service.findAll).toHaveBeenCalled();
 
-    expect(controller.findOne("1")).toEqual({ id: "1" });
+    await expect(controller.findOne("1")).resolves.toEqual({ id: "1" });
     expect(service.findOne).toHaveBeenCalledWith("1");
 
-    expect(controller.update("1", { price: 2 } as any)).toEqual({ id: "1", price: 2 });
+    await expect(controller.update("1", { price: 2 } as any)).resolves.toEqual({ id: "1", price: 2 });
     expect(service.update).toHaveBeenCalledWith("1", { price: 2 });
 
-    expect(controller.remove("1")).toEqual({ id: "1" });
+    await expect(controller.remove("1")).resolves.toEqual({ id: "1" });
     expect(service.remove).toHaveBeenCalledWith("1");
   });
 });

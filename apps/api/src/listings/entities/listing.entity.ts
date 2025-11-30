@@ -1,50 +1,50 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
-import { ListingStatus } from "@leadlah/core";
+import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { ExternalLink, ListingStatus, MediaAsset } from "@leadlah/core";
 
 @Entity({ name: "listings" })
 export class ListingEntity {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
 
-  @Column()
+  @Column({ type: "varchar", length: 255 })
   propertyName!: string;
 
-  @Column()
+  @Column({ type: "varchar", length: 100 })
   type!: string;
 
-  @Column("decimal")
+  @Column({ type: "numeric", precision: 15, scale: 2 })
   price!: number;
 
-  @Column("decimal")
+  @Column({ type: "numeric", precision: 12, scale: 2 })
   size!: number;
 
-  @Column("int")
+  @Column({ type: "int" })
   bedrooms!: number;
 
-  @Column("int")
+  @Column({ type: "int" })
   bathrooms!: number;
 
-  @Column()
+  @Column({ type: "varchar", length: 255 })
   location!: string;
 
-  @Column({ type: "enum", enum: ListingStatus, default: ListingStatus.ACTIVE })
+  @Column({ type: "varchar", length: 32, default: ListingStatus.ACTIVE })
   status!: ListingStatus;
 
-  @Column({ type: "jsonb", default: [] })
-  photos!: Record<string, string>[];
+  @Column({ type: "simple-json", default: "[]" })
+  photos!: MediaAsset[];
 
-  @Column({ type: "jsonb", default: [] })
-  videos!: Record<string, string>[];
+  @Column({ type: "simple-json", default: "[]" })
+  videos!: MediaAsset[];
 
-  @Column({ type: "jsonb", default: [] })
-  documents!: Record<string, string>[];
+  @Column({ type: "simple-json", default: "[]" })
+  documents!: MediaAsset[];
 
-  @Column({ type: "jsonb", default: [] })
-  externalLinks!: Record<string, string>[];
+  @Column({ type: "simple-json", default: "[]" })
+  externalLinks!: ExternalLink[];
 
-  @Column({ type: "timestamptz", default: () => "CURRENT_TIMESTAMP" })
+  @CreateDateColumn()
   createdAt!: Date;
 
-  @Column({ type: "timestamptz", default: () => "CURRENT_TIMESTAMP" })
+  @UpdateDateColumn()
   updatedAt!: Date;
 }

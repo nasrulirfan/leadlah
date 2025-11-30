@@ -27,13 +27,13 @@ export function StickyHeader({ variant = "marketing", userName, onSignOut }: Pro
         <nav className="flex items-center gap-4 text-sm font-medium text-muted-foreground">
           {variant === "marketing" ? (
             <Fragment>
-              <Link href="#features" className="transition hover:text-foreground">
+              <Link href="/#features" className="transition hover:text-foreground">
                 Why LeadLah?
               </Link>
-              <Link href="#automation" className="transition hover:text-foreground">
+              <Link href="/#automation" className="transition hover:text-foreground">
                 Automation
               </Link>
-              <Link href="#faq" className="transition hover:text-foreground">
+              <Link href="/#faq" className="transition hover:text-foreground">
                 FAQ
               </Link>
               <Button asChild size="sm" className="shadow-card">
@@ -42,31 +42,17 @@ export function StickyHeader({ variant = "marketing", userName, onSignOut }: Pro
             </Fragment>
           ) : (
             <Fragment>
-              <Link href="/dashboard" className="transition hover:text-foreground">
-                Dashboard
-              </Link>
-              <Link href="/listings" className="transition hover:text-foreground">
-                Listings
-              </Link>
-              <Link href="/calculators" className="transition hover:text-foreground">
-                Calculators
-              </Link>
-              <Link href="/billing" className="transition hover:text-foreground">
-                Billing
-              </Link>
-              <div className="flex items-center gap-3">
-                {isAuthenticated && onSignOut ? (
-                  <form action={onSignOut}>
-                    <Button type="submit" variant="ghost" size="sm" className="text-foreground">
-                      Sign out {userName ? `(${userName.split(" ")[0]})` : ""}
-                    </Button>
-                  </form>
-                ) : (
-                  <Button asChild size="sm" variant="secondary" className="shadow-card">
-                    <Link href="/sign-in">Sign in</Link>
+              {isAuthenticated && onSignOut ? (
+                <form action={onSignOut}>
+                  <Button type="submit" variant="ghost" size="sm" className="text-foreground">
+                    Sign out {userName ? `(${userName.split(" ")[0]})` : ""}
                   </Button>
-                )}
-              </div>
+                </form>
+              ) : (
+                <Button asChild size="sm" variant="secondary" className="shadow-card">
+                  <Link href="/sign-in">Sign in</Link>
+                </Button>
+              )}
             </Fragment>
           )}
         </nav>

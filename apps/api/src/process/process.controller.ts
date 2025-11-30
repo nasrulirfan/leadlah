@@ -1,14 +1,14 @@
 import { Body, Controller, Get, Param, Post } from "@nestjs/common";
 import { ProcessService } from "./process.service";
-import { ProcessStage } from "@leadlah/core";
+import { LogProcessDto } from "./dto/log-process.dto";
 
 @Controller("process")
 export class ProcessController {
   constructor(private readonly service: ProcessService) {}
 
   @Post(":listingId")
-  log(@Param("listingId") listingId: string, @Body() body: { stage: ProcessStage; notes?: string }) {
-    return this.service.logStage(listingId, body.stage, body.notes);
+  log(@Param("listingId") listingId: string, @Body() body: LogProcessDto) {
+    return this.service.logStage(listingId, body);
   }
 
   @Get(":listingId")

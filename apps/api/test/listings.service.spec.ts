@@ -1,7 +1,9 @@
 import { NotFoundException } from "@nestjs/common";
 import { ListingStatus } from "@leadlah/core";
-import { describe, expect, it, beforeEach } from "vitest";
+import { Repository } from "typeorm";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ListingsService } from "../src/listings/listings.service";
+import { ListingEntity } from "../src/listings/entities/listing.entity";
 import { CreateListingDto } from "../src/listings/dto/create-listing.dto";
 
 const createPayload = (): CreateListingDto => ({
@@ -19,42 +21,90 @@ const createPayload = (): CreateListingDto => ({
   externalLinks: []
 });
 
+type RepositoryMock = Partial<Record<keyof Repository<ListingEntity>, ReturnType<typeof vi.fn>>>;
+
+const createRepositoryMock = (): RepositoryMock => ({
+  create: vi.fn(),
+  save: vi.fn(),
+  find: vi.fn(),
+  findOne: vi.fn(),
+  preload: vi.fn(),
+  remove: vi.fn()
+});
+
 describe("ListingsService", () => {
   let service: ListingsService;
+  let repository: RepositoryMock;
 
   beforeEach(() => {
-    service = new ListingsService();
+    repository = createRepositoryMock();
+    service = new ListingsService(repository as unknown as Repository<ListingEntity>);
   });
 
-  it("creates a listing with default metadata", () => {
-    const listing = service.create(createPayload());
+  it("creates a listing with defaults", async () => {
+    const payload = createPayload();
+    const created = { id: "1", ...payload };
+    repository.create!.mockReturnValue(created);
+    repository.save!.mockResolvedValue(created);
 
-    expect(listing.id).toBeDefined();
-    expect(listing.status).toBe(ListingStatus.ACTIVE);
-    expect(listing.createdAt).toBeInstanceOf(Date);
-    expect(listing.updatedAt).toBeInstanceOf(Date);
-    expect(service.findAll()).toHaveLength(1);
+    const listing = await service.create(payload);
+
+    expect(repository.create).toHaveBeenCalledWith({
+      ...payload,
+      documents: [],
+      externalLinks: [],
+      photos: [],
+      status: ListingStatus.ACTIVE,
+      videos: []
+    });
+    expect(repository.save).toHaveBeenCalledWith(created);
+    expect(listing).toEqual(created);
   });
 
-  it("retrieves and updates an existing listing", () => {
-    const listing = service.create(createPayload());
-    const updated = service.update(listing.id, { price: 1250000 });
+  it("retrieves all listings", async () => {
+    repository.find!.mockResolvedValue([{ id: "1" } as ListingEntity]);
 
-    expect(updated.price).toBe(1250000);
-    expect(updated.updatedAt.getTime()).toBeGreaterThanOrEqual(listing.updatedAt.getTime());
-    expect(service.findOne(listing.id)).toEqual(updated);
+    const listings = await service.findAll();
+
+    expect(listings).toHaveLength(1);
+    expect(repository.find).toHaveBeenCalled();
   });
 
-  it("throws when listing is missing", () => {
-    expect(() => service.findOne("missing")).toThrow(NotFoundException);
+  it("finds an existing listing", async () => {
+    repository.findOne!.mockResolvedValue({ id: "abc" } as ListingEntity);
+
+    const listing = await service.findOne("abc");
+
+    expect(listing.id).toBe("abc");
+    expect(repository.findOne).toHaveBeenCalledWith({ where: { id: "abc" } });
   });
 
-  it("removes a listing", () => {
-    const listing = service.create(createPayload());
-    const result = service.remove(listing.id);
+  it("throws when listing not found", async () => {
+    repository.findOne!.mockResolvedValue(null);
 
-    expect(result).toEqual({ id: listing.id });
-    expect(service.findAll()).toHaveLength(0);
-    expect(() => service.findOne(listing.id)).toThrow(NotFoundException);
+    await expect(service.findOne("missing")).rejects.toThrow(NotFoundException);
+  });
+
+  it("updates a listing", async () => {
+    const preloadResult = { id: "1", price: 1000 } as ListingEntity;
+    repository.preload!.mockResolvedValue(preloadResult);
+    repository.save!.mockResolvedValue({ ...preloadResult, price: 1500 });
+
+    const updated = await service.update("1", { price: 1500 });
+
+    expect(repository.preload).toHaveBeenCalledWith({ id: "1", price: 1500, updatedAt: expect.any(Date) });
+    expect(repository.save).toHaveBeenCalled();
+    expect(updated.price).toBe(1500);
+  });
+
+  it("removes a listing", async () => {
+    const entity = { id: "1" } as ListingEntity;
+    repository.findOne!.mockResolvedValue(entity);
+    repository.remove!.mockResolvedValue(entity);
+
+    const result = await service.remove("1");
+
+    expect(repository.remove).toHaveBeenCalledWith(entity);
+    expect(result).toEqual({ id: "1" });
   });
 });

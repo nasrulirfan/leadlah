@@ -1,5 +1,27 @@
-import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, IsUrl, Min } from "class-validator";
+import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, IsUrl, Min, ValidateNested, IsIn, IsISO8601 } from "class-validator";
+import { Type } from "class-transformer";
 import { ListingStatus } from "@leadlah/core";
+
+class MediaAssetDto {
+  @IsUrl()
+  url!: string;
+
+  @IsOptional()
+  @IsString()
+  label?: string;
+}
+
+class ExternalLinkDto {
+  @IsIn(["Mudah", "PropertyGuru", "Other"])
+  provider!: "Mudah" | "PropertyGuru" | "Other";
+
+  @IsUrl()
+  url!: string;
+
+  @IsOptional()
+  @IsISO8601()
+  expiresAt?: string;
+}
 
 export class CreateListingDto {
   @IsString()
@@ -34,16 +56,22 @@ export class CreateListingDto {
   status: ListingStatus = ListingStatus.ACTIVE;
 
   @IsOptional()
-  @IsUrl({}, { each: true })
-  photos?: string[];
+  @ValidateNested({ each: true })
+  @Type(() => MediaAssetDto)
+  photos?: MediaAssetDto[];
 
   @IsOptional()
-  @IsUrl({}, { each: true })
-  videos?: string[];
+  @ValidateNested({ each: true })
+  @Type(() => MediaAssetDto)
+  videos?: MediaAssetDto[];
 
   @IsOptional()
-  documents?: Record<string, string>[];
+  @ValidateNested({ each: true })
+  @Type(() => MediaAssetDto)
+  documents?: MediaAssetDto[];
 
   @IsOptional()
-  externalLinks?: { provider: string; url: string; expiresAt?: Date }[];
+  @ValidateNested({ each: true })
+  @Type(() => ExternalLinkDto)
+  externalLinks?: ExternalLinkDto[];
 }

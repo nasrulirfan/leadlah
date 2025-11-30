@@ -1,48 +1,58 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import { randomUUID } from "crypto";
+import { InjectRepository } from "@nestjs/typeorm";
+import { DeepPartial, Repository } from "typeorm";
+import { ListingStatus } from "@leadlah/core";
+import { ListingEntity } from "./entities/listing.entity";
 import { CreateListingDto } from "./dto/create-listing.dto";
 import { UpdateListingDto } from "./dto/update-listing.dto";
-import { ListingStatus } from "@leadlah/core";
-
-type ListingRecord = CreateListingDto & { id: string; createdAt: Date; updatedAt: Date };
 
 @Injectable()
 export class ListingsService {
-  // TODO: replace with TypeORM repository; using in-memory store for MVP scaffolding
-  private listings: ListingRecord[] = [];
+  constructor(
+    @InjectRepository(ListingEntity)
+    private readonly repository: Repository<ListingEntity>
+  ) {}
 
-  create(payload: CreateListingDto) {
-    const record: ListingRecord = {
+  async create(payload: CreateListingDto) {
+    const entityData: DeepPartial<ListingEntity> = {
       ...payload,
-      id: randomUUID(),
       status: payload.status ?? ListingStatus.ACTIVE,
-      createdAt: new Date(),
-      updatedAt: new Date()
+      photos: payload.photos ?? [],
+      videos: payload.videos ?? [],
+      documents: payload.documents ?? [],
+      externalLinks: payload.externalLinks ?? []
     };
-    this.listings.push(record);
-    return record;
+    const entity = this.repository.create(entityData);
+    return this.repository.save(entity);
   }
 
   findAll() {
-    return this.listings;
+    return this.repository.find();
   }
 
-  findOne(id: string) {
-    const record = this.listings.find((l) => l.id === id);
-    if (!record) throw new NotFoundException("Listing not found");
-    return record;
+  async findOne(id: string) {
+    const entity = await this.repository.findOne({ where: { id } });
+    if (!entity) {
+      throw new NotFoundException("Listing not found");
+    }
+    return entity;
   }
 
-  update(id: string, payload: UpdateListingDto) {
-    const existing = this.findOne(id);
-    const updated = { ...existing, ...payload, updatedAt: new Date() };
-    this.listings = this.listings.map((l) => (l.id === id ? updated : l));
-    return updated;
+  async update(id: string, payload: UpdateListingDto) {
+    const entity = await this.repository.preload({
+      id,
+      ...payload,
+      updatedAt: new Date()
+    } as DeepPartial<ListingEntity>);
+    if (!entity) {
+      throw new NotFoundException("Listing not found");
+    }
+    return this.repository.save(entity);
   }
 
-  remove(id: string) {
-    this.findOne(id);
-    this.listings = this.listings.filter((l) => l.id !== id);
+  async remove(id: string) {
+    const entity = await this.findOne(id);
+    await this.repository.remove(entity);
     return { id };
   }
 }

@@ -17,20 +17,25 @@ describe("ProcessController", () => {
     controller = new ProcessController(service);
   });
 
-  it("delegates log/list/owner endpoints", () => {
+  it("delegates log/list/owner endpoints", async () => {
     const listingId = "listing";
     const log = { stage: ProcessStage.MARKETING_ACTIVATION };
-    vi.spyOn(service, "logStage").mockReturnValue(log as any);
-    vi.spyOn(service, "list").mockReturnValue([log] as any);
-    vi.spyOn(service, "ownerLink").mockReturnValue({ token: "abc" } as any);
+    vi.spyOn(service, "logStage").mockResolvedValue(log as any);
+    vi.spyOn(service, "list").mockResolvedValue([log] as any);
+    vi.spyOn(service, "ownerLink").mockResolvedValue({ token: "abc" } as any);
 
-    expect(controller.log(listingId, { stage: ProcessStage.MARKETING_ACTIVATION })).toBe(log);
-    expect(service.logStage).toHaveBeenCalledWith(listingId, ProcessStage.MARKETING_ACTIVATION, undefined);
+    await expect(controller.log(listingId, { stage: ProcessStage.MARKETING_ACTIVATION, notes: "note" })).resolves.toBe(
+      log
+    );
+    expect(service.logStage).toHaveBeenCalledWith(listingId, {
+      stage: ProcessStage.MARKETING_ACTIVATION,
+      notes: "note"
+    });
 
-    expect(controller.list(listingId)).toEqual([log]);
+    await expect(controller.list(listingId)).resolves.toEqual([log]);
     expect(service.list).toHaveBeenCalledWith(listingId);
 
-    expect(controller.owner(listingId)).toEqual({ token: "abc" });
+    await expect(controller.owner(listingId)).resolves.toEqual({ token: "abc" });
     expect(service.ownerLink).toHaveBeenCalledWith(listingId);
   });
 });
