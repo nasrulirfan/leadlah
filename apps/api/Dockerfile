@@ -23,15 +23,19 @@ COPY . .
 RUN pnpm --filter @leadlah/core build \
  && pnpm --filter @leadlah/api build
 
-# Create a minimal deployable bundle (app code + production deps)
-RUN pnpm deploy --filter @leadlah/api --prod /out
-
 FROM node:20-slim AS runner
 ENV NODE_ENV=production
 WORKDIR /app
 
-# Copy only the deployable output
-COPY --from=builder /out ./
+# Copy production dependencies (includes workspace symlinks)
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
+
+# Copy built artifacts and workspace sources needed by symlinks
+COPY --from=builder /app/apps/api/dist ./apps/api/dist
+COPY --from=builder /app/apps/api/package.json ./apps/api/package.json
+COPY --from=builder /app/packages/core ./packages/core
 
 EXPOSE 3001
+WORKDIR /app/apps/api
 CMD ["node", "dist/main.js"]
