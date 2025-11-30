@@ -13,7 +13,7 @@ const highlights = [
   {
     icon: ShieldCheck,
     title: "Better-auth sessions",
-    description: "Role-aware cookies with secure SQLite storage. Rotate secrets without downtime."
+    description: "Role-aware cookies with secure Postgres storage. Rotate secrets without downtime."
   },
   {
     icon: Sparkles,

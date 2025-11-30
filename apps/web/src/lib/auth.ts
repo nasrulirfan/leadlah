@@ -1,21 +1,26 @@
 import { betterAuth } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
-import { DatabaseSync } from "node:sqlite";
-import path from "node:path";
+import { Pool } from "pg";
 
 declare global {
   // eslint-disable-next-line no-var
-  var __authDb: DatabaseSync | undefined;
+  var __authPool: Pool | undefined;
 }
 
-const databaseFile = path.join(process.cwd(), "auth.sqlite");
+const authDatabaseUrl = process.env.BETTER_AUTH_DATABASE_URL ?? process.env.DATABASE_URL;
+
+if (!authDatabaseUrl) {
+  throw new Error("BETTER_AUTH_DATABASE_URL (or DATABASE_URL) must be set for Better-auth.");
+}
+
 const database =
-  globalThis.__authDb ??
-  // Node 22+ built-in SQLite driver keeps auth state local without extra deps
-  new DatabaseSync(databaseFile);
+  globalThis.__authPool ??
+  new Pool({
+    connectionString: authDatabaseUrl
+  });
 
 if (process.env.NODE_ENV !== "production") {
-  globalThis.__authDb = database;
+  globalThis.__authPool = database;
 }
 
 export const auth = betterAuth({

@@ -68,6 +68,7 @@ Create `.env.local` in `apps/web`:
 NEXT_PUBLIC_GA_ID=GA_MEASUREMENT_ID
 NEXT_PUBLIC_META_PIXEL_ID=META_PIXEL_ID
 BETTER_AUTH_SECRET=generate_with_openssl
+BETTER_AUTH_DATABASE_URL=postgres://leadlah:leadlah@localhost:5432/leadlah
 # Optional if your dev URL differs
 BETTER_AUTH_URL=http://localhost:3000
 ```
