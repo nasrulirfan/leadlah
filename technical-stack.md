@@ -14,7 +14,7 @@ We utilize a **Monorepo** strategy (Turborepo/Nx) with **TypeScript** across the
 | **Authentication** | **Better-auth**<br>(https://www.better-auth.com/) | • **Don’t build custom auth:** Avoid huge security and maintenance risks.<br>• Supports roles (Agent, Owner), social logins, 2FA, secure sessions. |
 | **File Storage** | **Cloudflare R2** | • Best for storing property photos/videos.<br>• **S3-Compatible:** Easy migration to AWS S3 if needed.<br>• **No egress fees** (major cost saver). |
 | **Reminders & Scheduling** | **Cron Jobs** | • Used for follow-ups, ad expiry reminders, task alerts.<br>• Can run on Render/Railway or AWS EventBridge (scalable). |
-| **PDF / Receipt Generation** | **Puppeteer** or **@react-pdf/renderer** | • **Required for:** Auto-generated receipts & reports.<br>• **Puppeteer:** Pixel-perfect PDFs using HTML templates.<br>• **React-PDF:** Build PDFs using React components. |
+| **PDF / Receipt Generation** | **Puppeteer** | • **Required for:** Auto-generated receipts & reports.<br>• **Puppeteer:** Pixel-perfect PDFs using HTML templates.<br>• **React-PDF:** Build PDFs using React components. |
 | **Monitoring** | **Sentry** | • Essential for production error monitoring & debugging. |
 | **Payment** | **HitPay** | • Perfect for Malaysia (FPX, Cards).<br>• Handles recurring subscription billing + retries. |
 | **Email Service** | **Resend** | • Modern, API-first email delivery for system notifications and receipts. |
