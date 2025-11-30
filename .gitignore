@@ -9,3 +9,5 @@ coverage
 build
 auth.sqlite
 *.log
+.env
+.env.local
