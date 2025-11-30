@@ -10,6 +10,8 @@ const PgPool: typeof import("pg").Pool = (() => {
 declare global {
   // eslint-disable-next-line no-var
   var __authPool: Pool | undefined;
+  // eslint-disable-next-line no-var
+  var __authMigrationsPromise: Promise<void> | undefined;
 }
 
 const authDatabaseUrl = process.env.BETTER_AUTH_DATABASE_URL ?? process.env.DATABASE_URL;
@@ -41,5 +43,20 @@ export const auth = betterAuth({
     nextCookies()
   ]
 });
+
+const migrationsPromise =
+  globalThis.__authMigrationsPromise ??
+  (globalThis.__authMigrationsPromise = (async () => {
+    if (auth.$context) {
+      const ctx = await auth.$context;
+      if (typeof ctx.runMigrations === "function") {
+        await ctx.runMigrations();
+      }
+    }
+  })());
+
+export async function ensureAuthReady() {
+  await migrationsPromise;
+}
 
 export type Session = typeof auth.$Infer.Session;

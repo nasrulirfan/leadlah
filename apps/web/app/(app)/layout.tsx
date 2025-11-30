@@ -5,12 +5,13 @@ import { StickyHeader } from "@/components/nav/StickyHeader";
 import { Badge } from "@/components/ui/badge";
 import { subscriptionState } from "@/lib/mock-data";
 import { Button } from "@/components/ui/button";
-import { auth } from "@/lib/auth";
+import { auth, ensureAuthReady } from "@/lib/auth";
 import { signOut } from "@/app/actions/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
+  await ensureAuthReady();
   const session = await auth.api.getSession({
     headers: await headers()
   });

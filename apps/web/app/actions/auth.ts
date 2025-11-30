@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { auth } from "@/lib/auth";
+import { auth, ensureAuthReady } from "@/lib/auth";
 
 type ActionState = { error?: string };
 
@@ -16,6 +16,7 @@ export async function signInWithEmail(prevState: ActionState, formData: FormData
   }
 
   try {
+    await ensureAuthReady();
     await auth.api.signInEmail({
       body: { email, password }
     });
@@ -36,6 +37,7 @@ export async function signUpWithEmail(prevState: ActionState, formData: FormData
   }
 
   try {
+    await ensureAuthReady();
     await auth.api.signUpEmail({
       body: { name, email, password }
     });
@@ -47,6 +49,7 @@ export async function signUpWithEmail(prevState: ActionState, formData: FormData
 }
 
 export async function signOut() {
+  await ensureAuthReady();
   await auth.api.signOut({
     headers: await headers()
   });

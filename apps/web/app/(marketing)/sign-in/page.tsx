@@ -7,7 +7,7 @@ import { AuthForm } from "@/components/auth/AuthForm";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { auth } from "@/lib/auth";
+import { auth, ensureAuthReady } from "@/lib/auth";
 
 const highlights = [
   {
@@ -28,6 +28,7 @@ const highlights = [
 ];
 
 export default async function SignInPage() {
+  await ensureAuthReady();
   const session = await auth.api.getSession({
     headers: await headers()
   });
