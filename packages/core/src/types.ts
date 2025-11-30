@@ -96,6 +96,7 @@ export type HitPayWebhook =
 
 export type CalculatorReceipt = {
   agentName: string;
+  customerName?: string;
   renNumber: string;
   agencyLogoUrl?: string;
   calculationType:

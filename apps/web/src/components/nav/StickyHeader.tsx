@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { Fragment } from "react";
 
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "../ui/button";
 
 type Props = {
@@ -24,7 +27,8 @@ export function StickyHeader({ variant = "marketing", userName, onSignOut }: Pro
             <span className="text-lg font-semibold text-foreground">Property Agent OS</span>
           </div>
         </Link>
-        <nav className="flex items-center gap-4 text-sm font-medium text-muted-foreground">
+        <nav className="flex items-center gap-3 text-sm font-medium text-muted-foreground">
+          <ThemeToggle />
           {variant === "marketing" ? (
             <Fragment>
               <Link href="/#features" className="transition hover:text-foreground">

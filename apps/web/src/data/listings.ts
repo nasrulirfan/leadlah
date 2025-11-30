@@ -109,6 +109,49 @@ export async function updateListingStatus(id: string, status: ListingInput["stat
   return row ? toListing(row) : null;
 }
 
+export async function updateListing(id: string, values: ListingFormValues): Promise<ListingInput | null> {
+  const payload = listingFormSchema.parse(values);
+  const result = await db.query<ListingRow>(
+    `
+      UPDATE "listings"
+      SET
+        "propertyName" = $2,
+        "type" = $3,
+        price = $4,
+        size = $5,
+        bedrooms = $6,
+        bathrooms = $7,
+        location = $8,
+        status = $9,
+        photos = $10,
+        videos = $11,
+        documents = $12,
+        "externalLinks" = $13,
+        "updatedAt" = NOW()
+      WHERE id = $1
+      RETURNING ${listingColumns}
+    `,
+    [
+      id,
+      payload.propertyName,
+      payload.type,
+      payload.price,
+      payload.size,
+      payload.bedrooms,
+      payload.bathrooms,
+      payload.location,
+      payload.status,
+      JSON.stringify(payload.photos ?? []),
+      JSON.stringify(payload.videos ?? []),
+      JSON.stringify(payload.documents ?? []),
+      JSON.stringify(payload.externalLinks ?? [])
+    ]
+  );
+
+  const row = result.rows[0];
+  return row ? toListing(row) : null;
+}
+
 export async function removeListing(id: string): Promise<{ id: string } | null> {
   const result = await db.query<{ id: string }>(`DELETE FROM "listings" WHERE id = $1 RETURNING id`, [id]);
   const row = result.rows[0];

@@ -38,7 +38,7 @@ export default async function SignInPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-background text-foreground">
       <StickyHeader variant="marketing" />
       <main className="container grid gap-10 py-16 lg:grid-cols-[1.05fr_0.95fr]">
         <div className="space-y-8">
@@ -52,7 +52,7 @@ export default async function SignInPage() {
           <Separator />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
             {highlights.map((item) => (
-              <Card key={item.title} padded className="flex items-start gap-4 bg-white/80">
+              <Card key={item.title} padded className="flex items-start gap-4 bg-card/90 dark:bg-slate-900/60">
                 <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                   <item.icon className="h-5 w-5" />
                 </div>
@@ -65,7 +65,7 @@ export default async function SignInPage() {
           </div>
         </div>
 
-        <Card padded className="bg-white shadow-card">
+        <Card padded className="bg-card shadow-card dark:bg-slate-900">
           <div className="space-y-6">
             <div>
               <p className="text-sm font-semibold text-primary">Welcome back</p>

@@ -119,7 +119,7 @@ const logos = ["IQI", "ERA", "Reapfield", "Hartamas", "Tech Realtors", "Allied G
 
 export default function MarketingPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-white to-white">
+    <div className="min-h-screen bg-gradient-to-b from-background via-background/80 to-white dark:from-slate-950 dark:via-slate-950/80 dark:to-slate-950">
       <StickyHeader variant="marketing" />
       <main className="container space-y-16 py-16">
         <section className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr]">
@@ -149,7 +149,7 @@ export default function MarketingPage() {
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
               {heroMetrics.map((metric) => (
-                <Card key={metric.label} padded className="bg-white/70 backdrop-blur">
+                <Card key={metric.label} padded className="bg-card/80 backdrop-blur dark:bg-slate-900/60">
                   <p className="text-sm text-muted-foreground">{metric.label}</p>
                   <p className="text-2xl font-semibold text-foreground">
                     {metric.value}
@@ -159,8 +159,8 @@ export default function MarketingPage() {
               ))}
             </div>
           </div>
-          <Card className="relative overflow-hidden border-none bg-gradient-to-br from-white via-brand-50 to-white shadow-card">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(29,103,255,0.12),transparent_45%)]" />
+          <Card className="relative overflow-hidden border-none bg-gradient-to-br from-white via-brand-50 to-white shadow-card dark:from-slate-900 dark:via-slate-900/80 dark:to-slate-950">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(29,103,255,0.12),transparent_45%)] dark:bg-[radial-gradient(circle_at_20%_20%,rgba(80,130,255,0.18),transparent_45%)]" />
             <div className="relative space-y-5 p-6">
               <Image
                 src="https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=1600&q=80"
@@ -171,13 +171,13 @@ export default function MarketingPage() {
                 priority
               />
               <div className="grid gap-4 md:grid-cols-2">
-                <Card padded className="bg-background/90">
+                <Card padded className="bg-background/90 dark:bg-slate-900/70">
                   <CardHeader className="space-y-1 p-0">
                     <CardTitle className="text-base">Live Listing Health</CardTitle>
                     <CardDescription>Know which portal or owner requires action in seconds.</CardDescription>
                   </CardHeader>
                 </Card>
-                <Card padded className="bg-background/90">
+                <Card padded className="bg-background/90 dark:bg-slate-900/70">
                   <CardHeader className="space-y-1 p-0">
                     <CardTitle className="text-base">Branded PDF Receipts</CardTitle>
                     <CardDescription>Share calculators on mobile, signed with your agency brand.</CardDescription>
@@ -240,7 +240,10 @@ export default function MarketingPage() {
           </Tabs>
         </section>
 
-        <section id="automation" className="grid gap-8 rounded-3xl border bg-slate-950 px-10 py-12 text-white shadow-card">
+        <section
+          id="automation"
+          className="grid gap-8 rounded-3xl border border-slate-900 bg-slate-950 px-10 py-12 text-white shadow-card dark:border-slate-800 dark:bg-slate-900"
+        >
           <div className="flex flex-wrap items-center justify-between gap-6">
             <div>
               <p className="text-sm uppercase tracking-[0.4em] text-white/70">Automation</p>
@@ -253,7 +256,7 @@ export default function MarketingPage() {
           </div>
           <div className="grid gap-6 md:grid-cols-3">
             {automations.map((automation) => (
-              <Card key={automation.title} padded className="bg-white/5 text-white">
+              <Card key={automation.title} padded className="bg-white/5 text-white dark:bg-white/10">
                 <Badge variant="outline" className="border-white/30 text-white/80">
                   {automation.badge}
                 </Badge>
@@ -262,12 +265,12 @@ export default function MarketingPage() {
               </Card>
             ))}
           </div>
-          <Separator className="border-white/10 bg-white/10" />
+          <Separator className="border-white/10 bg-white/10 dark:border-white/20 dark:bg-white/20" />
           <div className="flex flex-wrap gap-3">
             {logos.map((logo) => (
               <span
                 key={logo}
-                className="rounded-full border border-white/20 px-4 py-2 text-xs font-semibold tracking-wide text-white/80"
+                className="rounded-full border border-white/20 px-4 py-2 text-xs font-semibold tracking-wide text-white/80 dark:border-white/30"
               >
                 {logo}
               </span>

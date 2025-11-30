@@ -6,7 +6,7 @@ import { ListingStatus, ProcessStage, generateOwnerViewToken } from "@leadlah/co
 import type { ListingInput, ProcessLogEntry } from "@leadlah/core";
 import { reminders } from "@/lib/mock-data";
 import { listingFormSchema, type ListingFormValues } from "@/lib/listings/form";
-import { createListingAction, deleteListingAction, updateListingStatusAction } from "./actions";
+import { createListingAction, deleteListingAction, updateListingAction, updateListingStatusAction } from "./actions";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -68,6 +68,21 @@ const coverImageFor = (listingId: string, photos: ListingInput["photos"]) => {
   return fallbackPropertyImages[index];
 };
 
+const listingToFormValues = (listing: ListingInput): ListingFormValues => ({
+  propertyName: listing.propertyName,
+  type: listing.type,
+  price: listing.price,
+  size: listing.size,
+  bedrooms: listing.bedrooms,
+  bathrooms: listing.bathrooms,
+  location: listing.location,
+  status: listing.status,
+  photos: listing.photos ?? [],
+  videos: listing.videos ?? [],
+  documents: listing.documents ?? [],
+  externalLinks: listing.externalLinks ?? []
+});
+
 export default function ListingsClient({ initialListings, initialProcessLogs }: ListingsClientProps) {
   const [listings, setListings] = useState<ListingInput[]>(initialListings);
   const [processLogMap, setProcessLogMap] = useState<ProcessLogMap>(initialProcessLogs);
@@ -75,6 +90,7 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
   const [error, setError] = useState<string | null>(null);
   const [ownerLink, setOwnerLink] = useState<string | null>(null);
   const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
+  const [editingListing, setEditingListing] = useState<ListingInput | null>(null);
   const [statusFilter, setStatusFilter] = useState<"All" | ListingStatus>("All");
   const [isPending, startTransition] = useTransition();
 
@@ -97,7 +113,7 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
       case ListingStatus.WITHDRAWN:
         return "danger";
       default:
-        return "neutral";
+        return "primary";
     }
   };
 
@@ -111,8 +127,16 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
     }
     startTransition(async () => {
       try {
-        const created = await createListingAction(parsed.data);
-        setListings((prev) => [created, ...prev]);
+        if (editingListing) {
+          const updated = await updateListingAction(editingListing.id, parsed.data);
+          if (updated) {
+            setListings((prev) => prev.map((listing) => (listing.id === updated.id ? updated : listing)));
+            setEditingListing(null);
+          }
+        } else {
+          const created = await createListingAction(parsed.data);
+          setListings((prev) => [created, ...prev]);
+        }
         setForm(() => ({ ...emptyListing }));
         setIsFormDialogOpen(false);
       } catch (actionError) {
@@ -169,8 +193,14 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
   };
 
   const ownerView = useMemo(() => generateOwnerViewToken(listings[0]?.id ?? crypto.randomUUID()), [listings]);
-  const openListingForm = () => {
-    setForm({ ...emptyListing });
+  const openListingForm = (listing?: ListingInput) => {
+    if (listing) {
+      setForm(listingToFormValues(listing));
+      setEditingListing(listing);
+    } else {
+      setForm({ ...emptyListing });
+      setEditingListing(null);
+    }
     setError(null);
     setIsFormDialogOpen(true);
   };
@@ -190,18 +220,22 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
             setIsFormDialogOpen(open);
             if (!open) {
               setError(null);
+              setEditingListing(null);
+              setForm({ ...emptyListing });
             }
           }}
         >
           <DialogTrigger asChild>
-            <Button variant="secondary" size="sm" onClick={openListingForm}>
+            <Button variant="secondary" size="sm" onClick={() => openListingForm()}>
               New Listing
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-3xl">
             <DialogHeader>
-              <DialogTitle>Create Listing</DialogTitle>
-              <DialogDescription>Share-ready listings with media, external links, and workflow tracking.</DialogDescription>
+              <DialogTitle>{editingListing ? "Edit Listing" : "Create Listing"}</DialogTitle>
+              <DialogDescription>
+                {editingListing ? "Update property details and share them instantly." : "Share-ready listings with media, external links, and workflow tracking."}
+              </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="mt-4 grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
@@ -319,7 +353,7 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
               <div className="md:col-span-2 flex items-center justify-between">
                 <div className="text-sm text-red-600">{error}</div>
                 <Button type="submit" disabled={isPending}>
-                  {isPending ? "Saving..." : "Save Listing"}
+                  {isPending ? "Saving..." : editingListing ? "Update Listing" : "Save Listing"}
                 </Button>
               </div>
             </form>
@@ -410,6 +444,9 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
                       ))}
                     </SelectContent>
                   </Select>
+                  <Button variant="outline" size="sm" onClick={() => openListingForm(listing)}>
+                    Edit
+                  </Button>
                   <Button variant="danger" size="sm" disabled={isPending} onClick={() => handleDelete(listing.id)}>
                     Delete
                   </Button>
@@ -522,11 +559,13 @@ function ProcessLogDialog({ listing, entries, onUpdated }: ProcessLogDialogProps
             Process Log
           </Button>
         </DialogTrigger>
-        <p className="text-xs text-slate-500">{completedCount} / {stageOrder.length} stages complete</p>
+        <p className="text-xs text-muted-foreground">
+          {completedCount} / {stageOrder.length} stages complete
+        </p>
       </div>
       <DialogContent className="max-w-3xl overflow-hidden border-0 p-0">
         <div className="grid gap-0 md:grid-cols-[1.25fr_1fr]">
-          <div className="space-y-4 bg-slate-50 p-6">
+          <div className="space-y-4 bg-slate-50 p-6 dark:bg-slate-900/30">
             <DialogHeader className="text-left">
               <DialogTitle>Process Timeline</DialogTitle>
               <DialogDescription>Live transparency for {listing.propertyName}</DialogDescription>
@@ -538,22 +577,26 @@ function ProcessLogDialog({ listing, entries, onUpdated }: ProcessLogDialogProps
                 return (
                   <div key={stage} className="flex gap-3">
                     <div className="flex flex-col items-center">
-                      <span className={`h-2.5 w-2.5 rounded-full ${isComplete ? "bg-emerald-500" : "bg-slate-300"}`} />
+                      <span
+                        className={`h-2.5 w-2.5 rounded-full ${isComplete ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-700"}`}
+                      />
                       {index < stageOrder.length - 1 && (
-                        <span className={`mt-1 w-px flex-1 ${isComplete ? "bg-emerald-200" : "bg-slate-200"}`} />
+                        <span
+                          className={`mt-1 w-px flex-1 ${isComplete ? "bg-emerald-200" : "bg-slate-200 dark:bg-slate-800"}`}
+                        />
                       )}
                     </div>
-                    <div className="flex-1 rounded-xl border border-white/60 bg-white/80 p-3 shadow-sm shadow-slate-100">
+                    <div className="flex-1 rounded-xl border border-border/50 bg-card/90 p-3 shadow-sm shadow-slate-100 dark:border-slate-800/80 dark:bg-slate-900/60">
                       <div className="flex items-center justify-between gap-3">
-                        <p className="text-sm font-semibold text-slate-900">{stage}</p>
+                        <p className="text-sm font-semibold text-foreground">{stage}</p>
                         <Badge tone={isComplete ? "success" : "neutral"}>
                           {isComplete ? "Completed" : "Pending"}
                         </Badge>
                       </div>
-                      <p className="mt-1 text-xs text-slate-500">
+                      <p className="mt-1 text-xs text-muted-foreground">
                         {entry?.notes ?? "No remarks yet. Keep owners in the loop."}
                       </p>
-                      <p className="mt-1 text-[11px] text-slate-400">
+                      <p className="mt-1 text-[11px] text-muted-foreground/80">
                         {entry?.actor ? `Handled by ${entry.actor}` : "Awaiting assignment"}
                         {entry?.completedAt ? ` • ${formatDate(entry.completedAt)}` : ""}
                       </p>

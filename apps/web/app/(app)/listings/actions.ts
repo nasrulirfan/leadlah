@@ -4,7 +4,7 @@ import type { ListingInput } from "@leadlah/core";
 import { listingSchema } from "@leadlah/core";
 import { revalidatePath } from "next/cache";
 
-import { insertListing, removeListing, updateListingStatus } from "@/data/listings";
+import { insertListing, removeListing, updateListing, updateListingStatus } from "@/data/listings";
 import { listingFormSchema, type ListingFormValues } from "@/lib/listings/form";
 
 const LISTINGS_PATH = "/listings";
@@ -29,4 +29,12 @@ export async function deleteListingAction(id: string) {
   const result = await removeListing(parsedId);
   revalidatePath(LISTINGS_PATH);
   return result;
+}
+
+export async function updateListingAction(id: string, values: ListingFormValues) {
+  const parsedId = listingSchema.shape.id.parse(id);
+  const payload = listingFormSchema.parse(values);
+  const listing = await updateListing(parsedId, payload);
+  revalidatePath(LISTINGS_PATH);
+  return listing;
 }

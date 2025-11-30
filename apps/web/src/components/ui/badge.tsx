@@ -8,13 +8,14 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: "border-transparent bg-primary/10 text-primary",
-        secondary: "border-transparent bg-secondary text-secondary-foreground",
+        default: "border-transparent bg-primary/10 text-primary dark:bg-primary/25 dark:text-primary-foreground",
+        secondary: "border-transparent bg-secondary text-secondary-foreground dark:bg-secondary/70",
         outline: "text-foreground",
-        destructive: "border-transparent bg-destructive/10 text-destructive",
-        success: "border-transparent bg-emerald-100 text-emerald-700",
-        warning: "border-transparent bg-amber-100 text-amber-800",
-        info: "border-transparent bg-sky-100 text-sky-700"
+        destructive: "border-transparent bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive-foreground",
+        success: "border-transparent bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
+        warning: "border-transparent bg-amber-100 text-amber-800 dark:bg-amber-500/25 dark:text-amber-100",
+        info: "border-transparent bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-100",
+        primary: "border-transparent bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-100"
       }
     },
     defaultVariants: {
@@ -23,13 +24,14 @@ const badgeVariants = cva(
   }
 );
 
-type LegacyTone = "neutral" | "success" | "warning" | "danger" | "info";
+type LegacyTone = "neutral" | "success" | "warning" | "danger" | "info" | "primary";
 const toneToVariant: Record<LegacyTone, VariantProps<typeof badgeVariants>["variant"]> = {
   neutral: "secondary",
   success: "success",
   warning: "warning",
   danger: "destructive",
-  info: "info"
+  info: "info",
+  primary: "primary"
 };
 
 export interface BadgeProps

@@ -1,0 +1,142 @@
+import { NextRequest, NextResponse } from "next/server";
+import puppeteer from "puppeteer";
+import type { CalculatorReceipt } from "@leadlah/core";
+
+import { generateCalculatorReceiptHtml } from "@/lib/pdf/generate-calculator-receipt-html";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+type AllowableType = CalculatorReceipt["calculationType"];
+const allowedTypes: AllowableType[] = [
+  "Loan Eligibility",
+  "SPA/MOT",
+  "Loan Agreement",
+  "ROI",
+  "Sellability",
+  "Land Feasibility",
+  "Tenancy Stamp Duty"
+];
+
+export async function POST(req: NextRequest) {
+  try {
+    const payload = (await req.json()) as Record<string, unknown>;
+    const receipt = normalizeReceipt(payload);
+    const html = generateCalculatorReceiptHtml(receipt);
+
+    const browser = await puppeteer.launch({
+      headless: "new",
+      args: ["--no-sandbox", "--disable-setuid-sandbox"]
+    });
+
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 2 });
+      await page.setContent(html, { waitUntil: "networkidle0" });
+      await page.emulateMediaType("screen");
+      const pdf = await page.pdf({
+        format: "A4",
+        printBackground: true,
+        preferCSSPageSize: true,
+        margin: {
+          top: "0",
+          bottom: "0",
+          left: "0",
+          right: "0"
+        }
+      });
+
+      return new NextResponse(pdf, {
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename=${buildFileName(receipt)}`
+        }
+      });
+    } finally {
+      await browser.close();
+    }
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unable to generate calculator receipt.";
+    console.error("[calculators.pdf] Failed to generate receipt:", error);
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+}
+
+function normalizeReceipt(payload: Record<string, unknown>): CalculatorReceipt {
+  const issuedAtRaw = payload.issuedAt;
+  const issuedAt = new Date(String(issuedAtRaw));
+  if (Number.isNaN(issuedAt.getTime())) {
+    throw new Error("Issued at timestamp is invalid.");
+  }
+
+  const calculationType = payload.calculationType;
+  if (!allowedTypes.includes(calculationType as AllowableType)) {
+    throw new Error("Unsupported calculation type.");
+  }
+
+  const agentName = extractRequiredString(payload.agentName, "Agent name");
+  const renNumber = extractRequiredString(payload.renNumber, "REN number");
+  const customerName = extractOptionalString(payload.customerName);
+  const agencyLogoUrl = extractOptionalString(payload.agencyLogoUrl);
+
+  const inputs = extractRecord(payload.inputs, "inputs");
+  const outputs = extractRecord(payload.outputs, "outputs");
+
+  return {
+    agentName,
+    customerName,
+    renNumber,
+    agencyLogoUrl,
+    calculationType,
+    inputs,
+    outputs,
+    issuedAt
+  };
+}
+
+function extractRecord(
+  source: unknown,
+  fieldName: string
+): Record<string, number | string | boolean> {
+  if (!source || typeof source !== "object") {
+    throw new Error(`Receipt ${fieldName} are missing.`);
+  }
+
+  return Object.entries(source).reduce<Record<string, number | string | boolean>>(
+    (acc, [key, value]) => {
+      if (
+        typeof value === "string" ||
+        typeof value === "number" ||
+        typeof value === "boolean"
+      ) {
+        acc[key] = value;
+      } else if (value != null) {
+        acc[key] = String(value);
+      }
+      return acc;
+    },
+    {}
+  );
+}
+
+function extractRequiredString(value: unknown, fieldName: string): string {
+  if (typeof value !== "string" || !value.trim()) {
+    throw new Error(`${fieldName} is required for the receipt.`);
+  }
+  return value.trim();
+}
+
+function extractOptionalString(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return trimmed.length ? trimmed : undefined;
+}
+
+function buildFileName(receipt: CalculatorReceipt): string {
+  const slug = receipt.calculationType.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  const date = receipt.issuedAt.toISOString().split("T")[0];
+  return `${slug}-receipt-${date}.pdf`;
+}
