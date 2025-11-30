@@ -49,6 +49,25 @@ const stageOrder = Object.values(ProcessStage);
 const sortProcessEntries = (entries: ProcessLogEntry[]) =>
   [...entries].sort((a, b) => stageOrder.indexOf(a.stage) - stageOrder.indexOf(b.stage));
 
+const fallbackPropertyImages = [
+  "https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=600&q=80",
+  "https://images.unsplash.com/photo-1501183638710-841dd1904471?auto=format&fit=crop&w=600&q=80",
+  "https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&w=600&q=80",
+  "https://images.unsplash.com/photo-1430285561322-7808604715df?auto=format&fit=crop&w=600&q=80"
+];
+
+const coverImageFor = (listingId: string, photos: ListingInput["photos"]) => {
+  if (photos[0]?.url) {
+    return photos[0].url;
+  }
+  const index =
+    listingId
+      .split("")
+      .map((char) => char.charCodeAt(0))
+      .reduce((acc, code) => acc + code, 0) % fallbackPropertyImages.length;
+  return fallbackPropertyImages[index];
+};
+
 export default function ListingsClient({ initialListings, initialProcessLogs }: ListingsClientProps) {
   const [listings, setListings] = useState<ListingInput[]>(initialListings);
   const [processLogMap, setProcessLogMap] = useState<ProcessLogMap>(initialProcessLogs);
@@ -56,6 +75,7 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
   const [error, setError] = useState<string | null>(null);
   const [ownerLink, setOwnerLink] = useState<string | null>(null);
   const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<"All" | ListingStatus>("All");
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -126,6 +146,11 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
       }
     });
   };
+
+  const filteredListings = useMemo(
+    () => (statusFilter === "All" ? listings : listings.filter((listing) => listing.status === statusFilter)),
+    [statusFilter, listings]
+  );
 
   const handleProcessLogUpdate = (listingId: string, entry: ProcessLogEntry) => {
     setProcessLogMap((prev) => {
@@ -243,6 +268,21 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
                 />
               </div>
               <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">Cover Photo URL</label>
+                <Input
+                  type="url"
+                  value={form.photos[0]?.url ?? ""}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      photos: e.target.value ? [{ url: e.target.value, label: "Cover photo" }] : []
+                    })
+                  }
+                  placeholder="https://images.unsplash.com/..."
+                />
+                <p className="text-xs text-slate-500">Upload to your preferred storage and drop the public URL here.</p>
+              </div>
+              <div className="space-y-2">
                 <label className="text-sm font-semibold text-slate-700">Status</label>
                 <Select value={form.status} onValueChange={(value) => setForm({ ...form, status: value as ListingStatus })}>
                   <SelectTrigger>
@@ -288,11 +328,31 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
       </div>
 
       <Card>
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-900">Active Listings</h2>
-          <Button variant="secondary" size="sm" onClick={() => setOwnerLink(ownerView.token)}>
-            Generate Owner View Link
-          </Button>
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Listings</h2>
+            <p className="text-xs text-slate-500">
+              Showing {filteredListings.length} of {listings.length} properties
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as "All" | ListingStatus)}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All Statuses</SelectItem>
+                {Object.values(ListingStatus).map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {status}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button variant="secondary" size="sm" onClick={() => setOwnerLink(ownerView.token)}>
+              Owner Link
+            </Button>
+          </div>
         </div>
         {ownerLink && (
           <p className="mt-2 text-xs text-slate-600">
@@ -300,26 +360,32 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
           </p>
         )}
         <div className="mt-4 divide-y divide-slate-100">
-          {listings.map((listing) => {
+          {filteredListings.map((listing) => {
             const logEntries = processLogMap[listing.id] ?? [];
+            const coverImage = coverImageFor(listing.id, listing.photos);
             return (
-              <div key={listing.id} className="grid gap-3 py-4 md:grid-cols-[1.5fr_auto_auto] md:items-center">
-                <div>
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-base font-semibold text-slate-900">{listing.propertyName}</h3>
-                    <Badge tone={statusTone(listing.status)}>{listing.status}</Badge>
+              <div key={listing.id} className="grid gap-3 py-4 md:grid-cols-[2fr_auto_auto] md:items-center">
+                <div className="flex gap-4">
+                  <div className="h-28 w-36 overflow-hidden rounded-2xl bg-slate-100 shadow-inner">
+                    <img src={coverImage} alt={listing.propertyName} className="h-full w-full object-cover" />
                   </div>
-                  <p className="text-sm text-slate-600">
-                    {listing.type} • {listing.bedrooms} bed / {listing.bathrooms} bath • {listing.size} sqft •{" "}
-                    {listing.location}
-                  </p>
-                  <p className="text-sm font-semibold text-brand-700">RM {listing.price.toLocaleString()}</p>
-                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
-                    {listing.externalLinks.map((link) => (
-                      <a key={link.url} href={link.url} className="underline" target="_blank" rel="noreferrer">
-                        {link.provider} link
-                      </a>
-                    ))}
+                  <div className="flex flex-1 flex-col">
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-base font-semibold text-slate-900">{listing.propertyName}</h3>
+                      <Badge tone={statusTone(listing.status)}>{listing.status}</Badge>
+                    </div>
+                    <p className="text-sm text-slate-600">
+                      {listing.type} • {listing.bedrooms} bed / {listing.bathrooms} bath • {listing.size} sqft •{" "}
+                      {listing.location}
+                    </p>
+                    <p className="text-sm font-semibold text-brand-700">RM {listing.price.toLocaleString()}</p>
+                    <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
+                      {listing.externalLinks.map((link) => (
+                        <a key={link.url} href={link.url} className="underline" target="_blank" rel="noreferrer">
+                          {link.provider} link
+                        </a>
+                      ))}
+                    </div>
                   </div>
                 </div>
                 <ProcessLogDialog
