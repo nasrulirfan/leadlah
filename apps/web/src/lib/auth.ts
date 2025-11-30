@@ -1,6 +1,11 @@
 import { betterAuth } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
-import { Pool } from "pg";
+import type { Pool } from "pg";
+
+const PgPool: typeof import("pg").Pool = (() => {
+  const pgModule = eval("require")("pg") as typeof import("pg");
+  return pgModule.Pool;
+})();
 
 declare global {
   // eslint-disable-next-line no-var
@@ -15,7 +20,7 @@ if (!authDatabaseUrl) {
 
 const database =
   globalThis.__authPool ??
-  new Pool({
+  new PgPool({
     connectionString: authDatabaseUrl
   });
 
