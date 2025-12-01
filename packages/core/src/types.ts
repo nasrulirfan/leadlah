@@ -52,11 +52,22 @@ export type Listing = {
   updatedAt: Date;
 };
 
+export type ViewingCustomer = {
+  id: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  notes?: string;
+  viewedAt?: Date;
+};
+
 export type ProcessLogEntry = {
   stage: ProcessStage;
   notes?: string;
   completedAt?: Date;
   actor?: string;
+  viewings?: ViewingCustomer[];
+  successfulBuyerId?: string;
 };
 
 export type OwnerViewToken = {
@@ -110,4 +121,63 @@ export type CalculatorReceipt = {
   inputs: Record<string, number | string | boolean>;
   outputs: Record<string, number | string>;
   issuedAt: Date;
+};
+
+export enum ExpenseCategory {
+  FUEL = "Fuel",
+  ADVERTISING = "Advertising",
+  ENTERTAINMENT = "Client Entertainment",
+  PRINTING = "Printing",
+  TRANSPORTATION = "Transportation",
+  OFFICE = "Office Supplies",
+  PROFESSIONAL_FEES = "Professional Fees",
+  OTHER = "Other"
+}
+
+export type Target = {
+  id: string;
+  userId: string;
+  year: number;
+  month?: number;
+  targetUnits: number;
+  targetIncome: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type Expense = {
+  id: string;
+  userId: string;
+  category: ExpenseCategory;
+  amount: number;
+  description: string;
+  date: Date;
+  receiptUrl?: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type Commission = {
+  id: string;
+  userId: string;
+  listingId: string;
+  amount: number;
+  closedDate: Date;
+  notes?: string;
+  createdAt: Date;
+};
+
+export type PerformanceMetrics = {
+  period: { year: number; month?: number };
+  target: { units: number; income: number };
+  actual: {
+    units: number;
+    commission: number;
+    expenses: number;
+    netIncome: number;
+  };
+  progress: {
+    unitsPercent: number;
+    incomePercent: number;
+  };
 };

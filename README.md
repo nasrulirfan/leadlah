@@ -107,5 +107,30 @@ pnpm dev --filter @leadlah/web
 - Dashboard: `http://localhost:3000/dashboard`
 - Listings CRUD + reminders: `http://localhost:3000/listings`
 - Calculators suite: `http://localhost:3000/calculators`
+- **Performance Dashboard**: `http://localhost:3000/performance` ⭐ NEW
 - Billing UI: `http://localhost:3000/billing`
 - Owner view sample: `http://localhost:3000/owner/<token>` (see `apps/web/src/lib/mock-data.ts` for the token)
+
+## Performance Dashboard Module
+
+The **Sales, Target & Expense Tracker** module helps agents track their business performance, manage expenses, and understand true profitability.
+
+### Quick Start
+1. Run database migration:
+   ```bash
+   psql $DATABASE_URL -f apps/api/migrations/006_performance_tables.sql
+   ```
+2. Navigate to `http://localhost:3000/performance`
+
+### Features
+- 📊 Set monthly and annual sales targets
+- 💰 Track all business expenses (8 categories)
+- 📈 Real-time progress visualization
+- 💼 Calculate true net income
+- 📑 Generate comprehensive reports
+
+### Documentation
+- **Quick Start**: [PERFORMANCE_QUICK_START.md](PERFORMANCE_QUICK_START.md)
+- **User Guide**: [PERFORMANCE_USER_GUIDE.md](PERFORMANCE_USER_GUIDE.md)
+- **Technical Docs**: [PERFORMANCE_MODULE_README.md](PERFORMANCE_MODULE_README.md)
+- **All Documentation**: [PERFORMANCE_INDEX.md](PERFORMANCE_INDEX.md)

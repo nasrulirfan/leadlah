@@ -3,7 +3,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { ListingStatus, ProcessStage, generateOwnerViewToken } from "@leadlah/core";
-import type { ListingInput, ProcessLogEntry } from "@leadlah/core";
+import type { ListingInput, ProcessLogEntry, ViewingCustomer } from "@leadlah/core";
 import { reminders } from "@/lib/mock-data";
 import { listingFormSchema, type ListingFormValues } from "@/lib/listings/form";
 import { createListingAction, deleteListingAction, updateListingAction, updateListingStatusAction } from "./actions";
@@ -22,6 +22,8 @@ import {
   DialogTrigger
 } from "@/components/ui/dialog";
 import { updateProcessStage } from "@/lib/process-log/api";
+import { cn } from "@/lib/utils";
+import { CheckCircle2, Trash2 } from "lucide-react";
 
 type ProcessLogMap = Record<string, ProcessLogEntry[]>;
 
@@ -482,6 +484,22 @@ type ProcessLogDialogProps = {
   onUpdated: (entry: ProcessLogEntry) => void;
 };
 
+type ViewingFormState = {
+  name: string;
+  phone: string;
+  email: string;
+  notes: string;
+  viewedAt: string;
+};
+
+const emptyViewingForm: ViewingFormState = {
+  name: "",
+  phone: "",
+  email: "",
+  notes: "",
+  viewedAt: ""
+};
+
 function ProcessLogDialog({ listing, entries, onUpdated }: ProcessLogDialogProps) {
   const [open, setOpen] = useState(false);
   const [selectedStage, setSelectedStage] = useState<ProcessStage>(stageOrder[0]);
@@ -490,16 +508,77 @@ function ProcessLogDialog({ listing, entries, onUpdated }: ProcessLogDialogProps
   const [status, setStatus] = useState<"done" | "pending">("pending");
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [viewings, setViewings] = useState<ViewingCustomer[]>([]);
+  const [successfulBuyerId, setSuccessfulBuyerId] = useState<string | null>(null);
+  const [viewingForm, setViewingForm] = useState<ViewingFormState>(emptyViewingForm);
+  const [viewingError, setViewingError] = useState<string | null>(null);
+  const [isViewingsDialogOpen, setIsViewingsDialogOpen] = useState(false);
+
+  const generateViewingId = () =>
+    typeof crypto !== "undefined" && "randomUUID" in crypto && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
   const completedCount = entries.filter((entry) => entry.completedAt).length;
   const pendingStage = useMemo(
     () => entries.find((entry) => !entry.completedAt)?.stage ?? stageOrder[0],
     [entries]
   );
+  const isViewingStage = selectedStage === ProcessStage.VIEWING_RECORD;
+
+  const handleViewingInputChange = (field: keyof ViewingFormState, value: string) => {
+    setViewingForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleAddViewing = () => {
+    if (!viewingForm.name.trim()) {
+      setViewingError("Customer name is required.");
+      return;
+    }
+
+    const record: ViewingCustomer = {
+      id: generateViewingId(),
+      name: viewingForm.name.trim(),
+      phone: viewingForm.phone.trim() || undefined,
+      email: viewingForm.email.trim() || undefined,
+      notes: viewingForm.notes.trim() || undefined,
+      viewedAt: viewingForm.viewedAt ? new Date(viewingForm.viewedAt) : undefined
+    };
+
+    setViewings((prev) => [...prev, record]);
+    setViewingForm(emptyViewingForm);
+    setViewingError(null);
+  };
+
+  const handleRemoveViewing = (id: string) => {
+    setViewings((prev) => prev.filter((viewing) => viewing.id !== id));
+    if (successfulBuyerId === id) {
+      setSuccessfulBuyerId(null);
+    }
+  };
+
+  const handleSelectBuyer = (id: string) => {
+    setSuccessfulBuyerId((prev) => (prev === id ? null : id));
+    setStatus("done");
+  };
+
+  const viewingDateLabel = (date?: Date) => {
+    if (!date) {
+      return "Viewing scheduled";
+    }
+    return date.toLocaleString("en-MY", {
+      dateStyle: "medium",
+      timeStyle: "short"
+    });
+  };
 
   useEffect(() => {
     if (!open) {
       setMessage(null);
+      setViewingError(null);
+      setViewingForm(emptyViewingForm);
+      setViewings([]);
+      setSuccessfulBuyerId(null);
       return;
     }
     setSelectedStage(pendingStage);
@@ -513,24 +592,48 @@ function ProcessLogDialog({ listing, entries, onUpdated }: ProcessLogDialogProps
     setNotes(current?.notes ?? "");
     setActor(current?.actor ?? "");
     setStatus(current?.completedAt ? "done" : "pending");
+    if (selectedStage === ProcessStage.VIEWING_RECORD) {
+      setViewings(current?.viewings ?? []);
+      setSuccessfulBuyerId(current?.successfulBuyerId ?? null);
+    }
+    setViewingForm(emptyViewingForm);
   }, [selectedStage, entries, open]);
 
   useEffect(() => {
     setMessage(null);
+    setViewingError(null);
   }, [selectedStage]);
 
   const handleSave = async () => {
     setIsSaving(true);
     setMessage(null);
+    if (isViewingStage) {
+      if (viewings.length === 0) {
+        setViewingError("Add at least one viewing before saving this stage.");
+        setIsSaving(false);
+        return;
+      }
+      if (successfulBuyerId && !viewings.some((viewing) => viewing.id === successfulBuyerId)) {
+        setViewingError("Selected buyer must be part of the viewing list.");
+        setIsSaving(false);
+        return;
+      }
+    }
     try {
-      const updated = await updateProcessStage(listing.id, {
+      const payload = {
         stage: selectedStage,
         notes: notes.trim() || undefined,
         actor: actor.trim() || undefined,
-        completed: status === "done"
-      });
+        completed: status === "done",
+        viewings: isViewingStage ? viewings : undefined,
+        successfulBuyerId: isViewingStage ? successfulBuyerId ?? undefined : undefined
+      };
+      const updated = await updateProcessStage(listing.id, payload);
       onUpdated(updated);
       setMessage({ tone: "success", text: `${selectedStage} updated.` });
+      if (!isViewingStage) {
+        setViewingError(null);
+      }
     } catch (err) {
       setMessage({
         tone: "error",
@@ -574,6 +677,7 @@ function ProcessLogDialog({ listing, entries, onUpdated }: ProcessLogDialogProps
               {stageOrder.map((stage, index) => {
                 const entry = entries.find((item) => item.stage === stage);
                 const isComplete = Boolean(entry?.completedAt);
+                const isActiveStage = selectedStage === stage;
                 return (
                   <div key={stage} className="flex gap-3">
                     <div className="flex flex-col items-center">
@@ -586,7 +690,14 @@ function ProcessLogDialog({ listing, entries, onUpdated }: ProcessLogDialogProps
                         />
                       )}
                     </div>
-                    <div className="flex-1 rounded-xl border border-border/50 bg-card/90 p-3 shadow-sm shadow-slate-100 dark:border-slate-800/80 dark:bg-slate-900/60">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedStage(stage)}
+                      className={cn(
+                        "flex-1 rounded-xl border border-border/50 bg-card/90 p-3 text-left shadow-sm shadow-slate-100 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-slate-800/80 dark:bg-slate-900/60",
+                        isActiveStage && "border-primary/40 ring-2 ring-primary/20"
+                      )}
+                    >
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-sm font-semibold text-foreground">{stage}</p>
                         <Badge tone={isComplete ? "success" : "neutral"}>
@@ -600,7 +711,35 @@ function ProcessLogDialog({ listing, entries, onUpdated }: ProcessLogDialogProps
                         {entry?.actor ? `Handled by ${entry.actor}` : "Awaiting assignment"}
                         {entry?.completedAt ? ` • ${formatDate(entry.completedAt)}` : ""}
                       </p>
-                    </div>
+                      {stage === ProcessStage.VIEWING_RECORD && entry?.viewings?.length ? (
+                        <div className="mt-3 space-y-2">
+                          {entry.viewings.map((viewing) => {
+                            const contact = [viewing.phone, viewing.email].filter(Boolean).join(" • ");
+                            const isBuyer = entry.successfulBuyerId === viewing.id;
+                            return (
+                              <div
+                                key={viewing.id}
+                                className="rounded-lg border border-border/70 bg-background/70 p-3 text-xs dark:border-slate-800/60 dark:bg-slate-900/60"
+                              >
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <div>
+                                    <p className="text-sm font-semibold text-foreground">{viewing.name}</p>
+                                    <p className="text-xs text-muted-foreground">{contact || "Contact pending"}</p>
+                                    <p className="text-[11px] text-muted-foreground/80">{viewingDateLabel(viewing.viewedAt)}</p>
+                                  </div>
+                                  <Badge tone={isBuyer ? "success" : "info"} className="text-[11px]">
+                                    {isBuyer ? "Successful buyer" : "Viewing"}
+                                  </Badge>
+                                </div>
+                                {viewing.notes && (
+                                  <p className="mt-2 text-xs text-muted-foreground">{viewing.notes}</p>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+                    </button>
                   </div>
                 );
               })}
@@ -657,6 +796,92 @@ function ProcessLogDialog({ listing, entries, onUpdated }: ProcessLogDialogProps
                   placeholder="e.g. SPA drafted, LOI countersigned."
                 />
               </div>
+              {isViewingStage && (
+                <div className="space-y-3 rounded-2xl border border-dashed border-border/70 bg-muted/20 p-4 dark:bg-slate-900/40">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">Viewing Records</p>
+                      <p className="text-xs text-muted-foreground">Log prospects and select the successful buyer.</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {viewings.length > 0 && (
+                        <Button type="button" variant="outline" size="sm" onClick={() => setIsViewingsDialogOpen(true)}>
+                          View list
+                        </Button>
+                      )}
+                      {successfulBuyerId && (
+                        <Badge tone="success" className="text-xs">
+                          Buyer appointed
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="space-y-1">
+                      <label htmlFor="viewingName" className="text-xs font-medium text-muted-foreground">
+                        Customer Name
+                      </label>
+                      <Input
+                        id="viewingName"
+                        value={viewingForm.name}
+                        onChange={(event) => handleViewingInputChange("name", event.target.value)}
+                        placeholder="e.g. Tan Family"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label htmlFor="viewingPhone" className="text-xs font-medium text-muted-foreground">
+                        Phone
+                      </label>
+                      <Input
+                        id="viewingPhone"
+                        value={viewingForm.phone}
+                        onChange={(event) => handleViewingInputChange("phone", event.target.value)}
+                        placeholder="+60 ..."
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label htmlFor="viewingEmail" className="text-xs font-medium text-muted-foreground">
+                        Email (optional)
+                      </label>
+                      <Input
+                        id="viewingEmail"
+                        value={viewingForm.email}
+                        onChange={(event) => handleViewingInputChange("email", event.target.value)}
+                        placeholder="customer@email.com"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label htmlFor="viewingDate" className="text-xs font-medium text-muted-foreground">
+                        Viewing Date
+                      </label>
+                      <Input
+                        id="viewingDate"
+                        type="datetime-local"
+                        value={viewingForm.viewedAt}
+                        onChange={(event) => handleViewingInputChange("viewedAt", event.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label htmlFor="viewingNotes" className="text-xs font-medium text-muted-foreground">
+                      Notes
+                    </label>
+                    <Textarea
+                      id="viewingNotes"
+                      rows={2}
+                      value={viewingForm.notes}
+                      onChange={(event) => handleViewingInputChange("notes", event.target.value)}
+                      placeholder="Interest level, objections, follow-up plan"
+                    />
+                  </div>
+                  {viewingError && <p className="text-xs text-red-600">{viewingError}</p>}
+                  <div className="flex items-center justify-end">
+                    <Button type="button" variant="secondary" size="sm" onClick={handleAddViewing}>
+                      Add Viewing
+                    </Button>
+                  </div>
+                </div>
+              )}
               {message && (
                 <p className={`text-xs ${message.tone === "success" ? "text-emerald-600" : "text-red-600"}`}>
                   {message.text}
@@ -669,6 +894,73 @@ function ProcessLogDialog({ listing, entries, onUpdated }: ProcessLogDialogProps
           </div>
         </div>
       </DialogContent>
+      {isViewingStage && (
+        <Dialog open={isViewingsDialogOpen} onOpenChange={setIsViewingsDialogOpen}>
+          <DialogContent className="max-w-2xl space-y-4">
+            <DialogHeader>
+              <DialogTitle>Viewings for {listing.propertyName}</DialogTitle>
+              <DialogDescription>Review all prospects and appoint the successful buyer.</DialogDescription>
+            </DialogHeader>
+            {viewings.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No viewings recorded yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {viewings.map((viewing) => {
+                  const contact = [viewing.phone, viewing.email].filter(Boolean).join(" • ");
+                  const isBuyer = successfulBuyerId === viewing.id;
+                  return (
+                    <div
+                      key={viewing.id}
+                      className="rounded-2xl border border-border/80 bg-muted/30 p-4 dark:border-slate-800 dark:bg-slate-900/60"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="text-base font-semibold text-foreground">{viewing.name}</p>
+                          <p className="text-sm text-muted-foreground">{contact || "Contact pending"}</p>
+                          <p className="text-xs text-muted-foreground/80">{viewingDateLabel(viewing.viewedAt)}</p>
+                          {viewing.notes && <p className="mt-2 text-sm text-muted-foreground">{viewing.notes}</p>}
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={isBuyer ? "default" : "outline"}
+                            onClick={() => handleSelectBuyer(viewing.id)}
+                          >
+                            {isBuyer ? (
+                              <>
+                                <CheckCircle2 className="mr-2 h-4 w-4" />
+                                Buyer
+                              </>
+                            ) : (
+                              "Mark Buyer"
+                            )}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="text-muted-foreground hover:text-destructive"
+                            onClick={() => handleRemoveViewing(viewing.id)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Remove
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <div className="flex justify-end">
+              <Button type="button" variant="secondary" onClick={() => setIsViewingsDialogOpen(false)}>
+                Close
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </Dialog>
   );
 }

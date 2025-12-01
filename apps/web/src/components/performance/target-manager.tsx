@@ -1,0 +1,214 @@
+"use client";
+
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Edit2, Trash2 } from "lucide-react";
+import { useTargets } from "@/lib/performance/hooks";
+
+export function TargetManager() {
+  const { targets, createTarget, updateTarget, deleteTarget } = useTargets();
+  const [isCreating, setIsCreating] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth() + 1;
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Monthly & Annual Targets</CardTitle>
+            <Button size="sm" onClick={() => setIsCreating(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Set Target
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isCreating && (
+            <TargetForm
+              onSubmit={(data) => {
+                createTarget(data);
+                setIsCreating(false);
+              }}
+              onCancel={() => setIsCreating(false)}
+            />
+          )}
+
+          <div className="space-y-3">
+            {targets?.map((target) => (
+              <div
+                key={target.id}
+                className="flex items-center justify-between rounded-lg border border-border bg-muted/50 p-4"
+              >
+                {editingId === target.id ? (
+                  <TargetForm
+                    initialData={target}
+                    onSubmit={(data) => {
+                      updateTarget(target.id, data);
+                      setEditingId(null);
+                    }}
+                    onCancel={() => setEditingId(null)}
+                  />
+                ) : (
+                  <>
+                    <div className="flex items-center gap-4">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-foreground">
+                            {target.month 
+                              ? `${new Date(target.year, target.month - 1).toLocaleString('default', { month: 'long' })} ${target.year}`
+                              : `Year ${target.year}`
+                            }
+                          </p>
+                          {target.year === currentYear && target.month === currentMonth && (
+                            <Badge variant="primary">Current</Badge>
+                          )}
+                        </div>
+                        <div className="mt-1 flex gap-4 text-sm text-muted-foreground">
+                          <span>{target.targetUnits} units</span>
+                          <span>RM {target.targetIncome.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setEditingId(target.id)}
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => deleteTarget(target.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+
+            {!targets?.length && !isCreating && (
+              <div className="py-12 text-center">
+                <p className="text-sm text-muted-foreground">No targets set yet. Create your first target to start tracking!</p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function TargetForm({
+  initialData,
+  onSubmit,
+  onCancel
+}: {
+  initialData?: any;
+  onSubmit: (data: any) => void;
+  onCancel: () => void;
+}) {
+  const [formData, setFormData] = useState({
+    year: initialData?.year || new Date().getFullYear(),
+    month: initialData?.month || new Date().getMonth() + 1,
+    targetUnits: initialData?.targetUnits || 0,
+    targetIncome: initialData?.targetIncome || 0,
+    isAnnual: !initialData?.month
+  });
+
+  return (
+    <div className="w-full space-y-4 rounded-lg border border-border bg-card p-4">
+      <div className="grid gap-4 md:grid-cols-2">
+        <div>
+          <Label>Period Type</Label>
+          <select
+            className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+            value={formData.isAnnual ? "annual" : "monthly"}
+            onChange={(e) => setFormData({ ...formData, isAnnual: e.target.value === "annual" })}
+          >
+            <option value="monthly">Monthly</option>
+            <option value="annual">Annual</option>
+          </select>
+        </div>
+
+        <div>
+          <Label>Year</Label>
+          <Input
+            type="number"
+            value={formData.year}
+            onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
+            className="mt-1.5"
+          />
+        </div>
+
+        {!formData.isAnnual && (
+          <div>
+            <Label>Month</Label>
+            <select
+              className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+              value={formData.month}
+              onChange={(e) => setFormData({ ...formData, month: parseInt(e.target.value) })}
+            >
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                <option key={m} value={m}>
+                  {new Date(2024, m - 1).toLocaleString('default', { month: 'long' })}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <div>
+          <Label>Target Units</Label>
+          <Input
+            type="number"
+            value={formData.targetUnits}
+            onChange={(e) => setFormData({ ...formData, targetUnits: parseInt(e.target.value) })}
+            className="mt-1.5"
+            placeholder="e.g., 10"
+          />
+        </div>
+
+        <div>
+          <Label>Target Income (RM)</Label>
+          <Input
+            type="number"
+            value={formData.targetIncome}
+            onChange={(e) => setFormData({ ...formData, targetIncome: parseFloat(e.target.value) })}
+            className="mt-1.5"
+            placeholder="e.g., 50000"
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-2">
+        <Button variant="ghost" size="sm" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button
+          size="sm"
+          onClick={() => {
+            onSubmit({
+              year: formData.year,
+              month: formData.isAnnual ? undefined : formData.month,
+              targetUnits: formData.targetUnits,
+              targetIncome: formData.targetIncome
+            });
+          }}
+        >
+          {initialData ? "Update" : "Create"} Target
+        </Button>
+      </div>
+    </div>
+  );
+}

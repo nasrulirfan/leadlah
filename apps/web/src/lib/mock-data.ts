@@ -54,12 +54,47 @@ export const processLogs: Record<string, ProcessLogEntry[]> = {
   [listings[0].id]: [
     { stage: ProcessStage.OWNER_APPOINTMENT, completedAt: addDays(new Date(), -9), actor: "Alicia" },
     { stage: ProcessStage.MARKETING_ACTIVATION, completedAt: addDays(new Date(), -7), actor: "Alicia" },
-    { stage: ProcessStage.VIEWING_RECORD, notes: "Prospect loves view", completedAt: addDays(new Date(), -2) }
+    {
+      stage: ProcessStage.VIEWING_RECORD,
+      notes: "Prospect loves view",
+      completedAt: addDays(new Date(), -2),
+      viewings: [
+        {
+          id: "view-1",
+          name: "Lim Wei Han",
+          phone: "+60 12-345 6789",
+          notes: "Prefers evening viewings, wants price justification.",
+          viewedAt: addDays(new Date(), -5)
+        },
+        {
+          id: "view-2",
+          name: "Nor Aini",
+          phone: "+60 16-111 2222",
+          email: "aini@example.com",
+          notes: "Family of 4, loved pool view.",
+          viewedAt: addDays(new Date(), -3)
+        }
+      ],
+      successfulBuyerId: "view-2"
+    }
   ],
   [listings[1].id]: [
     { stage: ProcessStage.OWNER_APPOINTMENT, completedAt: addDays(new Date(), -25), actor: "Irfan" },
     { stage: ProcessStage.MARKETING_ACTIVATION, completedAt: addDays(new Date(), -23), actor: "Irfan" },
-    { stage: ProcessStage.VIEWING_RECORD, notes: "2 families viewed", completedAt: addDays(new Date(), -18) },
+    {
+      stage: ProcessStage.VIEWING_RECORD,
+      notes: "2 families viewed",
+      completedAt: addDays(new Date(), -18),
+      viewings: [
+        {
+          id: "dh-view-1",
+          name: "Chan Properties Sdn Bhd",
+          email: "director@chanprop.my",
+          notes: "Corporate lease interest",
+          viewedAt: addDays(new Date(), -19)
+        }
+      ]
+    },
     { stage: ProcessStage.OFFER_STAGE, notes: "LOI at RM3.1M in review", completedAt: addDays(new Date(), -1) }
   ]
 };

@@ -14,24 +14,24 @@ export default async function BillingPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Subscription & Billing</h1>
-          <p className="text-sm text-slate-600">Manage plan, invoices, and payment method via HitPay.</p>
+          <h1 className="text-2xl font-bold text-foreground">Subscription & Billing</h1>
+          <p className="text-sm text-muted-foreground">Manage plan, invoices, and payment method via HitPay.</p>
         </div>
         <Button variant="secondary" size="sm">Contact Support</Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
-          <p className="text-sm font-semibold text-slate-600">Current Status</p>
+          <p className="text-sm font-semibold text-muted-foreground">Current Status</p>
           <div className="mt-2 flex items-center gap-2">
             <Badge tone={paymentFailed ? "warning" : "success"}>{subscriptionState.status}</Badge>
             {subscriptionState.nextBillingAt && (
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-muted-foreground">
                 Next billing: {subscriptionState.nextBillingAt.toLocaleDateString()}
               </span>
             )}
           </div>
-          <div className="mt-4 space-y-2 text-sm text-slate-700">
+          <div className="mt-4 space-y-2 text-sm text-muted-foreground">
             <p>Unlimited Listings</p>
             <p>Branded PDF Receipts</p>
             <p>Fishbone Tracker & Reminders</p>
@@ -41,15 +41,15 @@ export default async function BillingPage() {
         <Card className="md:col-span-2">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold text-slate-600">LeadLah Pro</p>
-              <p className="text-3xl font-bold text-slate-900">RM129 <span className="text-base font-semibold text-slate-500">/ month</span></p>
+              <p className="text-sm font-semibold text-muted-foreground">LeadLah Pro</p>
+              <p className="text-3xl font-bold text-foreground">RM129 <span className="text-base font-semibold text-muted-foreground">/ month</span></p>
             </div>
             <div className="flex gap-3">
               <Button variant="secondary">Start 7-Day Free Trial</Button>
               <Button>Update Payment Method</Button>
             </div>
           </div>
-          <p className="mt-3 text-sm text-slate-600">HitPay powers recurring billing with FPX & Card support. Cancellations are immediate; access switches to read-only.</p>
+          <p className="mt-3 text-sm text-muted-foreground">HitPay powers recurring billing with FPX & Card support. Cancellations are immediate; access switches to read-only.</p>
         </Card>
       </div>
 
@@ -75,7 +75,7 @@ export default async function BillingPage() {
 
       <Card>
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-slate-900">Invoice History</h3>
+          <h3 className="text-lg font-semibold text-foreground">Invoice History</h3>
           <Button variant="secondary" size="sm">Download All</Button>
         </div>
         <div className="mt-4 divide-y divide-slate-100 text-sm">
@@ -83,7 +83,7 @@ export default async function BillingPage() {
             <div key={invoice.id} className="flex flex-wrap items-center justify-between py-3">
               <div>
                 <p className="font-semibold text-slate-800">{invoice.id}</p>
-                <p className="text-xs text-slate-500">{invoice.date.toLocaleDateString()}</p>
+                <p className="text-xs text-muted-foreground">{invoice.date.toLocaleDateString()}</p>
               </div>
               <div className="flex items-center gap-3">
                 <span className="font-semibold text-slate-800">RM {invoice.amount}</span>
@@ -98,7 +98,7 @@ export default async function BillingPage() {
       </Card>
 
       <div className="flex flex-wrap gap-3">
-        <Button variant="ghost" className="text-slate-700">Cancel Subscription</Button>
+        <Button variant="ghost" className="text-muted-foreground">Cancel Subscription</Button>
         <Button variant="secondary">Open HitPay Portal</Button>
       </div>
     </div>

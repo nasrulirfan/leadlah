@@ -1,4 +1,4 @@
-import type { ProcessLogEntry, ProcessStage } from "@leadlah/core";
+import type { ProcessLogEntry, ProcessStage, ViewingCustomer } from "@leadlah/core";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
@@ -7,11 +7,19 @@ export type UpdateProcessPayload = {
   notes?: string;
   actor?: string;
   completed?: boolean;
+  viewings?: ViewingCustomer[];
+  successfulBuyerId?: string;
 };
+
+const toViewingCustomer = (viewing: ViewingCustomer): ViewingCustomer => ({
+  ...viewing,
+  viewedAt: viewing.viewedAt ? new Date(viewing.viewedAt) : undefined
+});
 
 const toProcessLogEntry = (entry: ProcessLogEntry): ProcessLogEntry => ({
   ...entry,
-  completedAt: entry.completedAt ? new Date(entry.completedAt) : undefined
+  completedAt: entry.completedAt ? new Date(entry.completedAt) : undefined,
+  viewings: entry.viewings?.map(toViewingCustomer)
 });
 
 export async function updateProcessStage(listingId: string, payload: UpdateProcessPayload) {
@@ -27,5 +35,18 @@ export async function updateProcessStage(listingId: string, payload: UpdateProce
   }
 
   const data = (await response.json()) as ProcessLogEntry;
-  return toProcessLogEntry(data);
+  const result = toProcessLogEntry(data);
+
+  if (payload.viewings && (!result.viewings || result.viewings.length === 0)) {
+    result.viewings = payload.viewings.map((viewing) => ({
+      ...viewing,
+      viewedAt: viewing.viewedAt ? new Date(viewing.viewedAt) : undefined
+    }));
+  }
+
+  if (payload.successfulBuyerId && !result.successfulBuyerId) {
+    result.successfulBuyerId = payload.successfulBuyerId;
+  }
+
+  return result;
 }

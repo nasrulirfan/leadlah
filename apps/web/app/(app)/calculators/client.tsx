@@ -399,12 +399,12 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
             <CheckCircle2 className="h-5 w-5 text-primary" />
           </div>
           <div className="flex-1">
-            <h3 className="font-semibold text-slate-900">PDF Receipt Ready</h3>
-            <p className="mt-1 text-sm text-slate-600">
+            <h3 className="font-semibold text-foreground">PDF Receipt Ready</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
               {receipt.calculationType} • {receipt.agentName} ({receipt.renNumber}) · Prepared for{" "}
               {receipt.customerName ?? "Client"}
             </p>
-            <p className="mt-1 text-xs text-slate-500">Issued: {receipt.issuedAt.toLocaleString()}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Issued: {receipt.issuedAt.toLocaleString()}</p>
           </div>
           <Button asChild size="sm" variant="outline">
             <a href={downloadUrl} download={downloadFileName ?? "calculator-receipt.pdf"} className="flex items-center">
@@ -421,8 +421,8 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Professional Calculators</h1>
-            <p className="mt-2 text-slate-600">
+            <h1 className="text-3xl font-bold text-foreground">Professional Calculators</h1>
+            <p className="mt-2 text-muted-foreground">
               Choose a calculator to get started with instant, accurate financial estimates
             </p>
           </div>
@@ -447,10 +447,10 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
                     </Badge>
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-slate-900 group-hover:text-primary">
+                    <h3 className="text-lg font-semibold text-foreground group-hover:text-primary">
                       {calc.title}
                     </h3>
-                    <p className="mt-1 text-sm text-slate-600">{calc.description}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{calc.description}</p>
                   </div>
                 </div>
               </Card>
@@ -506,10 +506,10 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
 
       <Card className="border-dashed border-border">
         <div className="grid gap-4 lg:grid-cols-4">
-          <div className="space-y-3 rounded-2xl bg-slate-50 p-4 dark:bg-slate-900/40">
+          <div className="space-y-3 rounded-2xl bg-muted/50 p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Registered Agent</p>
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-sm font-semibold text-slate-600 shadow-sm dark:bg-slate-900/60 dark:text-white">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-background text-sm font-semibold text-muted-foreground shadow-sm">
                 {agentInitials}
               </div>
               <div>
@@ -544,7 +544,7 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
               onChange={(event) => setBrandingLogoUrl(event.target.value)}
               placeholder="https://logo.cdn/brand.png"
             />
-            <p className="text-xs text-slate-500">Optional. Used to brand the PDF header.</p>
+            <p className="text-xs text-muted-foreground">Optional. Used to brand the PDF header.</p>
           </div>
         </div>
       </Card>
@@ -552,7 +552,7 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
       {selectedCalculator === "loan" && (
         <div className="grid gap-6 lg:grid-cols-3">
           <Card className="lg:col-span-2">
-            <h3 className="text-lg font-semibold text-slate-900">Input Parameters</h3>
+            <h3 className="text-lg font-semibold text-foreground">Input Parameters</h3>
             <div className="mt-6 grid gap-6 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="income">Monthly Income (RM)</Label>
@@ -609,23 +609,23 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
           </Card>
 
           <Card className="bg-gradient-to-br from-blue-50 to-indigo-50">
-            <h3 className="text-lg font-semibold text-slate-900">Results</h3>
+            <h3 className="text-lg font-semibold text-foreground">Results</h3>
             <div className="mt-6 space-y-4">
-              <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900/60">
-                <p className="text-sm text-slate-600">Max Monthly Installment</p>
-                <p className="mt-1 text-2xl font-bold text-slate-900">
+              <div className="rounded-lg bg-card p-4 shadow-sm border border-border">
+                <p className="text-sm text-muted-foreground">Max Monthly Installment</p>
+                <p className="mt-1 text-2xl font-bold text-foreground">
                   RM {loan.maxInstallment.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </p>
               </div>
-              <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900/60">
-                <p className="text-sm text-slate-600">Max Loan Amount</p>
+              <div className="rounded-lg bg-card p-4 shadow-sm border border-border">
+                <p className="text-sm text-muted-foreground">Max Loan Amount</p>
                 <p className="mt-1 text-2xl font-bold text-primary">
                   RM {loan.maxLoanAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 </p>
               </div>
-              <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900/60">
-                <p className="text-sm text-slate-600">Max Property Price</p>
-                <p className="mt-1 text-2xl font-bold text-slate-900">
+              <div className="rounded-lg bg-card p-4 shadow-sm border border-border">
+                <p className="text-sm text-muted-foreground">Max Property Price</p>
+                <p className="mt-1 text-2xl font-bold text-foreground">
                   RM {loan.maxPropertyPrice.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 </p>
               </div>
@@ -637,7 +637,7 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
       {selectedCalculator === "spa" && (
         <div className="grid gap-6 lg:grid-cols-3">
           <Card className="lg:col-span-2">
-            <h3 className="text-lg font-semibold text-slate-900">Input Parameters</h3>
+            <h3 className="text-lg font-semibold text-foreground">Input Parameters</h3>
             <div className="mt-6 grid gap-6 sm:grid-cols-2">
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="propertyPrice">Property Price (RM)</Label>
@@ -699,23 +699,23 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
           </Card>
 
           <Card className="bg-gradient-to-br from-purple-50 to-pink-50">
-            <h3 className="text-lg font-semibold text-slate-900">Cost Breakdown</h3>
+            <h3 className="text-lg font-semibold text-foreground">Cost Breakdown</h3>
             <div className="mt-6 space-y-3">
-              <div className="flex items-center justify-between rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900/60">
-                <span className="text-sm text-slate-600">Legal Fee</span>
-                <span className="font-semibold text-slate-900">
+              <div className="flex items-center justify-between rounded-lg bg-card p-3 shadow-sm border border-border">
+                <span className="text-sm text-muted-foreground">Legal Fee</span>
+                <span className="font-semibold text-foreground">
                   RM {spa.legalFee.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </span>
               </div>
-              <div className="flex items-center justify-between rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900/60">
-                <span className="text-sm text-slate-600">Disbursement</span>
-                <span className="font-semibold text-slate-900">
+              <div className="flex items-center justify-between rounded-lg bg-card p-3 shadow-sm border border-border">
+                <span className="text-sm text-muted-foreground">Disbursement</span>
+                <span className="font-semibold text-foreground">
                   RM {spa.disbursement.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </span>
               </div>
-              <div className="flex items-center justify-between rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900/60">
-                <span className="text-sm text-slate-600">Stamp Duty</span>
-                <span className="font-semibold text-slate-900">
+              <div className="flex items-center justify-between rounded-lg bg-card p-3 shadow-sm border border-border">
+                <span className="text-sm text-muted-foreground">Stamp Duty</span>
+                <span className="font-semibold text-foreground">
                   RM {spa.stampDuty.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </span>
               </div>
@@ -733,7 +733,7 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
       {selectedCalculator === "loanAgreement" && (
         <div className="grid gap-6 lg:grid-cols-3">
           <Card className="lg:col-span-2">
-            <h3 className="text-lg font-semibold text-slate-900">Loan Amount</h3>
+            <h3 className="text-lg font-semibold text-foreground">Loan Amount</h3>
             <div className="mt-6">
               <div className="space-y-2">
                 <Label htmlFor="loanAmount">Loan Amount (RM)</Label>
@@ -742,9 +742,9 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
                   type="number"
                   value={loan.maxLoanAmount.toFixed(0)}
                   readOnly
-                  className="text-lg bg-slate-50"
+                  className="text-lg bg-muted"
                 />
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   Based on loan eligibility calculation. Switch to Loan Eligibility calculator to adjust.
                 </p>
               </div>
@@ -752,17 +752,17 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
           </Card>
 
           <Card className="bg-gradient-to-br from-indigo-50 to-blue-50">
-            <h3 className="text-lg font-semibold text-slate-900">Agreement Costs</h3>
+            <h3 className="text-lg font-semibold text-foreground">Agreement Costs</h3>
             <div className="mt-6 space-y-3">
-              <div className="flex items-center justify-between rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900/60">
-                <span className="text-sm text-slate-600">Legal Fee</span>
-                <span className="font-semibold text-slate-900">
+              <div className="flex items-center justify-between rounded-lg bg-card p-3 shadow-sm border border-border">
+                <span className="text-sm text-muted-foreground">Legal Fee</span>
+                <span className="font-semibold text-foreground">
                   RM {loanAgreement.legalFee.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </span>
               </div>
-              <div className="flex items-center justify-between rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900/60">
-                <span className="text-sm text-slate-600">Stamp Duty (0.5%)</span>
-                <span className="font-semibold text-slate-900">
+              <div className="flex items-center justify-between rounded-lg bg-card p-3 shadow-sm border border-border">
+                <span className="text-sm text-muted-foreground">Stamp Duty (0.5%)</span>
+                <span className="font-semibold text-foreground">
                   RM {loanAgreement.stampDuty.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </span>
               </div>
@@ -780,7 +780,7 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
       {selectedCalculator === "roi" && (
         <div className="grid gap-6 lg:grid-cols-3">
           <Card className="lg:col-span-2">
-            <h3 className="text-lg font-semibold text-slate-900">Investment Details</h3>
+            <h3 className="text-lg font-semibold text-foreground">Investment Details</h3>
             <div className="mt-6 grid gap-6 sm:grid-cols-2">
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="price">Property Price (RM)</Label>
@@ -811,32 +811,32 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
                   onChange={(e) => setRoiInput({ ...roiInput, annualCosts: Number(e.target.value) })}
                   className="text-lg"
                 />
-                <p className="text-xs text-slate-500">Maintenance, quit rent, assessment, etc.</p>
+                <p className="text-xs text-muted-foreground">Maintenance, quit rent, assessment, etc.</p>
               </div>
             </div>
           </Card>
 
           <Card className="bg-gradient-to-br from-green-50 to-emerald-50">
-            <h3 className="text-lg font-semibold text-slate-900">Yield Analysis</h3>
+            <h3 className="text-lg font-semibold text-foreground">Yield Analysis</h3>
             <div className="mt-6 space-y-4">
-              <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900/60">
-                <p className="text-sm text-slate-600">Gross Rental Yield</p>
+              <div className="rounded-lg bg-card p-4 shadow-sm border border-border">
+                <p className="text-sm text-muted-foreground">Gross Rental Yield</p>
                 <p className="mt-2 text-3xl font-bold text-green-600">
                   {(roi.grossYield * 100).toFixed(2)}%
                 </p>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-muted-foreground">
                   Annual rent: RM {(roiInput.monthlyRent * 12).toLocaleString()}
                 </p>
               </div>
-              <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900/60">
-                <p className="text-sm text-slate-600">Net Rental Yield</p>
+              <div className="rounded-lg bg-card p-4 shadow-sm border border-border">
+                <p className="text-sm text-muted-foreground">Net Rental Yield</p>
                 <p className="mt-2 text-3xl font-bold text-primary">
                   {(roi.netYield * 100).toFixed(2)}%
                 </p>
-                <p className="mt-1 text-xs text-slate-500">After deducting annual costs</p>
+                <p className="mt-1 text-xs text-muted-foreground">After deducting annual costs</p>
               </div>
-              <div className="rounded-lg bg-slate-100 p-3">
-                <p className="text-xs text-slate-600">
+              <div className="rounded-lg bg-muted p-3">
+                <p className="text-xs text-muted-foreground">
                   {roi.netYield >= 0.05
                     ? "✅ Strong investment potential"
                     : roi.netYield >= 0.03
@@ -852,7 +852,7 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
       {selectedCalculator === "sellability" && (
         <div className="grid gap-6 lg:grid-cols-3">
           <Card className="lg:col-span-2">
-            <h3 className="text-lg font-semibold text-slate-900">Market Factors</h3>
+            <h3 className="text-lg font-semibold text-foreground">Market Factors</h3>
             <div className="mt-6 grid gap-6">
               <div className="space-y-2">
                 <Label htmlFor="belowMarket">Price Below Market Value (%)</Label>
@@ -863,7 +863,7 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
                   onChange={(e) => setSellInput({ ...sellInput, belowMarketPct: Number(e.target.value) })}
                   className="text-lg"
                 />
-                <p className="text-xs text-slate-500">Higher percentage = more attractive pricing</p>
+                <p className="text-xs text-muted-foreground">Higher percentage = more attractive pricing</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="competition">Competition Score (0-10)</Label>
@@ -876,7 +876,7 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
                   onChange={(e) => setSellInput({ ...sellInput, competitionScore: Number(e.target.value) })}
                   className="text-lg"
                 />
-                <p className="text-xs text-slate-500">0 = High competition, 10 = Low competition</p>
+                <p className="text-xs text-muted-foreground">0 = High competition, 10 = Low competition</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="liquidity">Market Liquidity Score (0-10)</Label>
@@ -889,33 +889,33 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
                   onChange={(e) => setSellInput({ ...sellInput, liquidityScore: Number(e.target.value) })}
                   className="text-lg"
                 />
-                <p className="text-xs text-slate-500">0 = Illiquid market, 10 = Highly liquid</p>
+                <p className="text-xs text-muted-foreground">0 = Illiquid market, 10 = Highly liquid</p>
               </div>
             </div>
           </Card>
 
           <Card className="bg-gradient-to-br from-orange-50 to-amber-50">
-            <h3 className="text-lg font-semibold text-slate-900">MFS Assessment</h3>
+            <h3 className="text-lg font-semibold text-foreground">MFS Assessment</h3>
             <div className="mt-6 space-y-4">
-              <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900/60">
-                <p className="text-sm text-slate-600">Sellability Score</p>
+              <div className="rounded-lg bg-card p-4 shadow-sm border border-border">
+                <p className="text-sm text-muted-foreground">Sellability Score</p>
                 <div className="mt-2 flex items-baseline gap-2">
-                  <p className="text-4xl font-bold text-slate-900">{sell.score.toFixed(0)}</p>
-                  <p className="text-lg text-slate-500">/ 100</p>
+                  <p className="text-4xl font-bold text-foreground">{sell.score.toFixed(0)}</p>
+                  <p className="text-lg text-muted-foreground">/ 100</p>
                 </div>
-                <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-200">
+                <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted">
                   <div
                     className="h-full bg-gradient-to-r from-orange-500 to-amber-500 transition-all"
                     style={{ width: `${sell.score}%` }}
                   />
                 </div>
               </div>
-              <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900/60">
-                <p className="text-sm text-slate-600">Grade</p>
+              <div className="rounded-lg bg-card p-4 shadow-sm border border-border">
+                <p className="text-sm text-muted-foreground">Grade</p>
                 <p className="mt-2 text-5xl font-bold text-primary">{sell.grade}</p>
               </div>
-              <div className="rounded-lg bg-slate-100 p-4">
-                <p className="text-sm leading-relaxed text-slate-700">{sell.commentary}</p>
+              <div className="rounded-lg bg-muted p-4">
+                <p className="text-sm leading-relaxed text-muted-foreground">{sell.commentary}</p>
               </div>
             </div>
           </Card>
@@ -925,7 +925,7 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
       {selectedCalculator === "land" && (
         <div className="grid gap-6 lg:grid-cols-3">
           <Card className="lg:col-span-2">
-            <h3 className="text-lg font-semibold text-slate-900">Development Parameters</h3>
+            <h3 className="text-lg font-semibold text-foreground">Development Parameters</h3>
             <div className="mt-6 grid gap-6">
               <div className="space-y-2">
                 <Label htmlFor="gdv">Gross Development Value - GDV (RM)</Label>
@@ -936,7 +936,7 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
                   onChange={(e) => setLandInput({ ...landInput, gdv: Number(e.target.value) })}
                   className="text-lg"
                 />
-                <p className="text-xs text-slate-500">Total estimated sales value of completed project</p>
+                <p className="text-xs text-muted-foreground">Total estimated sales value of completed project</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="landCost">Land Acquisition Cost (RM)</Label>
@@ -947,7 +947,7 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
                   onChange={(e) => setLandInput({ ...landInput, landCost: Number(e.target.value) })}
                   className="text-lg"
                 />
-                <p className="text-xs text-slate-500">Purchase price of the land</p>
+                <p className="text-xs text-muted-foreground">Purchase price of the land</p>
               </div>
               <div className="rounded-lg bg-blue-50 p-4">
                 <p className="text-sm font-medium text-blue-900">Development Cost Formula</p>
@@ -957,26 +957,26 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
           </Card>
 
           <Card className="bg-gradient-to-br from-amber-50 to-yellow-50">
-            <h3 className="text-lg font-semibold text-slate-900">Feasibility Analysis</h3>
+            <h3 className="text-lg font-semibold text-foreground">Feasibility Analysis</h3>
             <div className="mt-6 space-y-4">
-              <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900/60">
-                <p className="text-sm text-slate-600">Developer Cost (45%)</p>
-                <p className="mt-1 text-xl font-bold text-slate-900">
+              <div className="rounded-lg bg-card p-4 shadow-sm border border-border">
+                <p className="text-sm text-muted-foreground">Developer Cost (45%)</p>
+                <p className="mt-1 text-xl font-bold text-foreground">
                   RM {land.developerCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 </p>
               </div>
-              <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900/60">
-                <p className="text-sm text-slate-600">Profit Margin</p>
+              <div className="rounded-lg bg-card p-4 shadow-sm border border-border">
+                <p className="text-sm text-muted-foreground">Profit Margin</p>
                 <p className="mt-1 text-3xl font-bold text-primary">
                   {(land.margin * 100).toFixed(2)}%
                 </p>
               </div>
-              <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900/60">
-                <p className="text-sm text-slate-600">Feasibility Grade</p>
-                <p className="mt-1 text-5xl font-bold text-slate-900">{land.grade}</p>
+              <div className="rounded-lg bg-card p-4 shadow-sm border border-border">
+                <p className="text-sm text-muted-foreground">Feasibility Grade</p>
+                <p className="mt-1 text-5xl font-bold text-foreground">{land.grade}</p>
               </div>
-              <div className="rounded-lg bg-slate-100 p-3">
-                <p className="text-xs text-slate-600">
+              <div className="rounded-lg bg-muted p-3">
+                <p className="text-xs text-muted-foreground">
                   {land.grade === "A"
                     ? "✅ Excellent - Strong profit potential"
                     : land.grade === "B"
@@ -996,7 +996,7 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
       {selectedCalculator === "tenancy" && (
         <div className="grid gap-6 lg:grid-cols-3">
           <Card className="lg:col-span-2">
-            <h3 className="text-lg font-semibold text-slate-900">Tenancy Agreement Details</h3>
+            <h3 className="text-lg font-semibold text-foreground">Tenancy Agreement Details</h3>
             <div className="mt-6 grid gap-6 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="monthlyRent">Monthly Rental (RM)</Label>
@@ -1028,27 +1028,27 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
           </Card>
 
           <Card className="bg-gradient-to-br from-teal-50 to-cyan-50">
-            <h3 className="text-lg font-semibold text-slate-900">Stamp Duty Breakdown</h3>
+            <h3 className="text-lg font-semibold text-foreground">Stamp Duty Breakdown</h3>
             <div className="mt-6 space-y-3">
-              <div className="flex items-center justify-between rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900/60">
-                <span className="text-sm text-slate-600">Annual Rent</span>
-                <span className="font-semibold text-slate-900">
+              <div className="flex items-center justify-between rounded-lg bg-card p-3 shadow-sm border border-border">
+                <span className="text-sm text-muted-foreground">Annual Rent</span>
+                <span className="font-semibold text-foreground">
                   RM {(tenancyInput.monthlyRent * 12).toLocaleString()}
                 </span>
               </div>
-              <div className="flex items-center justify-between rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900/60">
-                <span className="text-sm text-slate-600">Rounded Amount</span>
-                <span className="font-semibold text-slate-900">
+              <div className="flex items-center justify-between rounded-lg bg-card p-3 shadow-sm border border-border">
+                <span className="text-sm text-muted-foreground">Rounded Amount</span>
+                <span className="font-semibold text-foreground">
                   RM {tenancy.roundedAnnualRent.toLocaleString()}
                 </span>
               </div>
-              <div className="flex items-center justify-between rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900/60">
-                <span className="text-sm text-slate-600">Blocks</span>
-                <span className="font-semibold text-slate-900">{tenancy.blocks}</span>
+              <div className="flex items-center justify-between rounded-lg bg-card p-3 shadow-sm border border-border">
+                <span className="text-sm text-muted-foreground">Blocks</span>
+                <span className="font-semibold text-foreground">{tenancy.blocks}</span>
               </div>
-              <div className="flex items-center justify-between rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900/60">
-                <span className="text-sm text-slate-600">Rate Applied</span>
-                <span className="font-semibold text-slate-900">{tenancy.rate}%</span>
+              <div className="flex items-center justify-between rounded-lg bg-card p-3 shadow-sm border border-border">
+                <span className="text-sm text-muted-foreground">Rate Applied</span>
+                <span className="font-semibold text-foreground">{tenancy.rate}%</span>
               </div>
               <div className="mt-4 rounded-lg bg-primary p-4 text-white shadow-md">
                 <p className="text-sm opacity-90">Total Stamp Duty</p>

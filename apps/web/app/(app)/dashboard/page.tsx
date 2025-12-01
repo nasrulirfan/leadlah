@@ -22,8 +22,8 @@ export default async function DashboardPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Agent Overview</h1>
-          <p className="text-sm text-slate-600">Stay on top of listings, reminders, and profitability.</p>
+          <h1 className="text-2xl font-bold text-foreground">Agent Overview</h1>
+          <p className="text-sm text-muted-foreground">Stay on top of listings, reminders, and profitability.</p>
         </div>
         <div className="flex gap-3">
           <Button asChild variant="secondary">
@@ -37,26 +37,26 @@ export default async function DashboardPage() {
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
-          <h3 className="text-sm font-semibold text-slate-600">Active Listings</h3>
+          <h3 className="text-sm font-semibold text-muted-foreground">Active Listings</h3>
           <p className="mt-2 text-3xl font-bold text-brand-600">{active}</p>
-          <p className="text-xs text-slate-500">vs Sold: {sold}</p>
+          <p className="text-xs text-muted-foreground">vs Sold: {sold}</p>
         </Card>
         <Card>
-          <h3 className="text-sm font-semibold text-slate-600">Action Required</h3>
+          <h3 className="text-sm font-semibold text-muted-foreground">Action Required</h3>
           <div className="mt-2 space-y-2">
             {actionRequired.map((item) => (
-              <div key={item.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
-                <span className="text-sm text-slate-800">{item.message}</span>
+              <div key={item.id} className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2">
+                <span className="text-sm text-foreground">{item.message}</span>
                 <Badge tone="warning">{item.type}</Badge>
               </div>
             ))}
           </div>
         </Card>
         <Card>
-          <h3 className="text-sm font-semibold text-slate-600">Profit vs Target</h3>
+          <h3 className="text-sm font-semibold text-muted-foreground">Profit vs Target</h3>
           <div className="mt-2 text-3xl font-bold text-emerald-600">RM {net.toLocaleString()}</div>
-          <p className="text-xs text-slate-500">Target: RM {target.toLocaleString()}</p>
-          <div className="mt-3 h-3 w-full overflow-hidden rounded-full bg-slate-100">
+          <p className="text-xs text-muted-foreground">Target: RM {target.toLocaleString()}</p>
+          <div className="mt-3 h-3 w-full overflow-hidden rounded-full bg-muted">
             <div className="h-full bg-emerald-500" style={{ width: `${progress}%` }} />
           </div>
         </Card>
@@ -65,8 +65,8 @@ export default async function DashboardPage() {
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="text-lg font-semibold text-slate-900">Quick Calculators</h3>
-            <p className="text-sm text-slate-600">Loan eligibility, legal fees, stamp duty, ROI, and more.</p>
+            <h3 className="text-lg font-semibold text-foreground">Quick Calculators</h3>
+            <p className="text-sm text-muted-foreground">Loan eligibility, legal fees, stamp duty, ROI, and more.</p>
           </div>
           <Button asChild variant="secondary" size="sm">
             <Link href="/calculators">Open All Calculators</Link>
@@ -74,7 +74,7 @@ export default async function DashboardPage() {
         </div>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           {["Loan Eligibility", "Legal Fee & Stamp Duty", "ROI"].map((item) => (
-            <div key={item} className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800">
+            <div key={item} className="rounded-xl border border-border bg-muted/50 px-4 py-3 text-sm font-semibold text-foreground">
               {item}
             </div>
           ))}
