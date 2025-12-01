@@ -133,4 +133,5 @@ export const billingHistory = [
   { id: "INV-1002", amount: 129, date: addDays(new Date(), -1), status: "Failed" }
 ];
 
-export const ownerViewToken = generateOwnerViewToken(listings[0].id, 30);
+const demoOwnerLinkSecret = process.env.OWNER_LINK_SECRET ?? "demo-owner-link-secret";
+export const ownerViewToken = generateOwnerViewToken(listings[0].id, 30, demoOwnerLinkSecret);

@@ -23,6 +23,14 @@ type LogStagePayload = {
   successfulBuyerId?: string;
 };
 
+const resolveOwnerLinkSecret = () => {
+  const secret = process.env.OWNER_LINK_SECRET;
+  if (!secret) {
+    throw new Error("OWNER_LINK_SECRET must be configured to generate owner links.");
+  }
+  return secret;
+};
+
 @Injectable()
 export class ProcessService {
   constructor(
@@ -197,6 +205,6 @@ export class ProcessService {
     if (count === 0) {
       throw new NotFoundException("Listing has no process log");
     }
-    return generateOwnerViewToken(listingId, 30);
+    return generateOwnerViewToken(listingId, 30, resolveOwnerLinkSecret());
   }
 }

@@ -157,3 +157,12 @@ export async function removeListing(id: string): Promise<{ id: string } | null> 
   const row = result.rows[0];
   return row ?? null;
 }
+
+export async function fetchListingById(id: string): Promise<ListingInput | null> {
+  if (!id) {
+    return null;
+  }
+  const result = await db.query<ListingRow>(`SELECT ${listingColumns} FROM "listings" WHERE id = $1 LIMIT 1`, [id]);
+  const row = result.rows[0];
+  return row ? toListing(row) : null;
+}

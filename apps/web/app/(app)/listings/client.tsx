@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { ListingStatus, ProcessStage, generateOwnerViewToken } from "@leadlah/core";
+import { ListingStatus, ProcessStage } from "@leadlah/core";
 import type { ListingInput, ProcessLogEntry, ViewingCustomer } from "@leadlah/core";
 import { reminders } from "@/lib/mock-data";
 import { listingFormSchema, type ListingFormValues } from "@/lib/listings/form";
@@ -21,9 +21,10 @@ import {
   DialogTitle,
   DialogTrigger
 } from "@/components/ui/dialog";
-import { updateProcessStage } from "@/lib/process-log/api";
+import { fetchOwnerLink, updateProcessStage } from "@/lib/process-log/api";
+import { encodeOwnerViewToken } from "@/lib/owner-link";
 import { cn } from "@/lib/utils";
-import { CheckCircle2, Trash2 } from "lucide-react";
+import { CheckCircle2, Copy, Trash2 } from "lucide-react";
 
 type ProcessLogMap = Record<string, ProcessLogEntry[]>;
 
@@ -90,7 +91,6 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
   const [processLogMap, setProcessLogMap] = useState<ProcessLogMap>(initialProcessLogs);
   const [form, setForm] = useState<ListingFormValues>(emptyListing);
   const [error, setError] = useState<string | null>(null);
-  const [ownerLink, setOwnerLink] = useState<string | null>(null);
   const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
   const [editingListing, setEditingListing] = useState<ListingInput | null>(null);
   const [statusFilter, setStatusFilter] = useState<"All" | ListingStatus>("All");
@@ -194,7 +194,6 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
     });
   };
 
-  const ownerView = useMemo(() => generateOwnerViewToken(listings[0]?.id ?? crypto.randomUUID()), [listings]);
   const openListingForm = (listing?: ListingInput) => {
     if (listing) {
       setForm(listingToFormValues(listing));
@@ -385,16 +384,8 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
                 ))}
               </SelectContent>
             </Select>
-            <Button variant="secondary" size="sm" onClick={() => setOwnerLink(ownerView.token)}>
-              Owner Link
-            </Button>
           </div>
         </div>
-        {ownerLink && (
-          <p className="mt-2 text-xs text-slate-600">
-            Shareable owner link: <code className="rounded bg-slate-100 px-2 py-1">{ownerLink}</code>
-          </p>
-        )}
         <div className="mt-4 divide-y divide-slate-100">
           {filteredListings.map((listing) => {
             const logEntries = processLogMap[listing.id] ?? [];
@@ -513,6 +504,11 @@ function ProcessLogDialog({ listing, entries, onUpdated }: ProcessLogDialogProps
   const [viewingForm, setViewingForm] = useState<ViewingFormState>(emptyViewingForm);
   const [viewingError, setViewingError] = useState<string | null>(null);
   const [isViewingsDialogOpen, setIsViewingsDialogOpen] = useState(false);
+  const [ownerShareLink, setOwnerShareLink] = useState<string | null>(null);
+  const [ownerShareExpiresAt, setOwnerShareExpiresAt] = useState<Date | null>(null);
+  const [ownerLinkError, setOwnerLinkError] = useState<string | null>(null);
+  const [isGeneratingOwnerLink, setIsGeneratingOwnerLink] = useState(false);
+  const [hasCopiedOwnerLink, setHasCopiedOwnerLink] = useState(false);
 
   const generateViewingId = () =>
     typeof crypto !== "undefined" && "randomUUID" in crypto && typeof crypto.randomUUID === "function"
@@ -572,6 +568,40 @@ function ProcessLogDialog({ listing, entries, onUpdated }: ProcessLogDialogProps
     });
   };
 
+  const handleGenerateOwnerLink = async () => {
+    setOwnerLinkError(null);
+    setHasCopiedOwnerLink(false);
+    setIsGeneratingOwnerLink(true);
+    try {
+      const token = await fetchOwnerLink(listing.id);
+      const encoded = encodeOwnerViewToken(token);
+      const baseUrl =
+        process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ??
+        (typeof window !== "undefined" ? window.location.origin : "");
+      const url = `${baseUrl || ""}/owner/${encoded}`;
+      setOwnerShareLink(url);
+      setOwnerShareExpiresAt(token.expiresAt);
+    } catch (err) {
+      setOwnerLinkError(err instanceof Error ? err.message : "Unable to generate owner link.");
+      setOwnerShareLink(null);
+      setOwnerShareExpiresAt(null);
+    } finally {
+      setIsGeneratingOwnerLink(false);
+    }
+  };
+
+  const handleCopyOwnerLink = async () => {
+    if (!ownerShareLink || typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(ownerShareLink);
+      setHasCopiedOwnerLink(true);
+    } catch (err) {
+      setOwnerLinkError(err instanceof Error ? err.message : "Unable to copy link. Copy manually.");
+    }
+  };
+
   useEffect(() => {
     if (!open) {
       setMessage(null);
@@ -579,6 +609,10 @@ function ProcessLogDialog({ listing, entries, onUpdated }: ProcessLogDialogProps
       setViewingForm(emptyViewingForm);
       setViewings([]);
       setSuccessfulBuyerId(null);
+      setOwnerShareLink(null);
+      setOwnerShareExpiresAt(null);
+      setOwnerLinkError(null);
+      setHasCopiedOwnerLink(false);
       return;
     }
     setSelectedStage(pendingStage);
@@ -654,6 +688,16 @@ function ProcessLogDialog({ listing, entries, onUpdated }: ProcessLogDialogProps
     });
   };
 
+  const formatDateTime = (value?: Date | null) => {
+    if (!value) {
+      return null;
+    }
+    return value.toLocaleString("en-MY", {
+      dateStyle: "medium",
+      timeStyle: "short"
+    });
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <div className="flex flex-col gap-1">
@@ -666,13 +710,53 @@ function ProcessLogDialog({ listing, entries, onUpdated }: ProcessLogDialogProps
           {completedCount} / {stageOrder.length} stages complete
         </p>
       </div>
-      <DialogContent className="max-w-3xl overflow-hidden border-0 p-0">
+      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto border-0 p-0">
         <div className="grid gap-0 md:grid-cols-[1.25fr_1fr]">
           <div className="space-y-4 bg-slate-50 p-6 dark:bg-slate-900/30">
             <DialogHeader className="text-left">
               <DialogTitle>Process Timeline</DialogTitle>
               <DialogDescription>Live transparency for {listing.propertyName}</DialogDescription>
             </DialogHeader>
+            <div className="rounded-xl border border-dashed border-slate-300/70 bg-white/80 p-4 text-sm shadow-sm dark:border-slate-700/80 dark:bg-slate-900/60">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Owner access</p>
+                  <p className="text-sm text-muted-foreground">Share a read-only link for this listing.</p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={handleGenerateOwnerLink}
+                  disabled={isGeneratingOwnerLink}
+                >
+                  {isGeneratingOwnerLink ? "Generating..." : "Generate link"}
+                </Button>
+              </div>
+              {ownerLinkError ? <p className="mt-2 text-xs text-destructive">{ownerLinkError}</p> : null}
+              {ownerShareLink ? (
+                <div className="mt-3 space-y-2">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
+                    <code className="flex-1 rounded-lg border border-slate-200/80 bg-slate-50/80 px-3 py-2 text-xs text-slate-700 dark:border-slate-800 dark:bg-slate-900 break-all">
+                      {ownerShareLink}
+                    </code>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-2"
+                      onClick={handleCopyOwnerLink}
+                    >
+                      {hasCopiedOwnerLink ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                      {hasCopiedOwnerLink ? "Copied" : "Copy link"}
+                    </Button>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    {hasCopiedOwnerLink ? "Link copied" : `Expires ${formatDateTime(ownerShareExpiresAt) ?? ""}`}
+                  </p>
+                </div>
+              ) : null}
+            </div>
             <div className="max-h-[60vh] space-y-3 overflow-y-auto pr-1">
               {stageOrder.map((stage, index) => {
                 const entry = entries.find((item) => item.stage === stage);

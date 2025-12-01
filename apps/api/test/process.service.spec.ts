@@ -5,6 +5,8 @@ import * as core from "@leadlah/core";
 import { ProcessLogEntity } from "../src/process/entities/process-log.entity";
 import type { Repository } from "typeorm";
 
+process.env.OWNER_LINK_SECRET = "test-owner-link-secret";
+
 vi.mock("@leadlah/core", async () => {
   const actual = await vi.importActual<typeof import("@leadlah/core")>("@leadlah/core");
   return {
@@ -54,7 +56,7 @@ describe("ProcessService", () => {
     (repository.count as any).mockResolvedValue(1);
     const token = await service.ownerLink("listing");
 
-    expect(generateOwnerViewToken).toHaveBeenCalledWith("listing", 30);
+    expect(generateOwnerViewToken).toHaveBeenCalledWith("listing", 30, "test-owner-link-secret");
     expect(token).toEqual({
       listingId: "listing",
       token: "token",

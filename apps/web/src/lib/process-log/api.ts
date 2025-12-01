@@ -1,4 +1,4 @@
-import type { ProcessLogEntry, ProcessStage, ViewingCustomer } from "@leadlah/core";
+import type { OwnerViewToken, ProcessLogEntry, ProcessStage, ViewingCustomer } from "@leadlah/core";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
@@ -49,4 +49,19 @@ export async function updateProcessStage(listingId: string, payload: UpdateProce
   }
 
   return result;
+}
+
+export async function fetchOwnerLink(listingId: string): Promise<OwnerViewToken> {
+  const response = await fetch(`${API_BASE_URL}/process/${listingId}/owner-link`);
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || "Unable to generate owner link.");
+  }
+
+  const data = (await response.json()) as OwnerViewToken & { expiresAt: string };
+  return {
+    ...data,
+    expiresAt: new Date(data.expiresAt)
+  };
 }
