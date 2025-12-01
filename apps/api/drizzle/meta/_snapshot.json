@@ -162,6 +162,100 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
+    "process_viewings": {
+      "name": "process_viewings",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "processLogId": {
+          "name": "processLogId",
+          "type": "uuid",
+          "notNull": true
+        },
+        "listingId": {
+          "name": "listingId",
+          "type": "uuid",
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(160)",
+          "notNull": true
+        },
+        "phone": {
+          "name": "phone",
+          "type": "varchar(32)"
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(120)"
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text"
+        },
+        "viewedAt": {
+          "name": "viewedAt",
+          "type": "timestamptz"
+        },
+        "isSuccessfulBuyer": {
+          "name": "isSuccessfulBuyer",
+          "type": "boolean",
+          "notNull": true,
+          "default": "false"
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "now()"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "process_viewings_listing_idx": {
+          "name": "process_viewings_listing_idx",
+          "columns": ["listingId"],
+          "isUnique": false
+        },
+        "process_viewings_process_log_idx": {
+          "name": "process_viewings_process_log_idx",
+          "columns": ["processLogId"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "process_viewings_processLogId_process_logs_id_fk": {
+          "name": "process_viewings_processLogId_process_logs_id_fk",
+          "columns": ["processLogId"],
+          "foreignTable": "process_logs",
+          "foreignColumns": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "process_viewings_listingId_listings_id_fk": {
+          "name": "process_viewings_listingId_listings_id_fk",
+          "columns": ["listingId"],
+          "foreignTable": "listings",
+          "foreignColumns": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
     "targets": {
       "name": "targets",
       "schema": "",

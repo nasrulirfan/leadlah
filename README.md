@@ -61,6 +61,22 @@ pnpm test    # placeholder; add tests per package
 
 > Tip: for local dev, keep running `pnpm dev --filter @leadlah/web` natively while the API + databases run in Docker.
 
+## Database Migrations (Drizzle)
+
+The Postgres schema is versioned with [Drizzle](https://orm.drizzle.team/). Run pending migrations before starting the API:
+
+```bash
+pnpm --filter @leadlah/api db:migrate
+```
+
+When you update the schema under `apps/api/src/database/schema`, generate a new migration:
+
+```bash
+pnpm --filter @leadlah/api db:generate
+```
+
+Both commands read `DATABASE_URL` from `apps/api/.env`.
+
 ## Environment Variables
 
 Create `.env.local` in `apps/web`:
@@ -116,9 +132,9 @@ pnpm dev --filter @leadlah/web
 The **Sales, Target & Expense Tracker** module helps agents track their business performance, manage expenses, and understand true profitability.
 
 ### Quick Start
-1. Run database migration:
+1. Run the Drizzle migrations (ensures targets/expenses/commissions tables exist):
    ```bash
-   psql $DATABASE_URL -f apps/api/migrations/006_performance_tables.sql
+   pnpm --filter @leadlah/api db:migrate
    ```
 2. Navigate to `http://localhost:3000/performance`
 
