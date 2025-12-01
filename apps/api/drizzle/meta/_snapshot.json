@@ -1,0 +1,384 @@
+{
+  "version": "6",
+  "dialect": "postgresql",
+  "tables": {
+    "listings": {
+      "name": "listings",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "propertyName": {
+          "name": "propertyName",
+          "type": "varchar(255)",
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "varchar(100)",
+          "notNull": true
+        },
+        "price": {
+          "name": "price",
+          "type": "numeric(15, 2)",
+          "notNull": true
+        },
+        "size": {
+          "name": "size",
+          "type": "numeric(12, 2)",
+          "notNull": true
+        },
+        "bedrooms": {
+          "name": "bedrooms",
+          "type": "integer",
+          "notNull": true
+        },
+        "bathrooms": {
+          "name": "bathrooms",
+          "type": "integer",
+          "notNull": true
+        },
+        "location": {
+          "name": "location",
+          "type": "varchar(255)",
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(32)",
+          "notNull": true,
+          "default": "'Active'"
+        },
+        "photos": {
+          "name": "photos",
+          "type": "text",
+          "notNull": true,
+          "default": "'[]'"
+        },
+        "videos": {
+          "name": "videos",
+          "type": "text",
+          "notNull": true,
+          "default": "'[]'"
+        },
+        "documents": {
+          "name": "documents",
+          "type": "text",
+          "notNull": true,
+          "default": "'[]'"
+        },
+        "externalLinks": {
+          "name": "externalLinks",
+          "type": "text",
+          "notNull": true,
+          "default": "'[]'"
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "now()"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "process_logs": {
+      "name": "process_logs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "listingId": {
+          "name": "listingId",
+          "type": "uuid",
+          "notNull": true
+        },
+        "stage": {
+          "name": "stage",
+          "type": "varchar(64)",
+          "notNull": true
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text"
+        },
+        "actor": {
+          "name": "actor",
+          "type": "varchar(120)"
+        },
+        "completedAt": {
+          "name": "completedAt",
+          "type": "timestamptz"
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "now()"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "process_logs_listing_stage_idx": {
+          "name": "process_logs_listing_stage_idx",
+          "columns": ["listingId", "stage"],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "process_logs_listingId_listings_id_fk": {
+          "name": "process_logs_listingId_listings_id_fk",
+          "columns": ["listingId"],
+          "foreignTable": "listings",
+          "foreignColumns": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "targets": {
+      "name": "targets",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "varchar(255)",
+          "notNull": true
+        },
+        "year": {
+          "name": "year",
+          "type": "integer",
+          "notNull": true
+        },
+        "month": {
+          "name": "month",
+          "type": "integer"
+        },
+        "target_units": {
+          "name": "target_units",
+          "type": "integer",
+          "notNull": true,
+          "default": "0"
+        },
+        "target_income": {
+          "name": "target_income",
+          "type": "numeric(12, 2)",
+          "notNull": true,
+          "default": "0"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_targets_user_id": {
+          "name": "idx_targets_user_id",
+          "columns": ["user_id"],
+          "isUnique": false
+        },
+        "idx_targets_year": {
+          "name": "idx_targets_year",
+          "columns": ["year"],
+          "isUnique": false
+        },
+        "unique_user_period": {
+          "name": "unique_user_period",
+          "columns": ["user_id", "year", "month"],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "expenses": {
+      "name": "expenses",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "varchar(255)",
+          "notNull": true
+        },
+        "category": {
+          "name": "category",
+          "type": "varchar(50)",
+          "notNull": true
+        },
+        "amount": {
+          "name": "amount",
+          "type": "numeric(10, 2)",
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "notNull": true
+        },
+        "date": {
+          "name": "date",
+          "type": "date",
+          "notNull": true
+        },
+        "receipt_url": {
+          "name": "receipt_url",
+          "type": "text"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_expenses_user_id": {
+          "name": "idx_expenses_user_id",
+          "columns": ["user_id"],
+          "isUnique": false
+        },
+        "idx_expenses_date": {
+          "name": "idx_expenses_date",
+          "columns": ["date"],
+          "isUnique": false
+        },
+        "idx_expenses_category": {
+          "name": "idx_expenses_category",
+          "columns": ["category"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "commissions": {
+      "name": "commissions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "varchar(255)",
+          "notNull": true
+        },
+        "listing_id": {
+          "name": "listing_id",
+          "type": "uuid"
+        },
+        "amount": {
+          "name": "amount",
+          "type": "numeric(12, 2)",
+          "notNull": true
+        },
+        "closed_date": {
+          "name": "closed_date",
+          "type": "date",
+          "notNull": true
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_commissions_user_id": {
+          "name": "idx_commissions_user_id",
+          "columns": ["user_id"],
+          "isUnique": false
+        },
+        "idx_commissions_closed_date": {
+          "name": "idx_commissions_closed_date",
+          "columns": ["closed_date"],
+          "isUnique": false
+        },
+        "idx_commissions_listing_id": {
+          "name": "idx_commissions_listing_id",
+          "columns": ["listing_id"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "commissions_listing_id_listings_id_fk": {
+          "name": "commissions_listing_id_listings_id_fk",
+          "columns": ["listing_id"],
+          "foreignTable": "listings",
+          "foreignColumns": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    }
+  },
+  "enums": {},
+  "schemas": {}
+}

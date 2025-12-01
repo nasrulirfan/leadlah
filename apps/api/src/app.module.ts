@@ -29,7 +29,7 @@ import { SubscriptionModule } from "./subscription/subscription.module";
           type: "postgres",
           url,
           autoLoadEntities: true,
-          synchronize: true
+          synchronize: false
         };
       }
     }),
