@@ -76,6 +76,28 @@ export type OwnerViewToken = {
   expiresAt: Date;
 };
 
+export type NotificationPreferences = {
+  reminders: boolean;
+  smartDigest: boolean;
+  productUpdates: boolean;
+};
+
+export type UserProfile = {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  agency?: string;
+  role?: string;
+  bio?: string;
+  avatarUrl?: string;
+  coverUrl?: string;
+  timezone: string;
+  language: string;
+  whatsapp?: string;
+  notifications: NotificationPreferences;
+};
+
 export type ReminderType =
   | "PORTAL_EXPIRY"
   | "EXCLUSIVE_APPOINTMENT"

@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Calculator, CreditCard, LayoutDashboard, ListChecks, TrendingUp } from "lucide-react";
+import { Calculator, CreditCard, LayoutDashboard, ListChecks, TrendingUp, User } from "lucide-react";
 
 export type AppNavLink = {
   href: string;
@@ -32,6 +32,12 @@ export const appNavLinks: AppNavLink[] = [
     label: "Performance",
     description: "Targets & expenses",
     icon: TrendingUp
+  },
+  {
+    href: "/profile",
+    label: "Profile",
+    description: "Contact & presence",
+    icon: User
   },
   {
     href: "/billing",

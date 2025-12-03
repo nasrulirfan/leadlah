@@ -1,0 +1,89 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { userProfileUpdateSchema, type UserProfile } from "@leadlah/core";
+
+import { persistProfile } from "@/data/profile";
+import { requireSession } from "@/lib/session";
+
+const profileMutationSchema = userProfileUpdateSchema;
+
+const asOptionalString = (value: FormDataEntryValue | null) => {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return trimmed.length ? trimmed : undefined;
+};
+
+const asString = (value: FormDataEntryValue | null) => (typeof value === "string" ? value.trim() : "");
+
+const asBoolean = (value: FormDataEntryValue | null) => (typeof value === "string" ? value === "on" : false);
+
+const mutationSchema = z.object({
+  userId: z.string().min(1)
+});
+
+export type ProfileFormState = {
+  status: "idle" | "success" | "error";
+  message?: string;
+  errors?: Record<string, string[]>;
+  data?: UserProfile;
+};
+
+export const initialProfileState: ProfileFormState = { status: "idle" };
+
+export async function updateProfile(prevState: ProfileFormState, formData: FormData): Promise<ProfileFormState> {
+  const session = await requireSession();
+  const userId = session.user?.id ?? asString(formData.get("userId"));
+
+  const parsedUserId = mutationSchema.safeParse({ userId });
+  if (!parsedUserId.success) {
+    return {
+      status: "error",
+      message: "Your session expired. Please refresh and try again.",
+      errors: parsedUserId.error.flatten().fieldErrors
+    };
+  }
+
+  const payloadResult = profileMutationSchema.safeParse({
+    name: asString(formData.get("name")),
+    email: asString(formData.get("email")),
+    phone: asOptionalString(formData.get("phone")),
+    whatsapp: asOptionalString(formData.get("whatsapp")),
+    agency: asOptionalString(formData.get("agency")),
+    role: asOptionalString(formData.get("role")),
+    bio: asOptionalString(formData.get("bio")),
+    avatarUrl: asOptionalString(formData.get("avatarUrl")),
+    coverUrl: asOptionalString(formData.get("coverUrl")),
+    timezone: asString(formData.get("timezone")),
+    language: asString(formData.get("language")),
+    notifications: {
+      reminders: asBoolean(formData.get("notifications.reminders")),
+      smartDigest: asBoolean(formData.get("notifications.smartDigest")),
+      productUpdates: asBoolean(formData.get("notifications.productUpdates"))
+    }
+  });
+
+  if (!payloadResult.success) {
+    return {
+      status: "error",
+      message: "Please fix the highlighted fields and try again.",
+      errors: payloadResult.error.flatten().fieldErrors
+    };
+  }
+
+  const nextProfile = await persistProfile({
+    ...payloadResult.data,
+    id: parsedUserId.data.userId
+  });
+
+  revalidatePath("/profile");
+
+  return {
+    status: "success",
+    message: "Profile updated successfully.",
+    data: nextProfile
+  };
+}

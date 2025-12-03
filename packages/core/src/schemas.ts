@@ -1,6 +1,37 @@
 import { z } from "zod";
 import { ListingStatus, ProcessStage, SubscriptionStatus } from "./types";
 
+const urlLikeSchema = z
+  .string()
+  .min(4)
+  .refine((value) => /^(https?:\/\/)/i.test(value) || value.startsWith("data:"), {
+    message: "Must be a valid URL"
+  });
+
+export const notificationPreferencesSchema = z.object({
+  reminders: z.boolean(),
+  smartDigest: z.boolean(),
+  productUpdates: z.boolean()
+});
+
+export const userProfileSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(2),
+  email: z.string().email(),
+  phone: z.string().min(6).max(40).optional(),
+  agency: z.string().min(2).max(80).optional(),
+  role: z.string().min(2).max(80).optional(),
+  bio: z.string().max(280).optional(),
+  avatarUrl: urlLikeSchema.optional(),
+  coverUrl: urlLikeSchema.optional(),
+  timezone: z.string().min(2),
+  language: z.string().min(2),
+  whatsapp: z.string().min(6).max(40).optional(),
+  notifications: notificationPreferencesSchema
+});
+
+export const userProfileUpdateSchema = userProfileSchema.omit({ id: true });
+
 export const mediaAssetSchema = z.object({
   url: z.string().url(),
   label: z.string().optional()
@@ -62,3 +93,6 @@ export const subscriptionStatusSchema = z.nativeEnum(SubscriptionStatus);
 export type ListingInput = z.infer<typeof listingSchema>;
 export type ProcessLogInput = z.infer<typeof processLogEntrySchema>;
 export type ReminderInput = z.infer<typeof reminderSchema>;
+export type NotificationPreferencesInput = z.infer<typeof notificationPreferencesSchema>;
+export type UserProfileInput = z.infer<typeof userProfileSchema>;
+export type UserProfileUpdateInput = z.infer<typeof userProfileUpdateSchema>;
