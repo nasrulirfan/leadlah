@@ -53,17 +53,19 @@ export async function GET(request: NextRequest) {
       month ? [userId, year, month] : [userId, year]
     );
 
-    const target = targetResult.rows[0] || { target_units: 0, target_income: 0 };
-    const commission = parseFloat(commissionResult.rows[0].total);
-    const units = parseInt(commissionResult.rows[0].units);
-    const expenses = parseFloat(expenseResult.rows[0].total);
+    const targetRow = targetResult.rows[0] || { target_units: 0, target_income: 0 };
+    const targetUnits = Number(targetRow.target_units ?? 0);
+    const targetIncome = Number(targetRow.target_income ?? 0);
+    const commission = Number(commissionResult.rows[0].total ?? 0);
+    const units = Number(commissionResult.rows[0].units ?? 0);
+    const expenses = Number(expenseResult.rows[0].total ?? 0);
     const netIncome = commission - expenses;
 
     const metrics = {
       period: { year, month },
       target: {
-        units: target.target_units,
-        income: target.target_income
+        units: targetUnits,
+        income: targetIncome
       },
       actual: {
         units,
@@ -72,8 +74,8 @@ export async function GET(request: NextRequest) {
         netIncome
       },
       progress: {
-        unitsPercent: target.target_units > 0 ? (units / target.target_units) * 100 : 0,
-        incomePercent: target.target_income > 0 ? (netIncome / target.target_income) * 100 : 0
+        unitsPercent: targetUnits > 0 ? (units / targetUnits) * 100 : 0,
+        incomePercent: targetIncome > 0 ? (netIncome / targetIncome) * 100 : 0
       }
     };
 

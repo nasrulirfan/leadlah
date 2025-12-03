@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireSession } from "@/lib/session";
+import { serializeExpenseRow } from "@/lib/performance/serializers";
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
 
     const result = await db.query(query, params);
 
-    return NextResponse.json(result.rows);
+    return NextResponse.json(result.rows.map(serializeExpenseRow));
   } catch (error) {
     console.error("Error fetching expenses:", error);
     return NextResponse.json({ error: "Failed to fetch expenses" }, { status: 500 });
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
       [userId, category, amount, description, date, receiptUrl || null]
     );
 
-    return NextResponse.json(result.rows[0]);
+    return NextResponse.json(serializeExpenseRow(result.rows[0]));
   } catch (error) {
     console.error("Error creating expense:", error);
     return NextResponse.json({ error: "Failed to create expense" }, { status: 500 });

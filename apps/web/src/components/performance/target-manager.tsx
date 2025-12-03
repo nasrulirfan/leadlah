@@ -10,12 +10,28 @@ import { Plus, Edit2, Trash2 } from "lucide-react";
 import { useTargets } from "@/lib/performance/hooks";
 
 export function TargetManager() {
-  const { targets, createTarget, updateTarget, deleteTarget } = useTargets();
+  const { targets, createTarget, updateTarget, deleteTarget, isLoading, error } = useTargets();
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
+
+  const handleCreate = (data: any) => {
+    createTarget(data)
+      .then(() => setIsCreating(false))
+      .catch((err) => console.error("Unable to create target", err));
+  };
+
+  const handleUpdate = (id: string, data: any) => {
+    updateTarget(id, data)
+      .then(() => setEditingId(null))
+      .catch((err) => console.error("Unable to update target", err));
+  };
+
+  const handleDelete = (id: string) => {
+    deleteTarget(id).catch((err) => console.error("Unable to delete target", err));
+  };
 
   return (
     <div className="space-y-6">
@@ -30,17 +46,26 @@ export function TargetManager() {
           </div>
         </CardHeader>
         <CardContent>
+          {error && (
+            <div className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+              {error}
+            </div>
+          )}
+
           {isCreating && (
             <TargetForm
-              onSubmit={(data) => {
-                createTarget(data);
-                setIsCreating(false);
-              }}
+              onSubmit={(data) => handleCreate(data)}
               onCancel={() => setIsCreating(false)}
             />
           )}
 
           <div className="space-y-3">
+            {isLoading && !targets?.length && (
+              <div className="py-8 text-center text-sm text-muted-foreground">
+                Loading targets...
+              </div>
+            )}
+
             {targets?.map((target) => (
               <div
                 key={target.id}
@@ -49,10 +74,7 @@ export function TargetManager() {
                 {editingId === target.id ? (
                   <TargetForm
                     initialData={target}
-                    onSubmit={(data) => {
-                      updateTarget(target.id, data);
-                      setEditingId(null);
-                    }}
+                    onSubmit={(data) => handleUpdate(target.id, data)}
                     onCancel={() => setEditingId(null)}
                   />
                 ) : (
@@ -87,7 +109,7 @@ export function TargetManager() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => deleteTarget(target.id)}
+                        onClick={() => handleDelete(target.id)}
                       >
                         <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
                       </Button>
@@ -97,7 +119,7 @@ export function TargetManager() {
               </div>
             ))}
 
-            {!targets?.length && !isCreating && (
+            {!targets?.length && !isCreating && !isLoading && (
               <div className="py-12 text-center">
                 <p className="text-sm text-muted-foreground">No targets set yet. Create your first target to start tracking!</p>
               </div>

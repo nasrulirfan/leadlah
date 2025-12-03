@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireSession } from "@/lib/session";
+import { serializeExpenseRow } from "@/lib/performance/serializers";
 
 export async function PATCH(
   request: NextRequest,
@@ -29,7 +30,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Expense not found" }, { status: 404 });
     }
 
-    return NextResponse.json(result.rows[0]);
+    return NextResponse.json(serializeExpenseRow(result.rows[0]));
   } catch (error) {
     console.error("Error updating expense:", error);
     return NextResponse.json({ error: "Failed to update expense" }, { status: 500 });

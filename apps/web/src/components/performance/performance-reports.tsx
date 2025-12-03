@@ -9,7 +9,7 @@ import { usePerformanceReports } from "@/lib/performance/hooks";
 
 export function PerformanceReports() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const { yearlyReport, monthlyReports, isLoading } = usePerformanceReports(selectedYear);
+  const { yearlyReport, monthlyReports, isLoading, error, refresh } = usePerformanceReports(selectedYear);
 
   const handleDownloadReport = async (period: string) => {
     // TODO: Implement PDF generation
@@ -22,6 +22,14 @@ export function PerformanceReports() {
 
   return (
     <div className="space-y-6">
+      {error && !isLoading && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <span>{error}</span>
+          <Button size="sm" variant="ghost" onClick={() => refresh()}>
+            Retry
+          </Button>
+        </div>
+      )}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">

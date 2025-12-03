@@ -22,7 +22,7 @@ const categoryColors: Record<string, string> = {
 };
 
 export function ExpenseTracker() {
-  const { expenses, createExpense, updateExpense, deleteExpense, summary } = useExpenses();
+  const { expenses, createExpense, updateExpense, deleteExpense, summary, isLoading, error } = useExpenses();
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [filterMonth, setFilterMonth] = useState<string>(
@@ -34,6 +34,22 @@ export function ExpenseTracker() {
     const [year, month] = filterMonth.split('-');
     return expDate.getFullYear() === parseInt(year) && expDate.getMonth() + 1 === parseInt(month);
   });
+
+  const handleCreate = (data: any) => {
+    createExpense(data)
+      .then(() => setIsCreating(false))
+      .catch((err) => console.error("Unable to create expense", err));
+  };
+
+  const handleUpdate = (id: string, data: any) => {
+    updateExpense(id, data)
+      .then(() => setEditingId(null))
+      .catch((err) => console.error("Unable to update expense", err));
+  };
+
+  const handleDelete = (id: string) => {
+    deleteExpense(id).catch((err) => console.error("Unable to delete expense", err));
+  };
 
   return (
     <div className="space-y-6">
@@ -74,17 +90,26 @@ export function ExpenseTracker() {
           </div>
         </CardHeader>
         <CardContent>
+          {error && (
+            <div className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+              {error}
+            </div>
+          )}
+
           {isCreating && (
             <ExpenseForm
-              onSubmit={(data) => {
-                createExpense(data);
-                setIsCreating(false);
-              }}
+              onSubmit={(data) => handleCreate(data)}
               onCancel={() => setIsCreating(false)}
             />
           )}
 
           <div className="space-y-2">
+            {isLoading && !filteredExpenses?.length && (
+              <div className="py-8 text-center text-sm text-muted-foreground">
+                Loading expenses...
+              </div>
+            )}
+
             {filteredExpenses?.map((expense) => (
               <div
                 key={expense.id}
@@ -93,10 +118,7 @@ export function ExpenseTracker() {
                 {editingId === expense.id ? (
                   <ExpenseForm
                     initialData={expense}
-                    onSubmit={(data) => {
-                      updateExpense(expense.id, data);
-                      setEditingId(null);
-                    }}
+                    onSubmit={(data) => handleUpdate(expense.id, data)}
                     onCancel={() => setEditingId(null)}
                   />
                 ) : (
@@ -134,7 +156,7 @@ export function ExpenseTracker() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => deleteExpense(expense.id)}
+                        onClick={() => handleDelete(expense.id)}
                       >
                         <Trash2 className="h-4 w-4 text-red-600" />
                       </Button>
@@ -144,7 +166,7 @@ export function ExpenseTracker() {
               </div>
             ))}
 
-            {!filteredExpenses?.length && !isCreating && (
+            {!filteredExpenses?.length && !isCreating && !isLoading && (
               <div className="py-12 text-center">
                 <p className="text-sm text-muted-foreground">No expenses recorded for this month.</p>
               </div>

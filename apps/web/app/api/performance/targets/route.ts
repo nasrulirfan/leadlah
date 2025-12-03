@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireSession } from "@/lib/session";
+import { serializeTargetRow } from "@/lib/performance/serializers";
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
       [userId]
     );
 
-    return NextResponse.json(result.rows);
+    return NextResponse.json(result.rows.map(serializeTargetRow));
   } catch (error) {
     console.error("Error fetching targets:", error);
     return NextResponse.json({ error: "Failed to fetch targets" }, { status: 500 });
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
       [userId, year, month || null, targetUnits, targetIncome]
     );
 
-    return NextResponse.json(result.rows[0]);
+    return NextResponse.json(serializeTargetRow(result.rows[0]));
   } catch (error) {
     console.error("Error creating target:", error);
     return NextResponse.json({ error: "Failed to create target" }, { status: 500 });

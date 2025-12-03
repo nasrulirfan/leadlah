@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireSession } from "@/lib/session";
+import { serializeTargetRow } from "@/lib/performance/serializers";
 
 export async function PATCH(
   request: NextRequest,
@@ -26,7 +27,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Target not found" }, { status: 404 });
     }
 
-    return NextResponse.json(result.rows[0]);
+    return NextResponse.json(serializeTargetRow(result.rows[0]));
   } catch (error) {
     console.error("Error updating target:", error);
     return NextResponse.json({ error: "Failed to update target" }, { status: 500 });

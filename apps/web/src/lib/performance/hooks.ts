@@ -1,219 +1,420 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Target, Expense, PerformanceMetrics } from "@leadlah/core";
+import { ExpenseCategory } from "@leadlah/core";
 
-// Mock data for demonstration - replace with actual API calls
+type ApiTarget = {
+  id: string;
+  userId: string;
+  year: number;
+  month: number | null;
+  targetUnits: number;
+  targetIncome: number;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+type ApiExpense = {
+  id: string;
+  userId: string;
+  category: ExpenseCategory;
+  amount: number;
+  description: string;
+  date: string | null;
+  receiptUrl: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+type PerformanceReportsResponse = {
+  yearlyReport: PerformanceMetrics;
+  monthlyReports: PerformanceMetrics[];
+};
+
+const request = async <T>(url: string, init: RequestInit = {}) => {
+  try {
+    const response = await fetch(url, {
+      cache: init.cache ?? "no-store",
+      ...init
+    });
+
+    const text = await response.text();
+    let payload: any = null;
+
+    if (text) {
+      try {
+        payload = JSON.parse(text);
+      } catch {
+        payload = text;
+      }
+    }
+
+    if (!response.ok) {
+      const message =
+        payload && typeof payload === "object" && "error" in payload
+          ? (payload as { error?: string }).error
+          : null;
+      throw new Error(message || `Request failed with status ${response.status}`);
+    }
+
+    return payload as T;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error("Unable to complete request");
+  }
+};
+
+const deserializeTarget = (target: ApiTarget): Target => ({
+  id: target.id,
+  userId: target.userId,
+  year: target.year,
+  month: typeof target.month === "number" ? target.month : undefined,
+  targetUnits: target.targetUnits,
+  targetIncome: target.targetIncome,
+  createdAt: target.createdAt ? new Date(target.createdAt) : new Date(),
+  updatedAt: target.updatedAt ? new Date(target.updatedAt) : new Date()
+});
+
+const deserializeExpense = (expense: ApiExpense): Expense => ({
+  id: expense.id,
+  userId: expense.userId,
+  category: expense.category,
+  amount: expense.amount,
+  description: expense.description,
+  date: expense.date ? new Date(expense.date) : new Date(),
+  receiptUrl: expense.receiptUrl ?? undefined,
+  createdAt: expense.createdAt ? new Date(expense.createdAt) : new Date(),
+  updatedAt: expense.updatedAt ? new Date(expense.updatedAt) : new Date()
+});
+
+const sortTargets = (items: Target[]) => {
+  const monthValue = (month?: number) => (typeof month === "number" ? month : -Infinity);
+
+  return [...items].sort((a, b) => {
+    if (a.year !== b.year) {
+      return b.year - a.year;
+    }
+
+    return monthValue(b.month) - monthValue(a.month);
+  });
+};
+
+const sortExpenses = (items: Expense[]) =>
+  [...items].sort((a, b) => b.date.getTime() - a.date.getTime());
+
+const formatDatePayload = (date?: Date | string) => {
+  if (!date) {
+    return undefined;
+  }
+
+  if (typeof date === "string") {
+    return date;
+  }
+
+  return date.toISOString().split("T")[0];
+};
+
+const buildEmptyMetrics = (year: number, month?: number): PerformanceMetrics => ({
+  period: typeof month === "number" ? { year, month } : { year },
+  target: { units: 0, income: 0 },
+  actual: {
+    units: 0,
+    commission: 0,
+    expenses: 0,
+    netIncome: 0
+  },
+  progress: {
+    unitsPercent: 0,
+    incomePercent: 0
+  }
+});
+
 export function usePerformanceData() {
   const [data, setData] = useState<{
     currentMonth: PerformanceMetrics;
     currentYear: PerformanceMetrics;
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
+  const loadDashboard = useCallback(async () => {
+    setIsLoading(true);
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+
+    try {
+      const response = await request<PerformanceReportsResponse>(
+        `/api/performance/reports?year=${year}`
+      );
+      const monthly = response.monthlyReports ?? [];
+      const currentMonth =
+        monthly.find((report) => report.period.month === month) ?? buildEmptyMetrics(year, month);
+
       setData({
-        currentMonth: {
-          period: { year: 2025, month: 12 },
-          target: { units: 10, income: 50000 },
-          actual: {
-            units: 7,
-            commission: 38500,
-            expenses: 5200,
-            netIncome: 33300
-          },
-          progress: {
-            unitsPercent: 70,
-            incomePercent: 66.6
-          }
-        },
-        currentYear: {
-          period: { year: 2025 },
-          target: { units: 100, income: 500000 },
-          actual: {
-            units: 78,
-            commission: 425000,
-            expenses: 48000,
-            netIncome: 377000
-          },
-          progress: {
-            unitsPercent: 78,
-            incomePercent: 75.4
-          }
-        }
+        currentMonth,
+        currentYear: response.yearlyReport ?? buildEmptyMetrics(year)
       });
+      setError(null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to load performance data";
+      setError(message);
+      setData({
+        currentMonth: buildEmptyMetrics(year, month),
+        currentYear: buildEmptyMetrics(year)
+      });
+    } finally {
       setIsLoading(false);
-    }, 500);
+    }
   }, []);
 
-  return { data, isLoading };
+  useEffect(() => {
+    void loadDashboard();
+  }, [loadDashboard]);
+
+  return { data, isLoading, error, refresh: loadDashboard };
 }
 
 export function useTargets() {
-  const [targets, setTargets] = useState<Target[]>([
-    {
-      id: "1",
-      userId: "user1",
-      year: 2025,
-      month: 12,
-      targetUnits: 10,
-      targetIncome: 50000,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    },
-    {
-      id: "2",
-      userId: "user1",
-      year: 2025,
-      targetUnits: 100,
-      targetIncome: 500000,
-      createdAt: new Date(),
-      updatedAt: new Date()
+  const [targets, setTargets] = useState<Target[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadTargets = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await request<ApiTarget[]>("/api/performance/targets");
+      setTargets(sortTargets(response.map(deserializeTarget)));
+      setError(null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to load targets";
+      setError(message);
+    } finally {
+      setIsLoading(false);
     }
-  ]);
+  }, []);
 
-  const createTarget = async (data: Partial<Target>) => {
-    const newTarget: Target = {
-      id: Math.random().toString(36).substr(2, 9),
-      userId: "user1",
-      year: data.year!,
-      month: data.month,
-      targetUnits: data.targetUnits!,
-      targetIncome: data.targetIncome!,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    setTargets([...targets, newTarget]);
+  useEffect(() => {
+    void loadTargets();
+  }, [loadTargets]);
+
+  const createTarget = useCallback(async (data: Partial<Target>) => {
+    try {
+      const response = await request<ApiTarget>("/api/performance/targets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          year: data.year,
+          month: typeof data.month === "number" ? data.month : null,
+          targetUnits: data.targetUnits,
+          targetIncome: data.targetIncome
+        })
+      });
+      const newTarget = deserializeTarget(response);
+      setTargets((prev) =>
+        sortTargets([...prev.filter((target) => target.id !== newTarget.id), newTarget])
+      );
+      setError(null);
+      return newTarget;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to create target";
+      setError(message);
+      throw err instanceof Error ? err : new Error(message);
+    }
+  }, []);
+
+  const updateTarget = useCallback(async (id: string, data: Partial<Target>) => {
+    try {
+      const response = await request<ApiTarget>(`/api/performance/targets/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          targetUnits: data.targetUnits,
+          targetIncome: data.targetIncome
+        })
+      });
+      const updatedTarget = deserializeTarget(response);
+      setTargets((prev) =>
+        sortTargets(prev.map((target) => (target.id === id ? updatedTarget : target)))
+      );
+      setError(null);
+      return updatedTarget;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to update target";
+      setError(message);
+      throw err instanceof Error ? err : new Error(message);
+    }
+  }, []);
+
+  const deleteTarget = useCallback(async (id: string) => {
+    try {
+      await request(`/api/performance/targets/${id}`, {
+        method: "DELETE"
+      });
+      setTargets((prev) => prev.filter((target) => target.id !== id));
+      setError(null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to delete target";
+      setError(message);
+      throw err instanceof Error ? err : new Error(message);
+    }
+  }, []);
+
+  return {
+    targets,
+    isLoading,
+    error,
+    createTarget,
+    updateTarget,
+    deleteTarget,
+    refresh: loadTargets
   };
-
-  const updateTarget = async (id: string, data: Partial<Target>) => {
-    setTargets(targets.map(t => t.id === id ? { ...t, ...data, updatedAt: new Date() } : t));
-  };
-
-  const deleteTarget = async (id: string) => {
-    setTargets(targets.filter(t => t.id !== id));
-  };
-
-  return { targets, createTarget, updateTarget, deleteTarget };
 }
 
 export function useExpenses() {
-  const [expenses, setExpenses] = useState<Expense[]>([
-    {
-      id: "1",
-      userId: "user1",
-      category: "Fuel" as any,
-      amount: 250,
-      description: "Fuel for property viewings",
-      date: new Date("2025-12-15"),
-      createdAt: new Date(),
-      updatedAt: new Date()
-    },
-    {
-      id: "2",
-      userId: "user1",
-      category: "Advertising" as any,
-      amount: 1500,
-      description: "Facebook ads campaign",
-      date: new Date("2025-12-10"),
-      createdAt: new Date(),
-      updatedAt: new Date()
-    },
-    {
-      id: "3",
-      userId: "user1",
-      category: "Client Entertainment" as any,
-      amount: 180,
-      description: "Client lunch meeting",
-      date: new Date("2025-12-08"),
-      createdAt: new Date(),
-      updatedAt: new Date()
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadExpenses = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await request<ApiExpense[]>("/api/performance/expenses");
+      setExpenses(sortExpenses(response.map(deserializeExpense)));
+      setError(null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to load expenses";
+      setError(message);
+    } finally {
+      setIsLoading(false);
     }
-  ]);
+  }, []);
 
-  const summary = {
-    total: expenses.reduce((sum, exp) => sum + exp.amount, 0),
-    byCategory: expenses.reduce((acc, exp) => {
-      acc[exp.category] = (acc[exp.category] || 0) + exp.amount;
+  useEffect(() => {
+    void loadExpenses();
+  }, [loadExpenses]);
+
+  const createExpense = useCallback(async (data: Partial<Expense>) => {
+    try {
+      const response = await request<ApiExpense>("/api/performance/expenses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category: data.category,
+          amount: data.amount,
+          description: data.description,
+          date: formatDatePayload(data.date),
+          receiptUrl: data.receiptUrl ?? null
+        })
+      });
+      const newExpense = deserializeExpense(response);
+      setExpenses((prev) => sortExpenses([...prev, newExpense]));
+      setError(null);
+      return newExpense;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to create expense";
+      setError(message);
+      throw err instanceof Error ? err : new Error(message);
+    }
+  }, []);
+
+  const updateExpense = useCallback(async (id: string, data: Partial<Expense>) => {
+    try {
+      const response = await request<ApiExpense>(`/api/performance/expenses/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category: data.category,
+          amount: data.amount,
+          description: data.description,
+          date: data.date ? formatDatePayload(data.date) : undefined,
+          receiptUrl: data.receiptUrl ?? null
+        })
+      });
+      const updatedExpense = deserializeExpense(response);
+      setExpenses((prev) =>
+        sortExpenses(prev.map((expense) => (expense.id === id ? updatedExpense : expense)))
+      );
+      setError(null);
+      return updatedExpense;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to update expense";
+      setError(message);
+      throw err instanceof Error ? err : new Error(message);
+    }
+  }, []);
+
+  const deleteExpense = useCallback(async (id: string) => {
+    try {
+      await request(`/api/performance/expenses/${id}`, {
+        method: "DELETE"
+      });
+      setExpenses((prev) => prev.filter((expense) => expense.id !== id));
+      setError(null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to delete expense";
+      setError(message);
+      throw err instanceof Error ? err : new Error(message);
+    }
+  }, []);
+
+  const summary = useMemo(() => {
+    const total = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+    const byCategory = expenses.reduce<Record<string, number>>((acc, expense) => {
+      acc[expense.category] = (acc[expense.category] || 0) + expense.amount;
       return acc;
-    }, {} as Record<string, number>)
-  };
+    }, {});
 
-  const createExpense = async (data: Partial<Expense>) => {
-    const newExpense: Expense = {
-      id: Math.random().toString(36).substr(2, 9),
-      userId: "user1",
-      category: data.category!,
-      amount: data.amount!,
-      description: data.description!,
-      date: data.date!,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    setExpenses([...expenses, newExpense]);
-  };
+    return { total, byCategory };
+  }, [expenses]);
 
-  const updateExpense = async (id: string, data: Partial<Expense>) => {
-    setExpenses(expenses.map(e => e.id === id ? { ...e, ...data, updatedAt: new Date() } : e));
+  return {
+    expenses,
+    summary,
+    isLoading,
+    error,
+    createExpense,
+    updateExpense,
+    deleteExpense,
+    refresh: loadExpenses
   };
-
-  const deleteExpense = async (id: string) => {
-    setExpenses(expenses.filter(e => e.id !== id));
-  };
-
-  return { expenses, summary, createExpense, updateExpense, deleteExpense };
 }
 
 export function usePerformanceReports(year: number) {
   const [yearlyReport, setYearlyReport] = useState<PerformanceMetrics | null>(null);
   const [monthlyReports, setMonthlyReports] = useState<PerformanceMetrics[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setYearlyReport({
-        period: { year },
-        target: { units: 100, income: 500000 },
-        actual: {
-          units: 78,
-          commission: 425000,
-          expenses: 48000,
-          netIncome: 377000
-        },
-        progress: {
-          unitsPercent: 78,
-          incomePercent: 75.4
-        }
-      });
-
-      const months = Array.from({ length: 12 }, (_, i) => ({
-        period: { year, month: i + 1 },
-        target: { units: 8, income: 40000 },
-        actual: {
-          units: Math.floor(Math.random() * 10),
-          commission: Math.floor(Math.random() * 50000),
-          expenses: Math.floor(Math.random() * 8000),
-          netIncome: 0
-        },
-        progress: {
-          unitsPercent: 0,
-          incomePercent: 0
-        }
-      }));
-
-      months.forEach(m => {
-        m.actual.netIncome = m.actual.commission - m.actual.expenses;
-        m.progress.unitsPercent = (m.actual.units / m.target.units) * 100;
-        m.progress.incomePercent = (m.actual.netIncome / m.target.income) * 100;
-      });
-
-      setMonthlyReports(months);
+  const loadReports = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await request<PerformanceReportsResponse>(
+        `/api/performance/reports?year=${year}`
+      );
+      setYearlyReport(response.yearlyReport ?? buildEmptyMetrics(year));
+      setMonthlyReports(
+        response.monthlyReports && response.monthlyReports.length > 0
+          ? response.monthlyReports
+          : Array.from({ length: 12 }, (_, index) => buildEmptyMetrics(year, index + 1))
+      );
+      setError(null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to load performance reports";
+      setError(message);
+      setYearlyReport(buildEmptyMetrics(year));
+      setMonthlyReports(Array.from({ length: 12 }, (_, index) => buildEmptyMetrics(year, index + 1)));
+    } finally {
       setIsLoading(false);
-    }, 500);
+    }
   }, [year]);
 
-  return { yearlyReport, monthlyReports, isLoading };
+  useEffect(() => {
+    void loadReports();
+  }, [loadReports]);
+
+  return { yearlyReport, monthlyReports, isLoading, error, refresh: loadReports };
 }
