@@ -8,6 +8,8 @@ import { ListingsModule } from "./listings/listings.module";
 import { ProcessModule } from "./process/process.module";
 import { RemindersModule } from "./reminders/reminders.module";
 import { SubscriptionModule } from "./subscription/subscription.module";
+import { SubscriptionEntity } from "./subscription/entities/subscription.entity";
+import { SubscriptionInvoiceEntity } from "./subscription/entities/subscription-invoice.entity";
 
 @Module({
   imports: [
@@ -19,7 +21,7 @@ import { SubscriptionModule } from "./subscription/subscription.module";
             type: "sqljs",
             synchronize: true,
             autoSave: false,
-            entities: [ListingEntity, ProcessLogEntity, ProcessViewingEntity],
+            entities: [ListingEntity, ProcessLogEntity, ProcessViewingEntity, SubscriptionEntity, SubscriptionInvoiceEntity],
             dropSchema: true
           };
         }

@@ -1,4 +1,4 @@
-import { addMonths, differenceInCalendarDays } from "date-fns";
+import { addMonths } from "date-fns";
 import { CalculatorReceipt } from "./types";
 
 export type LoanEligibilityInput = {
@@ -255,19 +255,4 @@ export function generateReminderSchedule(
     exclusiveAlertAt,
     tenancyAlertAt
   };
-}
-
-export type SubscriptionState = {
-  status: "TRIALING" | "ACTIVE" | "PAST_DUE" | "CANCELED";
-  trialEndsAt?: Date;
-  nextBillingAt?: Date;
-  canceledAt?: Date;
-};
-
-export function isAccessAllowed(state: SubscriptionState): boolean {
-  return state.status === "TRIALING" || state.status === "ACTIVE" || state.status === "PAST_DUE";
-}
-
-export function daysLeft(date: Date): number {
-  return differenceInCalendarDays(date, new Date());
 }

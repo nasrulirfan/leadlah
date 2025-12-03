@@ -91,20 +91,6 @@ export type Reminder = {
   message: string;
 };
 
-export type HitPayWebhook =
-  | {
-      event: "payment.succeeded";
-      data: { invoiceId: string; amount: number; currency: string };
-    }
-  | {
-      event: "payment.failed";
-      data: { invoiceId: string; amount: number; currency: string };
-    }
-  | {
-      event: "subscription.canceled";
-      data: { subscriptionId: string };
-    };
-
 export type CalculatorReceipt = {
   agentName: string;
   customerName?: string;

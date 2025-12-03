@@ -1,12 +1,4 @@
-import {
-  Listing,
-  ListingStatus,
-  ProcessLogEntry,
-  ProcessStage,
-  Reminder,
-  SubscriptionState,
-  generateOwnerViewToken
-} from "@leadlah/core";
+import { Listing, ListingStatus, ProcessLogEntry, ProcessStage, Reminder, generateOwnerViewToken } from "@leadlah/core";
 import { addDays } from "date-fns";
 
 export const listings: Listing[] = [
@@ -121,16 +113,6 @@ export const reminders: Reminder[] = [
     dueAt: addDays(new Date(), 45),
     message: "Tenancy renewal alert. Engage tenant."
   }
-];
-
-export const subscriptionState: SubscriptionState = {
-  status: "PAST_DUE",
-  nextBillingAt: addDays(new Date(), 3)
-};
-
-export const billingHistory = [
-  { id: "INV-1001", amount: 129, date: addDays(new Date(), -30), status: "Paid" },
-  { id: "INV-1002", amount: 129, date: addDays(new Date(), -1), status: "Failed" }
 ];
 
 const demoOwnerLinkSecret = process.env.OWNER_LINK_SECRET ?? "demo-owner-link-secret";

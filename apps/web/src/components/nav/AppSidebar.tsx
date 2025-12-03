@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ComponentProps } from "react";
+import type { SubscriptionState } from "@leadlah/core";
+import { SubscriptionStatus } from "@leadlah/core";
 import { appNavLinks } from "./app-links";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -12,16 +14,13 @@ import { Separator } from "@/components/ui/separator";
 type SidebarProps = {
   userName?: string;
   onSignOut?: () => Promise<void>;
-  subscription: {
-    status: string;
-    nextBillingAt: string | Date;
-  };
+  subscription?: Pick<SubscriptionState, "status" | "nextBillingAt"> | null;
 };
 
 export function AppSidebar({ userName, onSignOut, subscription }: SidebarProps) {
   const pathname = usePathname();
-  const isPastDue = subscription.status === "PAST_DUE";
-  const billingDate = new Date(subscription.nextBillingAt);
+  const isPastDue = subscription?.status === SubscriptionStatus.PAST_DUE;
+  const billingDate = subscription?.nextBillingAt ? new Date(subscription.nextBillingAt) : null;
 
   return (
     <aside className="hidden w-full max-w-xs flex-col rounded-3xl border border-border/70 bg-card/90 p-6 text-foreground shadow-[0_10px_50px_rgba(15,23,42,0.08)] backdrop-blur lg:flex dark:border-slate-800/80 dark:bg-slate-900/40">
@@ -83,10 +82,12 @@ export function AppSidebar({ userName, onSignOut, subscription }: SidebarProps) 
       <div className="mt-6 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 p-4 text-white shadow-lg dark:from-slate-800 dark:to-slate-900">
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold">Subscription</p>
-          <Badge tone={isPastDue ? "danger" : "success"}>{isPastDue ? "Past Due" : "Active"}</Badge>
+          <Badge tone={isPastDue ? "danger" : subscription ? "success" : "neutral"}>
+            {subscription ? subscription.status : "Untracked"}
+          </Badge>
         </div>
         <p className="mt-1 text-xs text-white/70">
-          Next billing {billingDate.toLocaleDateString("en-MY", { month: "short", day: "numeric" })}
+          {billingDate ? `Next billing ${billingDate.toLocaleDateString("en-MY", { month: "short", day: "numeric" })}` : "No billing schedule"}
         </p>
         <Button
           asChild

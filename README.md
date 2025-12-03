@@ -87,15 +87,37 @@ BETTER_AUTH_SECRET=generate_with_openssl
 BETTER_AUTH_DATABASE_URL=postgres://leadlah:leadlah@localhost:5432/leadlah
 # Optional if your dev URL differs
 BETTER_AUTH_URL=http://localhost:3000
+NEXT_PUBLIC_API_URL=http://localhost:3001
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
 Create `.env` in `apps/api` (examples):
 ```
 PORT=3001
 DATABASE_URL=postgres://user:pass@host:5432/leadlah
-HITPAY_API_KEY=your_hitpay_key
-HITPAY_WEBHOOK_SECRET=your_webhook_secret
+HITPAY_API_KEY=your_hitpay_business_api_key
+HITPAY_SIGNATURE_KEY=your_hitpay_webhook_signature
+HITPAY_MODE=sandbox
+HITPAY_WEBHOOK_URL=https://your-ngrok-domain/hitpay-webhook
+HITPAY_RETURN_URL=http://localhost:3000/billing
+HITPAY_PAYMENT_METHODS=card,giro
+SUBSCRIPTION_PLAN_CODE=leadlah-pro-monthly
+SUBSCRIPTION_PLAN_NAME=LeadLah Pro
+SUBSCRIPTION_PLAN_DESCRIPTION=Unlimited listings, reminders, calculators, and owner reporting.
+SUBSCRIPTION_PLAN_AMOUNT=129
+SUBSCRIPTION_PLAN_CURRENCY=MYR
+SUBSCRIPTION_PLAN_INTERVAL=monthly
+SUBSCRIPTION_TRIAL_DAYS=7
+SUBSCRIPTION_GRACE_DAYS=3
 ```
+
+### HitPay Sandbox Set-Up
+
+1. Generate a Business API key and webhook signature key from the HitPay dashboard. Use the sandbox environment for local/staging.
+2. Point `HITPAY_WEBHOOK_URL` to a publicly accessible URL (e.g. `https://<ngrok>/billing/webhook/hitpay`) and register the same URL inside the HitPay dashboard.
+3. Set `HITPAY_RETURN_URL` (and `NEXT_PUBLIC_APP_URL`) to the hostname of the app so customers land back on `/billing` after securing their card.
+4. The Nest subscription module uses `HITPAY_PAYMENT_METHODS` to restrict the checkout methods (default: `card,giro`). Adjust to match your business account.
+5. Run `pnpm --filter @leadlah/api db:migrate` after setting the envs to ensure the subscription tables exist.
 
 ## Architecture Fit
 
