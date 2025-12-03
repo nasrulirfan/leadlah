@@ -7,29 +7,18 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "../ui/button";
 
 type Props = {
-  variant?: "marketing" | "app";
+  variant?: "marketing" | "app" | "owner";
   userName?: string;
   onSignOut?: () => Promise<void>;
 };
 
 export function StickyHeader({ variant = "marketing", userName, onSignOut }: Props) {
   const isAuthenticated = Boolean(userName);
-
-  return (
-    <header className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur">
-      <div className="container flex h-16 items-center justify-between">
-        <Link href="/" className="flex items-center gap-3 font-semibold text-base tracking-tight">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-card">
-            LL
-          </div>
-          <div className="leading-tight">
-            <span className="block text-sm uppercase tracking-[0.2em] text-muted-foreground">LeadLah</span>
-            <span className="text-lg font-semibold text-foreground">Property Agent OS</span>
-          </div>
-        </Link>
-        <nav className="flex items-center gap-3 text-sm font-medium text-muted-foreground">
-          <ThemeToggle />
-          {variant === "marketing" ? (
+  const navContent =
+    variant === "owner"
+      ? null
+      : variant === "marketing"
+        ? (
             <Fragment>
               <Link href="/#features" className="transition hover:text-foreground">
                 Why LeadLah?
@@ -44,7 +33,8 @@ export function StickyHeader({ variant = "marketing", userName, onSignOut }: Pro
                 <Link href="/sign-in">Launch App</Link>
               </Button>
             </Fragment>
-          ) : (
+          )
+        : (
             <Fragment>
               {isAuthenticated && onSignOut ? (
                 <form action={onSignOut}>
@@ -58,8 +48,26 @@ export function StickyHeader({ variant = "marketing", userName, onSignOut }: Pro
                 </Button>
               )}
             </Fragment>
-          )}
-        </nav>
+          );
+
+  return (
+    <header className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur">
+      <div className="container flex h-16 items-center justify-between">
+        <Link href="/" className="flex items-center gap-3 font-semibold text-base tracking-tight">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-card">
+            LL
+          </div>
+          <div className="leading-tight">
+            <span className="block text-sm uppercase tracking-[0.2em] text-muted-foreground">LeadLah</span>
+            <span className="text-lg font-semibold text-foreground">Property Agent OS</span>
+          </div>
+        </Link>
+        {navContent ? (
+          <nav className="flex items-center gap-3 text-sm font-medium text-muted-foreground">
+            <ThemeToggle />
+            {navContent}
+          </nav>
+        ) : null}
       </div>
     </header>
   );
