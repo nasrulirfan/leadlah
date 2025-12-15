@@ -44,10 +44,17 @@ export default async function BillingPage() {
     summary = getFallbackSummary();
     billingUnavailable = true;
   }
-  const { subscription, plan, invoices } = summary;
+  const { subscription, plan, invoices, billingProviderConfigured } = summary;
 
   const paymentFailed = subscription.status === SubscriptionStatus.PAST_DUE;
-  const showTrialCta = subscription.status !== SubscriptionStatus.ACTIVE;
+  const now = new Date();
+  const hasTrialWindow = !!subscription.trialEndsAt;
+  const trialActive = hasTrialWindow && subscription.trialEndsAt! > now;
+  const canStartTrial = !hasTrialWindow && subscription.status !== SubscriptionStatus.ACTIVE;
+  const hasRecurringBilling = !!subscription.providerRecurringId;
+  const isSubscribedWithTrial = hasRecurringBilling && subscription.status === SubscriptionStatus.TRIALING;
+  const statusLabel = isSubscribedWithTrial ? "Subscribed" : subscription.status;
+  const statusToneKey = isSubscribedWithTrial ? "success" : statusTone[subscription.status];
   const nextBillingLabel =
     subscription.nextBillingAt?.toLocaleDateString() ??
     subscription.trialEndsAt?.toLocaleDateString() ??
@@ -74,12 +81,22 @@ export default async function BillingPage() {
         </Card>
       )}
 
+      {!billingUnavailable && billingProviderConfigured === false && (
+        <Card className="border-amber-200 bg-amber-50 text-amber-900">
+          <p className="text-sm font-semibold">HitPay is not configured for this environment.</p>
+          <p className="text-xs text-amber-800">
+            You can start a free trial, but card setup and payment retries will only work after HitPay keys are added to
+            the API environment.
+          </p>
+        </Card>
+      )}
+
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <p className="text-sm font-semibold text-muted-foreground">Current Status</p>
           <div className="mt-2 flex flex-col gap-2">
             <div className="flex items-center gap-2">
-              <Badge tone={statusTone[subscription.status]}>{subscription.status}</Badge>
+              <Badge tone={statusToneKey}>{statusLabel}</Badge>
               <span className="text-xs text-muted-foreground">Next billing: {nextBillingLabel}</span>
             </div>
             {subscription.graceEndsAt && (
@@ -108,15 +125,27 @@ export default async function BillingPage() {
               </p>
             </div>
             <div className="flex gap-3">
-              {showTrialCta && (
+              {canStartTrial && (
                 <form action={startTrialAction}>
-                  <Button variant="secondary" type="submit">
+                  <Button
+                    variant="secondary"
+                    type="submit"
+                    disabled={billingUnavailable || billingProviderConfigured === false}
+                  >
                     Start 7-Day Free Trial
                   </Button>
                 </form>
               )}
+              {!canStartTrial && trialActive && subscription.trialEndsAt && (
+                <Button variant="secondary" type="button" disabled>
+                  Trial ends {subscription.trialEndsAt.toLocaleDateString()}
+                </Button>
+              )}
               <form action={startCheckoutAction}>
-                <Button type="submit">
+                <Button
+                  type="submit"
+                  disabled={billingUnavailable || billingProviderConfigured === false}
+                >
                   {subscription.providerRecurringId ? "Update Payment Method" : "Set Up Payment Method"}
                 </Button>
               </form>
@@ -143,12 +172,21 @@ export default async function BillingPage() {
             </div>
             <div className="flex gap-3">
               <form action={retryPaymentAction}>
-                <Button variant="secondary" className="border-red-200 text-red-700" type="submit">
+                <Button
+                  variant="secondary"
+                  className="border-red-200 text-red-700"
+                  type="submit"
+                  disabled={billingUnavailable || billingProviderConfigured === false}
+                >
                   Retry Payment
                 </Button>
               </form>
               <form action={startCheckoutAction}>
-                <Button variant="danger" type="submit">
+                <Button
+                  variant="danger"
+                  type="submit"
+                  disabled={billingUnavailable || billingProviderConfigured === false}
+                >
                   Update Card
                 </Button>
               </form>
@@ -197,9 +235,6 @@ export default async function BillingPage() {
             Cancel Subscription
           </Button>
         </form>
-        <Button variant="secondary" disabled>
-          Open HitPay Portal
-        </Button>
       </div>
     </div>
   );

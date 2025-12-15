@@ -54,6 +54,7 @@ export function getFallbackSummary(): SubscriptionSummary {
   const trialEndsAt = defaultPlan.trialDays > 0 ? addDays(now, defaultPlan.trialDays) : undefined;
   return {
     plan: defaultPlan,
+    billingProviderConfigured: false,
     subscription: {
       id: "fallback",
       status: SubscriptionStatus.TRIALING,
@@ -75,6 +76,7 @@ export async function fetchSubscriptionSummary(userId: string): Promise<Subscrip
   const data = await request<SubscriptionSummary>(`/billing/${userId}`);
   return {
     plan: data.plan,
+    billingProviderConfigured: data.billingProviderConfigured,
     subscription: {
       ...data.subscription,
       trialEndsAt: parseDate(data.subscription.trialEndsAt),

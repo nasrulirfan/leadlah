@@ -46,6 +46,10 @@ export type SubscriptionSummary = {
   subscription: SubscriptionState;
   invoices: BillingInvoice[];
   plan: SubscriptionPlan;
+  // Indicates whether the external billing provider (HitPay) is configured.
+  // When false or undefined, UI can show a lightweight hint that card setup
+  // and retries may be unavailable in this environment.
+  billingProviderConfigured?: boolean;
 };
 
 export type HitPayWebhook = {

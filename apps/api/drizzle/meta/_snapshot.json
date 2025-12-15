@@ -471,6 +471,202 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
+    },
+    "subscriptions": {
+      "name": "subscriptions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "userId": {
+          "name": "userId",
+          "type": "varchar(255)",
+          "notNull": true
+        },
+        "providerReference": {
+          "name": "providerReference",
+          "type": "varchar(120)",
+          "notNull": true
+        },
+        "providerRecurringId": {
+          "name": "providerRecurringId",
+          "type": "varchar(160)"
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(24)",
+          "notNull": true,
+          "default": "'TRIALING'"
+        },
+        "planAmount": {
+          "name": "planAmount",
+          "type": "numeric(10, 2)",
+          "notNull": true,
+          "default": "'0'"
+        },
+        "planCurrency": {
+          "name": "planCurrency",
+          "type": "varchar(8)",
+          "notNull": true,
+          "default": "'MYR'"
+        },
+        "planInterval": {
+          "name": "planInterval",
+          "type": "varchar(16)",
+          "notNull": true,
+          "default": "'monthly'"
+        },
+        "trialEndsAt": {
+          "name": "trialEndsAt",
+          "type": "timestamptz"
+        },
+        "nextBillingAt": {
+          "name": "nextBillingAt",
+          "type": "timestamptz"
+        },
+        "graceEndsAt": {
+          "name": "graceEndsAt",
+          "type": "timestamptz"
+        },
+        "canceledAt": {
+          "name": "canceledAt",
+          "type": "timestamptz"
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "jsonb"
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "now()"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "subscriptions_user_idx": {
+          "name": "subscriptions_user_idx",
+          "columns": ["userId"],
+          "isUnique": true
+        },
+        "subscriptions_provider_ref_idx": {
+          "name": "subscriptions_provider_ref_idx",
+          "columns": ["providerReference"],
+          "isUnique": true
+        },
+        "subscriptions_provider_recurring_idx": {
+          "name": "subscriptions_provider_recurring_idx",
+          "columns": ["providerRecurringId"],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "subscription_invoices": {
+      "name": "subscription_invoices",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "subscriptionId": {
+          "name": "subscriptionId",
+          "type": "uuid",
+          "notNull": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "varchar(255)",
+          "notNull": true
+        },
+        "providerPaymentId": {
+          "name": "providerPaymentId",
+          "type": "varchar(160)"
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(16)",
+          "notNull": true,
+          "default": "'Pending'"
+        },
+        "amount": {
+          "name": "amount",
+          "type": "numeric(10, 2)",
+          "notNull": true,
+          "default": "'0'"
+        },
+        "currency": {
+          "name": "currency",
+          "type": "varchar(8)",
+          "notNull": true,
+          "default": "'MYR'"
+        },
+        "paidAt": {
+          "name": "paidAt",
+          "type": "timestamptz"
+        },
+        "failedAt": {
+          "name": "failedAt",
+          "type": "timestamptz"
+        },
+        "rawPayload": {
+          "name": "rawPayload",
+          "type": "jsonb"
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "now()"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "subscription_invoices_subscription_idx": {
+          "name": "subscription_invoices_subscription_idx",
+          "columns": ["subscriptionId"],
+          "isUnique": false
+        },
+        "subscription_invoices_payment_idx": {
+          "name": "subscription_invoices_payment_idx",
+          "columns": ["providerPaymentId"],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "subscription_invoices_subscriptionId_subscriptions_id_fk": {
+          "name": "subscription_invoices_subscriptionId_subscriptions_id_fk",
+          "columns": ["subscriptionId"],
+          "foreignTable": "subscriptions",
+          "foreignColumns": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
     }
   },
   "enums": {},

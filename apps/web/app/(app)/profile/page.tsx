@@ -22,18 +22,10 @@ export default async function ProfilePage() {
     { label: "Listings synced", value: "18", caption: "Across Mudah & PropertyGuru" }
   ];
 
-  const upcomingReminders = reminders.slice(0, 2);
-
   return (
     <div className="space-y-6">
       <ProfileHero profile={profile} stats={stats} />
-      <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
-        <ProfileForm profile={profile} />
-        <div className="space-y-6">
-          <RemindersCard reminders={upcomingReminders} />
-          <SecurityCard />
-        </div>
-      </div>
+      <ProfileForm profile={profile} />
     </div>
   );
 }
@@ -41,18 +33,7 @@ export default async function ProfilePage() {
 function ProfileHero({ profile, stats }: { profile: UserProfile; stats: { label: string; value: string; caption: string }[] }) {
   return (
     <section className="overflow-hidden rounded-3xl border border-border bg-card shadow-card">
-      <div className="relative h-40 w-full overflow-hidden rounded-[26px] bg-gradient-to-r from-brand-600 via-indigo-600 to-primary" aria-hidden>
-        {profile.coverUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={profile.coverUrl}
-            alt="Profile cover"
-            className="absolute inset-0 h-full w-full object-cover opacity-70"
-          />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-900/80 via-slate-900/30 to-slate-900/60" />
-      </div>
-      <div className="-mt-12 flex flex-wrap items-center gap-5 px-6 pb-6">
+      <div className="flex flex-wrap items-center gap-5 px-6 py-6">
         <div className="relative h-24 w-24 overflow-hidden rounded-3xl border-4 border-card bg-background shadow-2xl">
           {profile.avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -86,103 +67,14 @@ function ProfileHero({ profile, stats }: { profile: UserProfile; stats: { label:
             </div>
           </div>
         </div>
-        <div className="flex flex-col gap-2">
-          <Button variant="secondary" size="sm" className="rounded-full">
-            <Sparkles className="mr-2 h-4 w-4" /> Share profile link
-          </Button>
-          <Button variant="outline" size="sm" className="rounded-full">
-            <LinkIcon className="mr-2 h-4 w-4" /> Preview owner report
-          </Button>
-        </div>
-      </div>
-      <div className="border-t border-border/60">
-        <dl className="grid gap-4 px-6 py-5 md:grid-cols-3">
-          {stats.map((stat) => (
-            <div key={stat.label} className="rounded-2xl border border-border/60 bg-muted/30 px-4 py-3">
-              <dt className="text-xs uppercase tracking-wide text-muted-foreground">{stat.label}</dt>
-              <dd className="text-lg font-semibold text-foreground">{stat.value}</dd>
-              <p className="text-xs text-muted-foreground">{stat.caption}</p>
-            </div>
-          ))}
-        </dl>
+        <div className="flex flex-col gap-2" />
       </div>
     </section>
   );
 }
 
-function RemindersCard({
-  reminders: entries
-}: {
-  reminders: { id: string; message: string; type: string; dueAt: Date }[];
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Sparkles className="h-4 w-4 text-amber-500" />
-          Upcoming reminders
-        </CardTitle>
-        <CardDescription>We surface the next critical nudges so you can act before owners chase.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {entries.map((reminder) => (
-          <div key={reminder.id} className="rounded-2xl border border-border/70 bg-muted/30 px-4 py-3">
-            <div className="flex items-center justify-between text-sm font-semibold text-foreground">
-              <span>{reminder.message}</span>
-              <Badge tone="warning" className="text-[10px] capitalize">
-                {reminder.type.replace(/_/g, " ")}
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground">Due {reminder.dueAt.toLocaleDateString()}</p>
-          </div>
-        ))}
-        {entries.length === 0 && <p className="text-sm text-muted-foreground">You are fully clear for the next week. 🎉</p>}
-      </CardContent>
-    </Card>
-  );
-}
-
 function SecurityCard() {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <ShieldCheck className="h-4 w-4 text-emerald-500" />
-          Account safety
-        </CardTitle>
-        <CardDescription>Manage authentication, session health, and connected channels.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4 text-sm">
-        <div className="rounded-2xl border border-border/60 bg-muted/30 px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-semibold text-foreground">Password</p>
-              <p className="text-xs text-muted-foreground">Last changed 42 days ago</p>
-            </div>
-            <Button variant="ghost" size="sm">
-              Update
-            </Button>
-          </div>
-        </div>
-        <div className="rounded-2xl border border-border/60 bg-muted/30 px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-semibold text-foreground">WhatsApp Broadcast</p>
-              <p className="text-xs text-muted-foreground">Connected via +60 ending 4455</p>
-            </div>
-            <Badge tone="success">Active</Badge>
-          </div>
-        </div>
-        <div className="rounded-2xl border border-border/60 bg-muted/30 px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-semibold text-foreground">Calendar availability</p>
-              <p className="text-xs text-muted-foreground">Synced with Google Calendar</p>
-            </div>
-            <Badge tone="info">Syncing</Badge>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    null
   );
 }

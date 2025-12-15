@@ -100,7 +100,9 @@ HITPAY_SIGNATURE_KEY=your_hitpay_webhook_signature
 HITPAY_MODE=sandbox
 HITPAY_WEBHOOK_URL=https://your-ngrok-domain/hitpay-webhook
 HITPAY_RETURN_URL=http://localhost:3000/billing
-HITPAY_PAYMENT_METHODS=card,giro
+# Optional: restrict checkout methods (comma-separated, e.g. "card,giro").
+# Leave blank or omit to use the HitPay account's default methods.
+HITPAY_PAYMENT_METHODS=
 SUBSCRIPTION_PLAN_CODE=leadlah-pro-monthly
 SUBSCRIPTION_PLAN_NAME=LeadLah Pro
 SUBSCRIPTION_PLAN_DESCRIPTION=Unlimited listings, reminders, calculators, and owner reporting.

@@ -1,11 +1,13 @@
 "use server";
 
+import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { userProfileUpdateSchema, type UserProfile } from "@leadlah/core";
 
 import { persistProfile } from "@/data/profile";
 import { requireSession } from "@/lib/session";
+import { auth } from "@/lib/auth";
 
 const profileMutationSchema = userProfileUpdateSchema;
 
@@ -31,8 +33,6 @@ export type ProfileFormState = {
   errors?: Record<string, string[]>;
   data?: UserProfile;
 };
-
-export const initialProfileState: ProfileFormState = { status: "idle" };
 
 export async function updateProfile(prevState: ProfileFormState, formData: FormData): Promise<ProfileFormState> {
   const session = await requireSession();
@@ -78,6 +78,20 @@ export async function updateProfile(prevState: ProfileFormState, formData: FormD
     ...payloadResult.data,
     id: parsedUserId.data.userId
   });
+
+  // Also sync core user fields (name, image) back to Better Auth so the
+  // session header reflects the latest profile information.
+  try {
+    await auth.api.updateUser({
+      body: {
+        name: nextProfile.name,
+        image: nextProfile.avatarUrl
+      },
+      headers: await headers()
+    });
+  } catch (error) {
+    console.error("Failed to sync auth user profile:", error);
+  }
 
   revalidatePath("/profile");
 

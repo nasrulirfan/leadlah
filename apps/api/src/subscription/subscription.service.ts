@@ -8,7 +8,7 @@ import {
   SubscriptionStatus,
   SubscriptionSummary
 } from "@leadlah/core";
-import { Repository } from "typeorm";
+import { QueryFailedError, Repository } from "typeorm";
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { SubscriptionEntity } from "./entities/subscription.entity";
 import { SubscriptionInvoiceEntity } from "./entities/subscription-invoice.entity";
@@ -27,7 +27,7 @@ type InvoicePayloadOptions = {
 @Injectable()
 export class SubscriptionService {
   private readonly config: SubscriptionConfig;
-  private readonly hitpay: HitpayClient;
+  private readonly hitpay: HitpayClient | null;
 
   constructor(
     @InjectRepository(SubscriptionEntity)
@@ -36,10 +36,13 @@ export class SubscriptionService {
     private readonly invoiceRepository: Repository<SubscriptionInvoiceEntity>
   ) {
     this.config = loadSubscriptionConfig();
-    this.hitpay = new HitpayClient({
-      apiKey: this.config.hitpay.apiKey,
-      baseUrl: this.config.hitpay.baseUrl
-    });
+    this.hitpay =
+      this.config.hitpay != null
+        ? new HitpayClient({
+            apiKey: this.config.hitpay.apiKey,
+            baseUrl: this.config.hitpay.baseUrl
+          })
+        : null;
   }
 
   async getSummary(userId: string): Promise<SubscriptionSummary> {
@@ -53,23 +56,47 @@ export class SubscriptionService {
     return {
       subscription: this.toState(subscription),
       invoices: invoices.map((invoice) => this.toInvoice(invoice)),
-      plan: this.config.plan
+      plan: this.config.plan,
+      billingProviderConfigured: this.config.hitpay != null
     };
   }
 
   async startTrial(userId: string) {
     const subscription = await this.getOrCreateSubscription(userId);
     const now = new Date();
-    subscription.status = SubscriptionStatus.TRIALING;
-    subscription.graceEndsAt = null;
-    subscription.canceledAt = null;
-    subscription.nextBillingAt = this.config.plan.trialDays > 0 ? this.addDays(now, this.config.plan.trialDays) : now;
-    subscription.trialEndsAt = subscription.nextBillingAt;
-    const saved = await this.subscriptionRepository.save(subscription);
-    return this.toState(saved);
+
+    // If a trial is already active, treat this as an idempotent no-op so users
+    // cannot extend their free trial by repeatedly clicking the CTA.
+    if (subscription.trialEndsAt && subscription.trialEndsAt.getTime() > now.getTime()) {
+      return this.toState(subscription);
+    }
+
+    // If there is no recorded trial window (legacy or migrated data), grant a
+    // single trial period based on the current plan configuration.
+    if (!subscription.trialEndsAt) {
+      subscription.status = SubscriptionStatus.TRIALING;
+      subscription.graceEndsAt = null;
+      subscription.canceledAt = null;
+      subscription.nextBillingAt =
+        this.config.plan.trialDays > 0 ? this.addDays(now, this.config.plan.trialDays) : now;
+      subscription.trialEndsAt = subscription.nextBillingAt;
+      const saved = await this.subscriptionRepository.save(subscription);
+      return this.toState(saved);
+    }
+
+    // If a trial window exists but has already ended, do not grant additional
+    // free trials. Simply return the current state without modification.
+    return this.toState(subscription);
   }
 
   async createCheckout(userId: string, payload: CreateCheckoutDto) {
+    const hitpayConfig = this.config.hitpay;
+    if (!this.hitpay || !hitpayConfig) {
+      throw new BadRequestException(
+        "Billing provider is not configured. Please contact support before starting a paid subscription."
+      );
+    }
+
     const subscription = await this.getOrCreateSubscription(userId);
 
     const response = await this.hitpay.createRecurringBilling({
@@ -81,10 +108,13 @@ export class SubscriptionService {
       cycle: this.config.plan.interval,
       customer_email: payload.customerEmail,
       customer_name: payload.customerName,
-      redirect_url: payload.redirectUrl ?? this.config.hitpay.defaultRedirectUrl,
+      redirect_url: payload.redirectUrl ?? hitpayConfig.defaultRedirectUrl,
       reference: subscription.providerReference,
-      payment_methods: this.config.hitpay.paymentMethods,
-      webhook: this.config.hitpay.webhookUrl,
+      // If no explicit payment methods are configured, omit the field so
+      // HitPay falls back to the account's default methods. This avoids
+      // validation errors for merchants that only allow the default set.
+      payment_methods: hitpayConfig.paymentMethods.length > 0 ? hitpayConfig.paymentMethods : undefined,
+      webhook: hitpayConfig.webhookUrl,
       send_email: "true"
     });
 
@@ -106,6 +136,13 @@ export class SubscriptionService {
     }
     if (!subscription.providerRecurringId) {
       throw new BadRequestException("No saved payment method available. Please update the payment method.");
+    }
+
+    const hitpayConfig = this.config.hitpay;
+    if (!this.hitpay || !hitpayConfig) {
+      throw new BadRequestException(
+        "Billing provider is not configured. Please update your payment method after billing is enabled."
+      );
     }
 
     const result = await this.hitpay.chargeRecurringBilling(subscription.providerRecurringId, {
@@ -141,7 +178,7 @@ export class SubscriptionService {
       throw new NotFoundException("No subscription found for this user.");
     }
 
-    if (subscription.providerRecurringId) {
+    if (subscription.providerRecurringId && this.hitpay) {
       await this.hitpay.deleteRecurringBilling(subscription.providerRecurringId);
     }
 
@@ -169,6 +206,8 @@ export class SubscriptionService {
   private async getOrCreateSubscription(userId: string): Promise<SubscriptionEntity> {
     let subscription = await this.subscriptionRepository.findOne({ where: { userId } });
     if (!subscription) {
+      const initialBillingDate =
+        this.config.plan.trialDays > 0 ? this.addDays(new Date(), this.config.plan.trialDays) : undefined;
       subscription = this.subscriptionRepository.create({
         userId,
         providerReference: `sub_${randomUUID()}`,
@@ -176,12 +215,10 @@ export class SubscriptionService {
         planAmount: this.config.plan.amount,
         planCurrency: this.config.plan.currency,
         planInterval: this.config.plan.interval,
-        trialEndsAt:
-          this.config.plan.trialDays > 0 ? this.addDays(new Date(), this.config.plan.trialDays) : undefined,
-        nextBillingAt:
-          this.config.plan.trialDays > 0 ? this.addDays(new Date(), this.config.plan.trialDays) : undefined
+        trialEndsAt: initialBillingDate,
+        nextBillingAt: initialBillingDate
       });
-      return this.subscriptionRepository.save(subscription);
+      return this.saveWithDuplicateGuard(subscription, userId);
     }
 
     let needsSync = false;
@@ -199,6 +236,24 @@ export class SubscriptionService {
     }
 
     return needsSync ? this.subscriptionRepository.save(subscription) : subscription;
+  }
+
+  private async saveWithDuplicateGuard(subscription: SubscriptionEntity, userId: string): Promise<SubscriptionEntity> {
+    try {
+      return await this.subscriptionRepository.save(subscription);
+    } catch (error) {
+      if (this.isUniqueViolation(error)) {
+        const existing = await this.subscriptionRepository.findOne({ where: { userId } });
+        if (existing) {
+          return existing;
+        }
+      }
+      throw error;
+    }
+  }
+
+  private isUniqueViolation(error: unknown): error is QueryFailedError {
+    return error instanceof QueryFailedError && error.driverError?.code === "23505";
   }
 
   private toState(entity: SubscriptionEntity): SubscriptionState {
@@ -333,14 +388,15 @@ export class SubscriptionService {
   }
 
   private verifySignature(signature: string | undefined, payload: HitPayWebhook) {
-    if (!this.config.hitpay.signatureKey) {
+    const hitpay = this.config.hitpay;
+    if (!hitpay || !hitpay.signatureKey) {
       return;
     }
     if (!signature) {
       throw new BadRequestException("Missing HitPay signature.");
     }
 
-    const digest = createHmac("sha256", this.config.hitpay.signatureKey)
+    const digest = createHmac("sha256", hitpay.signatureKey)
       .update(JSON.stringify(payload))
       .digest("hex");
 

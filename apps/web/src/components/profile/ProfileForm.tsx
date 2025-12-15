@@ -5,7 +5,7 @@ import { useFormState, useFormStatus } from "react-dom";
 import { CheckCircle2, Loader2, UploadCloud, XCircle } from "lucide-react";
 import type { UserProfile } from "@leadlah/core";
 
-import { initialProfileState, updateProfile, type ProfileFormState } from "@/app/actions/profile";
+import { updateProfile, type ProfileFormState } from "@/app/actions/profile";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -33,6 +33,7 @@ const languageOptions = [
 ];
 
 export function ProfileForm({ profile }: ProfileFormProps) {
+  const initialProfileState: ProfileFormState = { status: "idle" };
   const [state, formAction] = useFormState(updateProfile, initialProfileState);
   const [avatarPreview, setAvatarPreview] = useState(profile.avatarUrl ?? "");
   const [timezone, setTimezone] = useState(profile.timezone);
@@ -134,14 +135,6 @@ export function ProfileForm({ profile }: ProfileFormProps) {
                 placeholder="+60 12-555 4455"
               />
             </Field>
-            <Field label="WhatsApp" name="whatsapp" state={state}>
-              <Input
-                name="whatsapp"
-                id="whatsapp"
-                defaultValue={profile.whatsapp}
-                placeholder="Same as mobile"
-              />
-            </Field>
             <Field label="REN role/title" name="role" state={state}>
               <Input name="role" id="role" defaultValue={profile.role} placeholder="Senior REN" />
             </Field>
@@ -172,23 +165,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
               <FieldError name="timezone" state={state} />
             </div>
           </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="language">Language</Label>
-              <Select value={language} onValueChange={setLanguage}>
-                <SelectTrigger id="language">
-                  <SelectValue placeholder="Preferred language" />
-                </SelectTrigger>
-                <SelectContent>
-                  {languageOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FieldError name="language" state={state} />
-            </div>
+          <div className="grid gap-4 md:grid-cols-1">
             <Field label="Bio" name="bio" state={state}>
               <Textarea
                 name="bio"

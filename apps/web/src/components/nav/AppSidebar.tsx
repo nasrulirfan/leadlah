@@ -14,13 +14,21 @@ import { Separator } from "@/components/ui/separator";
 type SidebarProps = {
   userName?: string;
   onSignOut?: () => Promise<void>;
-  subscription?: Pick<SubscriptionState, "status" | "nextBillingAt"> | null;
+  subscription?: Pick<SubscriptionState, "status" | "nextBillingAt" | "providerRecurringId" | "trialEndsAt"> | null;
 };
 
 export function AppSidebar({ userName, onSignOut, subscription }: SidebarProps) {
   const pathname = usePathname();
   const isPastDue = subscription?.status === SubscriptionStatus.PAST_DUE;
   const billingDate = subscription?.nextBillingAt ? new Date(subscription.nextBillingAt) : null;
+  const hasRecurringBilling = !!subscription?.providerRecurringId;
+  const isSubscribedWithTrial =
+    hasRecurringBilling && subscription?.status === SubscriptionStatus.TRIALING && !!subscription.trialEndsAt;
+  const subscriptionLabel = subscription
+    ? isSubscribedWithTrial
+      ? "Subscribed"
+      : subscription.status
+    : "Untracked";
 
   return (
     <aside className="hidden w-full max-w-xs flex-col rounded-3xl border border-border/70 bg-card/90 p-6 text-foreground shadow-[0_10px_50px_rgba(15,23,42,0.08)] backdrop-blur lg:flex dark:border-slate-800/80 dark:bg-slate-900/40">
@@ -83,7 +91,7 @@ export function AppSidebar({ userName, onSignOut, subscription }: SidebarProps) 
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold">Subscription</p>
           <Badge tone={isPastDue ? "danger" : subscription ? "success" : "neutral"}>
-            {subscription ? subscription.status : "Untracked"}
+            {subscriptionLabel}
           </Badge>
         </div>
         <p className="mt-1 text-xs text-white/70">
