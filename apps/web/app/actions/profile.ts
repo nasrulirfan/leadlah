@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { userProfileUpdateSchema, type UserProfile } from "@leadlah/core";
 
-import { persistProfile } from "@/data/profile";
+import { fetchProfile, persistProfile } from "@/data/profile";
 import { requireSession } from "@/lib/session";
 import { auth } from "@/lib/auth";
 
@@ -20,8 +20,6 @@ const asOptionalString = (value: FormDataEntryValue | null) => {
 };
 
 const asString = (value: FormDataEntryValue | null) => (typeof value === "string" ? value.trim() : "");
-
-const asBoolean = (value: FormDataEntryValue | null) => (typeof value === "string" ? value === "on" : false);
 
 const mutationSchema = z.object({
   userId: z.string().min(1)
@@ -47,23 +45,21 @@ export async function updateProfile(prevState: ProfileFormState, formData: FormD
     };
   }
 
+  const currentProfile = await fetchProfile(parsedUserId.data.userId);
+
   const payloadResult = profileMutationSchema.safeParse({
     name: asString(formData.get("name")),
     email: asString(formData.get("email")),
     phone: asOptionalString(formData.get("phone")),
-    whatsapp: asOptionalString(formData.get("whatsapp")),
+    whatsapp: currentProfile.whatsapp,
     agency: asOptionalString(formData.get("agency")),
     role: asOptionalString(formData.get("role")),
-    bio: asOptionalString(formData.get("bio")),
+    bio: currentProfile.bio,
     avatarUrl: asOptionalString(formData.get("avatarUrl")),
     coverUrl: asOptionalString(formData.get("coverUrl")),
     timezone: asString(formData.get("timezone")),
     language: asString(formData.get("language")),
-    notifications: {
-      reminders: asBoolean(formData.get("notifications.reminders")),
-      smartDigest: asBoolean(formData.get("notifications.smartDigest")),
-      productUpdates: asBoolean(formData.get("notifications.productUpdates"))
-    }
+    notifications: currentProfile.notifications
   });
 
   if (!payloadResult.success) {

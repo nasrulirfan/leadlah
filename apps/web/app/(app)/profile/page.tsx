@@ -55,7 +55,6 @@ function ProfileHero({ profile, stats }: { profile: UserProfile; stats: { label:
             <span className="text-xs text-muted-foreground">{profile.agency ?? "Independent"}</span>
           </div>
           <h1 className="text-2xl font-semibold text-foreground">{profile.name}</h1>
-          <p className="text-sm text-muted-foreground">{profile.bio ?? "Set your bio to let leads know what you specialise in."}</p>
           <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
             <div className="flex items-center gap-1">
               <User className="h-3.5 w-3.5" />

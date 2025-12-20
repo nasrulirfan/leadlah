@@ -11,8 +11,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 type ProfileFormProps = {
@@ -165,44 +163,6 @@ export function ProfileForm({ profile }: ProfileFormProps) {
               <FieldError name="timezone" state={state} />
             </div>
           </div>
-          <div className="grid gap-4 md:grid-cols-1">
-            <Field label="Bio" name="bio" state={state}>
-              <Textarea
-                name="bio"
-                id="bio"
-                defaultValue={profile.bio}
-                placeholder="Let leads know what you specialise in."
-                className="min-h-[120px]"
-              />
-            </Field>
-          </div>
-          <div>
-            <Label className="text-sm font-semibold">Notifications</Label>
-            <p className="text-xs text-muted-foreground">Personalise how LeadLah nudges you to keep deals moving.</p>
-            <div className="mt-3 space-y-3 rounded-2xl border border-dashed border-border/70 bg-muted/20 p-4">
-              <NotificationToggle
-                id="notifications.reminders"
-                name="notifications.reminders"
-                title="Critical reminders"
-                description="Expiring listings, exclusive appointments, tenancy renewals."
-                defaultChecked={profile.notifications.reminders}
-              />
-              <NotificationToggle
-                id="notifications.smartDigest"
-                name="notifications.smartDigest"
-                title="Weekly digest"
-                description="Consolidated KPI + reminder email every Monday 7am."
-                defaultChecked={profile.notifications.smartDigest}
-              />
-              <NotificationToggle
-                id="notifications.productUpdates"
-                name="notifications.productUpdates"
-                title="Product tips"
-                description="Occasional product education and feature announcements."
-                defaultChecked={profile.notifications.productUpdates}
-              />
-            </div>
-          </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-3 border-t border-border/70 pt-5 md:flex-row md:items-center md:justify-between">
           <div className="text-sm text-muted-foreground">
@@ -302,30 +262,6 @@ function FieldError({
     return null;
   }
   return <p className="text-sm text-destructive">{message}</p>;
-}
-
-function NotificationToggle({
-  id,
-  name,
-  title,
-  description,
-  defaultChecked
-}: {
-  id: string;
-  name: string;
-  title: string;
-  description: string;
-  defaultChecked?: boolean;
-}) {
-  return (
-    <div className="flex items-start justify-between gap-3 rounded-2xl border border-transparent bg-background/90 px-4 py-3 shadow-sm">
-      <div>
-        <p className="text-sm font-semibold text-foreground">{title}</p>
-        <p className="text-xs text-muted-foreground">{description}</p>
-      </div>
-      <Switch id={id} name={name} defaultChecked={defaultChecked} />
-    </div>
-  );
 }
 
 function FormBanner({ message, tone }: { message: string; tone: "success" | "error" }) {
