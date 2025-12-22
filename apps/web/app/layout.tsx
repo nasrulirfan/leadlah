@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 const font = Space_Grotesk({
   subsets: ["latin"],
-  variable: "--font-display"
+  variable: "--font-display",
 });
 
 export const metadata: Metadata = {
@@ -19,8 +19,12 @@ export const metadata: Metadata = {
     "Property Agent App Malaysia",
     "DSR Calculator",
     "Real Estate CRM",
-    "LeadLah"
+    "LeadLah",
   ],
+  icons: {
+    icon: "/icon.png",
+    apple: "/apple-icon.png",
+  },
   openGraph: {
     title: "LeadLah | Property Agent OS for Malaysia",
     description:
@@ -32,20 +36,29 @@ export const metadata: Metadata = {
         url: "https://dummyimage.com/1200x630/1d67ff/ffffff&text=LeadLah",
         width: 1200,
         height: 630,
-        alt: "LeadLah Dashboard Preview"
-      }
-    ]
+        alt: "LeadLah Dashboard Preview",
+      },
+    ],
   },
-  metadataBase: new URL("https://leadlah.com")
+  metadataBase: new URL("https://leadlah.com"),
 };
 
 type Props = { children: React.ReactNode };
 
 export default function RootLayout({ children }: Props) {
   return (
-    <html lang="en" suppressHydrationWarning className={cn("bg-background", font.variable)}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={cn("bg-background", font.variable)}
+    >
       <body className="bg-background text-foreground antialiased">
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
           <Script id="ga4" strategy="afterInteractive">
             {`
               window.dataLayer = window.dataLayer || [];

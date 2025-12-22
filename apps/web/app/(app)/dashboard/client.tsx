@@ -22,12 +22,17 @@ import {
   ActivityFeed,
 } from "@/components/dashboard";
 import type { DashboardReminders } from "@/lib/reminders/types";
-import { completeReminderAction, dismissReminderAction } from "@/app/actions/reminders";
+import {
+  completeReminderAction,
+  dismissReminderAction,
+} from "@/app/actions/reminders";
+import type { DashboardActivity } from "@/lib/dashboard/types";
 
 interface DashboardClientProps {
   listingCounts: Record<string, number>;
   reminders: DashboardReminders;
   timezone: string;
+  activities: DashboardActivity[];
   performanceData: {
     target: number;
     commission: number;
@@ -48,6 +53,7 @@ export function DashboardClient({
   listingCounts,
   reminders,
   timezone,
+  activities,
   performanceData,
   monthlyData,
 }: DashboardClientProps) {
@@ -70,12 +76,20 @@ export function DashboardClient({
   const pending = listingCounts["Pending"] ?? 0;
   const expired = listingCounts["Expired"] ?? 0;
 
-  const progress = performanceData.target > 0
-    ? Math.min(100, Math.round((performanceData.netIncome / performanceData.target) * 100))
-    : 0;
+  const progress =
+    performanceData.target > 0
+      ? Math.min(
+          100,
+          Math.round(
+            (performanceData.netIncome / performanceData.target) * 100,
+          ),
+        )
+      : 0;
 
   const totalReminders =
-    reminders.today.length + reminders.tomorrow.length + reminders.thisWeek.length;
+    reminders.today.length +
+    reminders.tomorrow.length +
+    reminders.thisWeek.length;
 
   return (
     <div className="space-y-8">
@@ -133,7 +147,10 @@ export function DashboardClient({
           subtitle={`Target: RM ${(performanceData.target / 1000).toFixed(0)}k`}
           icon={DollarSign}
           colorScheme="emerald"
-          progress={{ value: performanceData.commission, max: performanceData.target }}
+          progress={{
+            value: performanceData.commission,
+            max: performanceData.target,
+          }}
           delay={0.1}
         />
         <StatsCard
@@ -151,7 +168,10 @@ export function DashboardClient({
           subtitle={`Target: ${performanceData.unitsTarget} units`}
           icon={Target}
           colorScheme="amber"
-          progress={{ value: performanceData.unitsClosed, max: performanceData.unitsTarget }}
+          progress={{
+            value: performanceData.unitsClosed,
+            max: performanceData.unitsTarget,
+          }}
           delay={0.3}
         />
       </div>
@@ -179,7 +199,7 @@ export function DashboardClient({
           onComplete={handleComplete}
           onDismiss={handleDismiss}
         />
-        <ActivityFeed activities={[]} />
+        <ActivityFeed activities={activities} />
       </div>
 
       {/* Quick Actions */}

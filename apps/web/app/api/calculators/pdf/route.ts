@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { existsSync } from "fs";
+import { readFile } from "fs/promises";
+import path from "path";
 import puppeteer from "puppeteer";
 import type { CalculatorReceipt } from "@leadlah/core";
 
@@ -6,6 +9,9 @@ import { generateCalculatorReceiptHtml } from "@/lib/pdf/generate-calculator-rec
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+let leadlahMarkDataUriCache: string | undefined;
+let leadlahMarkDataUriLoaded = false;
 
 type AllowableType = CalculatorReceipt["calculationType"];
 const allowedTypes: AllowableType[] = [
@@ -15,23 +21,28 @@ const allowedTypes: AllowableType[] = [
   "ROI",
   "Sellability",
   "Land Feasibility",
-  "Tenancy Stamp Duty"
+  "Tenancy Stamp Duty",
 ];
 
 export async function POST(req: NextRequest) {
   try {
     const payload = (await req.json()) as Record<string, unknown>;
     const receipt = normalizeReceipt(payload);
-    const html = generateCalculatorReceiptHtml(receipt);
+    const leadlahMarkDataUri = await getLeadlahMarkDataUri();
+    const html = generateCalculatorReceiptHtml(receipt, { leadlahMarkDataUri });
 
     const browser = await puppeteer.launch({
       headless: "new",
-      args: ["--no-sandbox", "--disable-setuid-sandbox"]
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
 
     try {
       const page = await browser.newPage();
-      await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 2 });
+      await page.setViewport({
+        width: 794,
+        height: 1123,
+        deviceScaleFactor: 2,
+      });
       await page.setContent(html, { waitUntil: "networkidle0" });
       await page.emulateMediaType("screen");
       const pdf = await page.pdf({
@@ -42,25 +53,58 @@ export async function POST(req: NextRequest) {
           top: "0",
           bottom: "0",
           left: "0",
-          right: "0"
-        }
+          right: "0",
+        },
       });
 
       return new NextResponse(pdf, {
         headers: {
           "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename=${buildFileName(receipt)}`
-        }
+          "Content-Disposition": `attachment; filename=${buildFileName(receipt)}`,
+        },
       });
     } finally {
       await browser.close();
     }
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Unable to generate calculator receipt.";
+      error instanceof Error
+        ? error.message
+        : "Unable to generate calculator receipt.";
     console.error("[calculators.pdf] Failed to generate receipt:", error);
     return NextResponse.json({ error: message }, { status: 400 });
   }
+}
+
+async function getLeadlahMarkDataUri(): Promise<string | undefined> {
+  if (leadlahMarkDataUriLoaded) {
+    return leadlahMarkDataUriCache;
+  }
+
+  leadlahMarkDataUriLoaded = true;
+  const assetPath = resolveBrandAssetPath("brand/leadlah-symbol.png");
+  if (!assetPath) {
+    return undefined;
+  }
+
+  try {
+    const buffer = await readFile(assetPath);
+    leadlahMarkDataUriCache = `data:image/png;base64,${buffer.toString("base64")}`;
+  } catch (error) {
+    console.warn("[calculators.pdf] Unable to load LeadLah logo asset:", error);
+    leadlahMarkDataUriCache = undefined;
+  }
+
+  return leadlahMarkDataUriCache;
+}
+
+function resolveBrandAssetPath(assetPath: string): string | undefined {
+  const candidates = [
+    path.join(process.cwd(), "public", assetPath),
+    path.join(process.cwd(), "apps", "web", "public", assetPath),
+  ];
+
+  return candidates.find((candidate) => existsSync(candidate));
 }
 
 function normalizeReceipt(payload: Record<string, unknown>): CalculatorReceipt {
@@ -91,33 +135,32 @@ function normalizeReceipt(payload: Record<string, unknown>): CalculatorReceipt {
     calculationType,
     inputs,
     outputs,
-    issuedAt
+    issuedAt,
   };
 }
 
 function extractRecord(
   source: unknown,
-  fieldName: string
+  fieldName: string,
 ): Record<string, number | string | boolean> {
   if (!source || typeof source !== "object") {
     throw new Error(`Receipt ${fieldName} are missing.`);
   }
 
-  return Object.entries(source).reduce<Record<string, number | string | boolean>>(
-    (acc, [key, value]) => {
-      if (
-        typeof value === "string" ||
-        typeof value === "number" ||
-        typeof value === "boolean"
-      ) {
-        acc[key] = value;
-      } else if (value != null) {
-        acc[key] = String(value);
-      }
-      return acc;
-    },
-    {}
-  );
+  return Object.entries(source).reduce<
+    Record<string, number | string | boolean>
+  >((acc, [key, value]) => {
+    if (
+      typeof value === "string" ||
+      typeof value === "number" ||
+      typeof value === "boolean"
+    ) {
+      acc[key] = value;
+    } else if (value != null) {
+      acc[key] = String(value);
+    }
+    return acc;
+  }, {});
 }
 
 function extractRequiredString(value: unknown, fieldName: string): string {
@@ -136,7 +179,9 @@ function extractOptionalString(value: unknown): string | undefined {
 }
 
 function buildFileName(receipt: CalculatorReceipt): string {
-  const slug = receipt.calculationType.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  const slug = receipt.calculationType
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-");
   const date = receipt.issuedAt.toISOString().split("T")[0];
   return `${slug}-receipt-${date}.pdf`;
 }
