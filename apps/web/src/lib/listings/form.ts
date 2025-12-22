@@ -1,5 +1,5 @@
-import type { ListingInput } from "@leadlah/core";
 import { listingSchema } from "@leadlah/core";
+import { z } from "zod";
 
 export const listingFormSchema = listingSchema.omit({
   id: true,
@@ -7,4 +7,4 @@ export const listingFormSchema = listingSchema.omit({
   updatedAt: true
 });
 
-export type ListingFormValues = Omit<ListingInput, "id" | "createdAt" | "updatedAt">;
+export type ListingFormValues = z.input<typeof listingFormSchema>;

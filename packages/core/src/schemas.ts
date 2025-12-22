@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ListingStatus, ProcessStage, SubscriptionStatus } from "./types";
+import { ListingCategory, ListingStatus, ProcessStage, SubscriptionStatus } from "./types";
 
 const urlLikeSchema = z
   .string()
@@ -47,12 +47,16 @@ export const listingSchema = z.object({
   id: z.string().uuid(),
   propertyName: z.string().min(2),
   type: z.string().min(2),
+  category: z.nativeEnum(ListingCategory).default(ListingCategory.FOR_SALE),
   price: z.number().nonnegative(),
   size: z.number().nonnegative(),
   bedrooms: z.number().int().nonnegative(),
   bathrooms: z.number().int().nonnegative(),
   location: z.string().min(3),
+  buildingProject: z.string().min(2).max(255).optional(),
   status: z.nativeEnum(ListingStatus),
+  expiresAt: z.coerce.date().optional(),
+  lastEnquiryAt: z.coerce.date().optional(),
   photos: z.array(mediaAssetSchema).default([]),
   videos: z.array(mediaAssetSchema).default([]),
   documents: z.array(mediaAssetSchema).default([]),
@@ -90,7 +94,30 @@ export const reminderSchema = z.object({
 
 export const subscriptionStatusSchema = z.nativeEnum(SubscriptionStatus);
 
+export const listingSearchSchema = z
+  .object({
+    category: z.nativeEnum(ListingCategory).optional(),
+    location: z.string().min(1).optional(),
+    buildingProject: z.string().min(1).optional(),
+    minPrice: z.coerce.number().nonnegative().optional(),
+    maxPrice: z.coerce.number().nonnegative().optional(),
+    status: z.nativeEnum(ListingStatus).optional(),
+    propertyType: z.string().min(1).optional(),
+    noEnquiryDays: z.coerce.number().int().nonnegative().optional(),
+    expiringInDays: z.coerce.number().int().nonnegative().optional()
+  })
+  .superRefine((values, ctx) => {
+    if (values.minPrice != null && values.maxPrice != null && values.minPrice > values.maxPrice) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "minPrice must be less than or equal to maxPrice",
+        path: ["minPrice"]
+      });
+    }
+  });
+
 export type ListingInput = z.infer<typeof listingSchema>;
+export type ListingSearchInput = z.infer<typeof listingSearchSchema>;
 export type ProcessLogInput = z.infer<typeof processLogEntrySchema>;
 export type ReminderInput = z.infer<typeof reminderSchema>;
 export type NotificationPreferencesInput = z.infer<typeof notificationPreferencesSchema>;

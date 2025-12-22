@@ -2,11 +2,11 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { ListingStatus, ProcessStage } from "@leadlah/core";
+import { ListingCategory, ListingStatus, ProcessStage } from "@leadlah/core";
 import type { ListingInput, ProcessLogEntry, ViewingCustomer } from "@leadlah/core";
 import { reminders } from "@/lib/mock-data";
 import { listingFormSchema, type ListingFormValues } from "@/lib/listings/form";
-import { createListingAction, deleteListingAction, updateListingAction, updateListingStatusAction } from "./actions";
+import { createListingAction, deleteListingAction, updateListingAction, updateListingCategoryAction, updateListingStatusAction } from "./actions";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -36,12 +36,16 @@ type ListingsClientProps = {
 const emptyListing: ListingFormValues = {
   propertyName: "",
   type: "",
+  category: ListingCategory.FOR_SALE,
   price: 0,
   size: 0,
   bedrooms: 0,
   bathrooms: 0,
   location: "",
+  buildingProject: undefined,
   status: ListingStatus.ACTIVE,
+  expiresAt: undefined,
+  lastEnquiryAt: undefined,
   photos: [],
   videos: [],
   documents: [],
@@ -71,15 +75,26 @@ const coverImageFor = (listingId: string, photos: ListingInput["photos"]) => {
   return fallbackPropertyImages[index];
 };
 
+const dateToInputValue = (value?: Date) => {
+  if (!value) {
+    return "";
+  }
+  return value.toISOString().slice(0, 10);
+};
+
 const listingToFormValues = (listing: ListingInput): ListingFormValues => ({
   propertyName: listing.propertyName,
   type: listing.type,
+  category: listing.category,
   price: listing.price,
   size: listing.size,
   bedrooms: listing.bedrooms,
   bathrooms: listing.bathrooms,
   location: listing.location,
+  buildingProject: listing.buildingProject,
   status: listing.status,
+  expiresAt: listing.expiresAt ? dateToInputValue(listing.expiresAt) : undefined,
+  lastEnquiryAt: listing.lastEnquiryAt ? dateToInputValue(listing.lastEnquiryAt) : undefined,
   photos: listing.photos ?? [],
   videos: listing.videos ?? [],
   documents: listing.documents ?? [],
@@ -93,7 +108,15 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
   const [error, setError] = useState<string | null>(null);
   const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
   const [editingListing, setEditingListing] = useState<ListingInput | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<"All" | ListingCategory>("All");
   const [statusFilter, setStatusFilter] = useState<"All" | ListingStatus>("All");
+  const [locationFilter, setLocationFilter] = useState("");
+  const [buildingProjectFilter, setBuildingProjectFilter] = useState("");
+  const [propertyTypeFilter, setPropertyTypeFilter] = useState("");
+  const [minPriceFilter, setMinPriceFilter] = useState("");
+  const [maxPriceFilter, setMaxPriceFilter] = useState("");
+  const [noEnquiryDaysFilter, setNoEnquiryDaysFilter] = useState("");
+  const [expiringInDaysFilter, setExpiringInDaysFilter] = useState("");
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -114,6 +137,22 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
         return "warning";
       case ListingStatus.WITHDRAWN:
         return "danger";
+      default:
+        return "primary";
+    }
+  };
+
+  const categoryTone = (category: ListingCategory) => {
+    switch (category) {
+      case ListingCategory.SOLD:
+        return "success";
+      case ListingCategory.RENTED:
+        return "info";
+      case ListingCategory.HOLD_FOR_SALE:
+      case ListingCategory.BOOKED:
+        return "warning";
+      case ListingCategory.OFF_MARKET:
+        return "neutral";
       default:
         return "primary";
     }
@@ -173,9 +212,85 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
     });
   };
 
+  const handleCategoryChange = (id: string, category: ListingCategory) => {
+    startTransition(async () => {
+      try {
+        const updated = await updateListingCategoryAction({ id, category });
+        if (updated) {
+          setListings((prev) => prev.map((listing) => (listing.id === updated.id ? updated : listing)));
+        }
+      } catch (actionError) {
+        setError(actionError instanceof Error ? actionError.message : "Unable to update the listing category.");
+      }
+    });
+  };
+
   const filteredListings = useMemo(
-    () => (statusFilter === "All" ? listings : listings.filter((listing) => listing.status === statusFilter)),
-    [statusFilter, listings]
+    () => {
+      const minPrice = minPriceFilter.trim() ? Number(minPriceFilter) : null;
+      const maxPrice = maxPriceFilter.trim() ? Number(maxPriceFilter) : null;
+      const noEnquiryDays = noEnquiryDaysFilter.trim() ? Number(noEnquiryDaysFilter) : null;
+      const expiringInDays = expiringInDaysFilter.trim() ? Number(expiringInDaysFilter) : null;
+      const now = new Date();
+
+      return listings.filter((listing) => {
+        if (categoryFilter !== "All" && listing.category !== categoryFilter) {
+          return false;
+        }
+        if (statusFilter !== "All" && listing.status !== statusFilter) {
+          return false;
+        }
+        if (locationFilter.trim() && !listing.location.toLowerCase().includes(locationFilter.trim().toLowerCase())) {
+          return false;
+        }
+        if (propertyTypeFilter.trim() && !listing.type.toLowerCase().includes(propertyTypeFilter.trim().toLowerCase())) {
+          return false;
+        }
+        if (buildingProjectFilter.trim()) {
+          const haystack = `${listing.buildingProject ?? ""} ${listing.propertyName}`.toLowerCase();
+          if (!haystack.includes(buildingProjectFilter.trim().toLowerCase())) {
+            return false;
+          }
+        }
+        if (minPrice != null && Number.isFinite(minPrice) && listing.price < minPrice) {
+          return false;
+        }
+        if (maxPrice != null && Number.isFinite(maxPrice) && listing.price > maxPrice) {
+          return false;
+        }
+        if (noEnquiryDays != null && Number.isFinite(noEnquiryDays)) {
+          if (!listing.lastEnquiryAt) {
+          } else {
+            const threshold = new Date(now.getTime() - noEnquiryDays * 24 * 60 * 60 * 1000);
+            if (listing.lastEnquiryAt >= threshold) {
+              return false;
+            }
+          }
+        }
+        if (expiringInDays != null && Number.isFinite(expiringInDays)) {
+          if (!listing.expiresAt) {
+            return false;
+          }
+          const expiresBefore = new Date(now.getTime() + expiringInDays * 24 * 60 * 60 * 1000);
+          if (listing.expiresAt < now || listing.expiresAt > expiresBefore) {
+            return false;
+          }
+        }
+        return true;
+      });
+    },
+    [
+      listings,
+      categoryFilter,
+      statusFilter,
+      locationFilter,
+      buildingProjectFilter,
+      propertyTypeFilter,
+      minPriceFilter,
+      maxPriceFilter,
+      noEnquiryDaysFilter,
+      expiringInDaysFilter
+    ]
   );
 
   const handleProcessLogUpdate = (listingId: string, entry: ProcessLogEntry) => {
@@ -258,6 +373,24 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
                 />
               </div>
               <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">Category</label>
+                <Select
+                  value={(form.category as ListingCategory | undefined) ?? ListingCategory.FOR_SALE}
+                  onValueChange={(value) => setForm({ ...form, category: value as ListingCategory })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.values(ListingCategory).map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
                 <label className="text-sm font-semibold text-slate-700">Price (RM)</label>
                 <Input
                   required
@@ -303,6 +436,19 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
                 />
               </div>
               <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">Building / Project</label>
+                <Input
+                  value={(form.buildingProject as string | undefined) ?? ""}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      buildingProject: e.target.value.trim() ? e.target.value : undefined
+                    })
+                  }
+                  placeholder="e.g. Mont Kiara, Serenia City"
+                />
+              </div>
+              <div className="space-y-2">
                 <label className="text-sm font-semibold text-slate-700">Cover Photo URL</label>
                 <Input
                   type="url"
@@ -331,6 +477,34 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">Listing Expiry Date</label>
+                <Input
+                  type="date"
+                  value={(form.expiresAt as string | undefined) ?? ""}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      expiresAt: e.target.value ? e.target.value : undefined
+                    })
+                  }
+                />
+                <p className="text-xs text-slate-500">Used for expiring listing filters and reminders.</p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">Last Enquiry Date</label>
+                <Input
+                  type="date"
+                  value={(form.lastEnquiryAt as string | undefined) ?? ""}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      lastEnquiryAt: e.target.value ? e.target.value : undefined
+                    })
+                  }
+                />
+                <p className="text-xs text-slate-500">Helps identify listings with no enquiry for X days.</p>
               </div>
               <div className="space-y-2 md:col-span-2">
                 <label className="text-sm font-semibold text-slate-700">External Portal Links</label>
@@ -371,6 +545,68 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
+            <Input
+              value={locationFilter}
+              onChange={(e) => setLocationFilter(e.target.value)}
+              placeholder="Location"
+              className="w-[160px]"
+            />
+            <Input
+              value={buildingProjectFilter}
+              onChange={(e) => setBuildingProjectFilter(e.target.value)}
+              placeholder="Building / Project"
+              className="w-[200px]"
+            />
+            <Input
+              value={propertyTypeFilter}
+              onChange={(e) => setPropertyTypeFilter(e.target.value)}
+              placeholder="Property type"
+              className="w-[160px]"
+            />
+            <Input
+              type="number"
+              value={minPriceFilter}
+              onChange={(e) => setMinPriceFilter(e.target.value)}
+              placeholder="Min price"
+              className="w-[140px]"
+            />
+            <Input
+              type="number"
+              value={maxPriceFilter}
+              onChange={(e) => setMaxPriceFilter(e.target.value)}
+              placeholder="Max price"
+              className="w-[140px]"
+            />
+            <Input
+              type="number"
+              value={noEnquiryDaysFilter}
+              onChange={(e) => setNoEnquiryDaysFilter(e.target.value)}
+              placeholder="No enquiry (days)"
+              className="w-[160px]"
+            />
+            <Input
+              type="number"
+              value={expiringInDaysFilter}
+              onChange={(e) => setExpiringInDaysFilter(e.target.value)}
+              placeholder="Expiring in (days)"
+              className="w-[160px]"
+            />
+            <Select
+              value={categoryFilter}
+              onValueChange={(value) => setCategoryFilter(value as "All" | ListingCategory)}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All Categories</SelectItem>
+                {Object.values(ListingCategory).map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as "All" | ListingStatus)}>
               <SelectTrigger className="w-[160px]">
                 <SelectValue placeholder="Status" />
@@ -399,10 +635,12 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
                   <div className="flex flex-1 flex-col">
                     <div className="flex items-center gap-3">
                       <h3 className="text-base font-semibold text-slate-900">{listing.propertyName}</h3>
+                      <Badge tone={categoryTone(listing.category)}>{listing.category}</Badge>
                       <Badge tone={statusTone(listing.status)}>{listing.status}</Badge>
                     </div>
                     <p className="text-sm text-slate-600">
                       {listing.type} • {listing.bedrooms} bed / {listing.bathrooms} bath • {listing.size} sqft •{" "}
+                      {listing.buildingProject ? `${listing.buildingProject} • ` : ""}
                       {listing.location}
                     </p>
                     <p className="text-sm font-semibold text-brand-700">RM {listing.price.toLocaleString()}</p>
@@ -421,6 +659,22 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
                   onUpdated={(entry) => handleProcessLogUpdate(listing.id, entry)}
                 />
                 <div className="flex items-center gap-2 md:justify-end">
+                  <Select
+                    value={listing.category}
+                    disabled={isPending}
+                    onValueChange={(value) => handleCategoryChange(listing.id, value as ListingCategory)}
+                  >
+                    <SelectTrigger className="max-w-[180px]">
+                      <SelectValue placeholder="Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.values(ListingCategory).map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <Select
                     value={listing.status}
                     disabled={isPending}

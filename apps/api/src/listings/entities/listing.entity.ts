@@ -1,5 +1,7 @@
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
-import { ExternalLink, ListingStatus, MediaAsset } from "@leadlah/core";
+import { ExternalLink, ListingCategory, ListingStatus, MediaAsset } from "@leadlah/core";
+
+const timestampColumnType = process.env.NODE_ENV === "test" ? "datetime" : "timestamptz";
 
 @Entity({ name: "listings" })
 export class ListingEntity {
@@ -11,6 +13,9 @@ export class ListingEntity {
 
   @Column({ type: "varchar", length: 100 })
   type!: string;
+
+  @Column({ type: "varchar", length: 32, default: ListingCategory.FOR_SALE })
+  category!: ListingCategory;
 
   @Column({ type: "numeric", precision: 15, scale: 2 })
   price!: number;
@@ -27,8 +32,17 @@ export class ListingEntity {
   @Column({ type: "varchar", length: 255 })
   location!: string;
 
+  @Column({ type: "varchar", length: 255, nullable: true })
+  buildingProject?: string;
+
   @Column({ type: "varchar", length: 32, default: ListingStatus.ACTIVE })
   status!: ListingStatus;
+
+  @Column({ type: timestampColumnType as any, nullable: true })
+  expiresAt?: Date;
+
+  @Column({ type: timestampColumnType as any, nullable: true })
+  lastEnquiryAt?: Date;
 
   @Column({ type: "simple-json", default: "[]" })
   photos!: MediaAsset[];

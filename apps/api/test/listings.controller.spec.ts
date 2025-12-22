@@ -43,8 +43,8 @@ describe("ListingsController", () => {
     vi.spyOn(service, "update").mockResolvedValue({ id: "1", price: 2 } as any);
     vi.spyOn(service, "remove").mockResolvedValue({ id: "1" });
 
-    await expect(controller.findAll()).resolves.toEqual([]);
-    expect(service.findAll).toHaveBeenCalled();
+    await expect(controller.findAll({} as any)).resolves.toEqual([]);
+    expect(service.findAll).toHaveBeenCalledWith({});
 
     await expect(controller.findOne("1")).resolves.toEqual({ id: "1" });
     expect(service.findOne).toHaveBeenCalledWith("1");

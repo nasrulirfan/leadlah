@@ -6,6 +6,17 @@ export enum ListingStatus {
   WITHDRAWN = "Withdrawn"
 }
 
+export enum ListingCategory {
+  FOR_SALE = "For Sale",
+  FOR_RENT = "For Rent",
+  FOR_SALE_AND_RENT = "For Sale & Rent",
+  SOLD = "Sold",
+  RENTED = "Rented",
+  HOLD_FOR_SALE = "Hold for Sale",
+  BOOKED = "Booked",
+  OFF_MARKET = "Off-Market"
+}
+
 export enum ProcessStage {
   OWNER_APPOINTMENT = "Owner Appointment",
   MARKETING_ACTIVATION = "Marketing Activation",
@@ -38,12 +49,16 @@ export type Listing = {
   id: string;
   propertyName: string;
   type: string;
+  category: ListingCategory;
   price: number;
   size: number;
   bedrooms: number;
   bathrooms: number;
   location: string;
+  buildingProject?: string;
   status: ListingStatus;
+  expiresAt?: Date;
+  lastEnquiryAt?: Date;
   photos: MediaAsset[];
   videos: MediaAsset[];
   documents: MediaAsset[];

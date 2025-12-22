@@ -1,4 +1,4 @@
-import { Listing, ListingStatus, ProcessLogEntry, ProcessStage, Reminder, generateOwnerViewToken } from "@leadlah/core";
+import { Listing, ListingCategory, ListingStatus, ProcessLogEntry, ProcessStage, Reminder, generateOwnerViewToken } from "@leadlah/core";
 import { addDays } from "date-fns";
 
 export const listings: Listing[] = [
@@ -6,12 +6,16 @@ export const listings: Listing[] = [
     id: "8e4e1b32-2c4c-4e4f-9b5a-1fd3c1f1a001",
     propertyName: "Seri Maya Condo",
     type: "Condominium",
+    category: ListingCategory.FOR_SALE,
     price: 950000,
     size: 1200,
     bedrooms: 3,
     bathrooms: 2,
     location: "Kuala Lumpur",
+    buildingProject: "Seri Maya",
     status: ListingStatus.ACTIVE,
+    expiresAt: addDays(new Date(), 60),
+    lastEnquiryAt: addDays(new Date(), -4),
     photos: [{ url: "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85", label: "Living" }],
     videos: [],
     documents: [{ url: "https://example.com/title.pdf", label: "Title Deed" }],
@@ -25,12 +29,16 @@ export const listings: Listing[] = [
     id: "6a6c8d8e-c9ab-4de0-9b0a-20e40da7ab02",
     propertyName: "Damansara Heights Bungalow",
     type: "Landed",
+    category: ListingCategory.FOR_RENT,
     price: 3200000,
     size: 4800,
     bedrooms: 6,
     bathrooms: 6,
     location: "Damansara, Selangor",
+    buildingProject: "Damansara Heights",
     status: ListingStatus.ACTIVE,
+    expiresAt: addDays(new Date(), 20),
+    lastEnquiryAt: addDays(new Date(), -12),
     photos: [{ url: "https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e", label: "Facade" }],
     videos: [],
     documents: [],

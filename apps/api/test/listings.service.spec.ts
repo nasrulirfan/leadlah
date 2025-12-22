@@ -1,5 +1,5 @@
 import { NotFoundException } from "@nestjs/common";
-import { ListingStatus } from "@leadlah/core";
+import { ListingCategory, ListingStatus } from "@leadlah/core";
 import { Repository } from "typeorm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ListingsService } from "../src/listings/listings.service";
@@ -27,6 +27,7 @@ const createRepositoryMock = (): RepositoryMock => ({
   create: vi.fn(),
   save: vi.fn(),
   find: vi.fn(),
+  createQueryBuilder: vi.fn(),
   findOne: vi.fn(),
   preload: vi.fn(),
   remove: vi.fn()
@@ -51,6 +52,7 @@ describe("ListingsService", () => {
 
     expect(repository.create).toHaveBeenCalledWith({
       ...payload,
+      category: ListingCategory.FOR_SALE,
       documents: [],
       externalLinks: [],
       photos: [],
@@ -67,7 +69,7 @@ describe("ListingsService", () => {
     const listings = await service.findAll();
 
     expect(listings).toHaveLength(1);
-    expect(repository.find).toHaveBeenCalled();
+    expect(repository.find).toHaveBeenCalledWith({ order: { createdAt: "DESC" } });
   });
 
   it("finds an existing listing", async () => {

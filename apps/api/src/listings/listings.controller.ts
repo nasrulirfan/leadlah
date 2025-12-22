@@ -1,7 +1,8 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { ListingsService } from "./listings.service";
 import { CreateListingDto } from "./dto/create-listing.dto";
 import { UpdateListingDto } from "./dto/update-listing.dto";
+import { ListListingsQueryDto } from "./dto/list-listings.query";
 
 @Controller("listings")
 export class ListingsController {
@@ -13,8 +14,8 @@ export class ListingsController {
   }
 
   @Get()
-  findAll() {
-    return this.service.findAll();
+  findAll(@Query() query: ListListingsQueryDto) {
+    return this.service.findAll(query);
   }
 
   @Get(":id")

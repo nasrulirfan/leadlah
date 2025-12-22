@@ -36,6 +36,20 @@
       "when": 1764573083385,
       "tag": "0004_add_profiles",
       "breakpoints": false
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1766281502916,
+      "tag": "0005_add_listing_lifecycle_filters",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1766385951640,
+      "tag": "0006_absent_black_bolt",
+      "breakpoints": true
     }
   ]
 }
