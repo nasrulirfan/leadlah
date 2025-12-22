@@ -5,6 +5,8 @@ import { fetchSubscriptionSummary, getFallbackSummary } from "@/data/subscriptio
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { PageHero } from "@/components/app/PageHero";
+import { CreditCard } from "lucide-react";
 import {
   cancelSubscriptionAction,
   retryPaymentAction,
@@ -63,16 +65,24 @@ export default async function BillingPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Subscription & Billing</h1>
-          <p className="text-sm text-muted-foreground">Manage plan, invoices, and payment method via HitPay.</p>
-        </div>
-        <Button variant="secondary" size="sm">Contact Support</Button>
-      </div>
+      <PageHero
+        title="Subscription & Billing"
+        description="Manage plan, invoices, and payment method via HitPay."
+        icon={<CreditCard />}
+        badges={
+          <Badge tone="neutral" className="border-white/10 bg-white/10 text-white">
+            {statusLabel}
+          </Badge>
+        }
+        actions={
+          <Button variant="secondary" size="lg" className="bg-white text-slate-900 shadow-lg hover:bg-slate-100">
+            Contact Support
+          </Button>
+        }
+      />
 
       {billingUnavailable && (
-        <Card className="border-amber-200 bg-amber-50 text-amber-900">
+        <Card className="border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
           <p className="text-sm font-semibold">Billing service is temporarily unavailable. Showing cached defaults.</p>
           <p className="text-xs text-amber-800">
             Ensure the API is running on {process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"} with the latest
@@ -82,7 +92,7 @@ export default async function BillingPage() {
       )}
 
       {!billingUnavailable && billingProviderConfigured === false && (
-        <Card className="border-amber-200 bg-amber-50 text-amber-900">
+        <Card className="border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
           <p className="text-sm font-semibold">HitPay is not configured for this environment.</p>
           <p className="text-xs text-amber-800">
             You can start a free trial, but card setup and payment retries will only work after HitPay keys are added to
@@ -92,7 +102,7 @@ export default async function BillingPage() {
       )}
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
+        <Card className="border-border/70 bg-card/90 shadow-sm transition-all hover:shadow-md dark:bg-slate-900/40">
           <p className="text-sm font-semibold text-muted-foreground">Current Status</p>
           <div className="mt-2 flex flex-col gap-2">
             <div className="flex items-center gap-2">
@@ -112,7 +122,7 @@ export default async function BillingPage() {
           </div>
         </Card>
 
-        <Card className="md:col-span-2">
+        <Card className="md:col-span-2 border-border/70 bg-card/90 shadow-sm transition-all hover:shadow-md dark:bg-slate-900/40">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-sm font-semibold text-muted-foreground">{plan.name}</p>
@@ -159,7 +169,7 @@ export default async function BillingPage() {
       </div>
 
       {paymentFailed && (
-        <Card className="border-red-200 bg-red-50">
+        <Card className="border-red-200 bg-red-50 dark:border-red-500/30 dark:bg-red-500/10">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="text-lg font-semibold text-red-800">Payment Failed</h3>
@@ -195,25 +205,25 @@ export default async function BillingPage() {
         </Card>
       )}
 
-      <Card>
+      <Card className="border-border/70 bg-card/90 shadow-sm transition-all hover:shadow-md dark:bg-slate-900/40">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-foreground">Invoice History</h3>
           <Button variant="secondary" size="sm" disabled>
             Download All
           </Button>
         </div>
-        <div className="mt-4 divide-y divide-slate-100 text-sm">
+        <div className="mt-4 divide-y divide-border text-sm">
           {invoices.length === 0 && (
             <p className="py-6 text-center text-muted-foreground">No invoices issued yet.</p>
           )}
           {invoices.map((invoice) => (
             <div key={invoice.id} className="flex flex-wrap items-center justify-between py-3">
               <div>
-                <p className="font-semibold text-slate-800">{invoice.providerPaymentId ?? invoice.id}</p>
+                <p className="font-semibold text-foreground">{invoice.providerPaymentId ?? invoice.id}</p>
                 <p className="text-xs text-muted-foreground">{invoice.createdAt.toLocaleDateString()}</p>
               </div>
               <div className="flex items-center gap-3">
-                <span className="font-semibold text-slate-800">{formatAmount(invoice.amount, invoice.currency)}</span>
+                <span className="font-semibold text-foreground">{formatAmount(invoice.amount, invoice.currency)}</span>
                 <Badge tone={invoiceTone[invoice.status]}>{invoice.status}</Badge>
                 <Link
                   href="#"

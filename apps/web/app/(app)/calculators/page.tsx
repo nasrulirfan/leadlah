@@ -9,7 +9,7 @@ type AgentMetadata = {
 
 export default async function CalculatorsPage() {
   const session = await requireSession();
-  const metadata = (session.user?.metadata ?? {}) as AgentMetadata;
+  const metadata = ((session.user as unknown as { metadata?: AgentMetadata })?.metadata ?? {}) as AgentMetadata;
 
   return (
     <CalculatorsClient

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   calculateLoanEligibility,
   calculateSpaMot,
@@ -19,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import type { CalculatorReceipt } from "@leadlah/core";
+import { PageHero } from "@/components/app/PageHero";
 import {
   Calculator,
   FileText,
@@ -31,6 +33,7 @@ import {
   ArrowLeft,
   CheckCircle2
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type CalculatorType =
   | "loan"
@@ -211,7 +214,7 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
   ):
     | {
         inputs: Record<string, number | string | boolean>;
-        outputs: Record<string, number | string | boolean>;
+        outputs: Record<string, number | string>;
       }
     | null => {
     switch (calculatorType) {
@@ -320,6 +323,25 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
     }
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.08 }
+    }
+  };
+
+  const cardVariants = {
+    hidden: { opacity: 0, y: 20, scale: 0.98 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: { duration: 0.35, ease: [0.25, 0.4, 0.25, 1] as [number, number, number, number] }
+    },
+    exit: { opacity: 0, scale: 0.98, transition: { duration: 0.2 } }
+  };
+
   const handleExportPDF = async () => {
     if (!selectedCalculator) {
       return;
@@ -419,44 +441,54 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
   if (!selectedCalculator) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Professional Calculators</h1>
-            <p className="mt-2 text-muted-foreground">
-              Choose a calculator to get started with instant, accurate financial estimates
-            </p>
-          </div>
-        </div>
+        <PageHero
+          title="Professional Calculators"
+          description="Choose a calculator to get started with instant, accurate financial estimates."
+          icon={<Calculator />}
+        />
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {calculators.map((calc) => {
-            const Icon = calc.icon;
-            return (
-              <Card
-                key={calc.id}
-                className="group cursor-pointer transition-all hover:shadow-lg hover:border-primary/50"
-                onClick={() => setSelectedCalculator(calc.id)}
-              >
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-start justify-between">
-                    <div className={`${calc.color} rounded-lg p-3 text-white transition-transform group-hover:scale-110`}>
-                      <Icon className="h-6 w-6" />
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+        >
+          <AnimatePresence initial={false}>
+            {calculators.map((calc) => {
+              const Icon = calc.icon;
+              return (
+                <motion.div key={calc.id} variants={cardVariants} layout>
+                  <Card
+                    className="group cursor-pointer border-border/70 bg-card/90 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md dark:bg-slate-900/40"
+                    onClick={() => setSelectedCalculator(calc.id)}
+                  >
+                    <div className="flex flex-col gap-4">
+                      <div className="flex items-start justify-between">
+                        <div
+                          className={cn(
+                            "rounded-2xl p-3 text-white shadow-sm transition-transform group-hover:scale-105",
+                            calc.color
+                          )}
+                        >
+                          <Icon className="h-6 w-6" />
+                        </div>
+                        <Badge variant="secondary" className="text-xs">
+                          {calc.category}
+                        </Badge>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-foreground transition-colors group-hover:text-primary">
+                          {calc.title}
+                        </h3>
+                        <p className="mt-1 text-sm text-muted-foreground">{calc.description}</p>
+                      </div>
                     </div>
-                    <Badge variant="secondary" className="text-xs">
-                      {calc.category}
-                    </Badge>
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-foreground group-hover:text-primary">
-                      {calc.title}
-                    </h3>
-                    <p className="mt-1 text-sm text-muted-foreground">{calc.description}</p>
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
+                  </Card>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </motion.div>
 
         {receiptBanner}
       </div>
@@ -464,45 +496,35 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
   }
 
   const currentCalculator = selectedCalculator ? calculatorsById[selectedCalculator] : null;
+  const HeroIcon = currentCalculator?.icon ?? Calculator;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setSelectedCalculator(null)}
-          className="gap-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Calculators
-        </Button>
-      </div>
+      <PageHero
+        title={currentCalculator?.title ?? "Calculator"}
+        description={currentCalculator?.description}
+        icon={<HeroIcon />}
+        actions={
+          <>
+            <Button
+              variant="secondary"
+              size="lg"
+              onClick={() => setSelectedCalculator(null)}
+              className="gap-2 bg-white text-slate-900 shadow-lg hover:bg-slate-100"
+            >
+              <ArrowLeft className="h-5 w-5" />
+              Back
+            </Button>
+            <Button onClick={handleExportPDF} size="lg" className="gap-2" disabled={isGenerating}>
+              <Download className="h-5 w-5" />
+              {isGenerating ? "Generating..." : "Export PDF"}
+            </Button>
+          </>
+        }
+      />
 
       {receiptBanner}
-
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            {currentCalculator && (
-              <>
-                <div className={`${currentCalculator.color} rounded-lg p-3 text-white`}>
-                  <currentCalculator.icon className="h-6 w-6" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-foreground">{currentCalculator.title}</h1>
-                  <p className="text-sm text-muted-foreground">{currentCalculator.description}</p>
-                </div>
-              </>
-            )}
-          </div>
-          <Button onClick={handleExportPDF} className="gap-2" disabled={isGenerating}>
-            <Download className="h-4 w-4" />
-            {isGenerating ? "Generating..." : "Export PDF"}
-          </Button>
-        </div>
-        {error && <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p>}
-      </div>
+      {error && <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p>}
 
       <Card className="border-dashed border-border">
         <div className="grid gap-4 lg:grid-cols-4">
