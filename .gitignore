@@ -9,5 +9,6 @@ coverage
 build
 auth.sqlite
 *.log
+*.tsbuildinfo
 .env
 .env.local

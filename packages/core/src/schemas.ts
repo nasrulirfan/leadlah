@@ -43,6 +43,40 @@ export const externalLinkSchema = z.object({
   expiresAt: z.coerce.date().optional()
 });
 
+const allowedExternalLinkDomains = {
+  Mudah: ["mudah.my", "mudah.com"],
+  PropertyGuru: ["propertyguru.com", "propertyguru.com.my", "propertyguru.com.sg"],
+  iProperty: ["iproperty.com", "iproperty.com.my"],
+  Other: []
+} as const satisfies Record<string, readonly string[]>;
+
+const hostnameMatchesAllowedDomains = (hostname: string, domains: readonly string[]) => {
+  const normalizedHostname = hostname.toLowerCase().replace(/^www\./, "");
+  return domains.some((domain) => normalizedHostname === domain || normalizedHostname.endsWith(`.${domain}`));
+};
+
+export const validatedExternalLinkSchema = externalLinkSchema.superRefine((link, ctx) => {
+  const domains = allowedExternalLinkDomains[link.provider] ?? [];
+  if (link.provider === "Other" || domains.length === 0) {
+    return;
+  }
+
+  let hostname = "";
+  try {
+    hostname = new URL(link.url).hostname;
+  } catch {
+    return;
+  }
+
+  if (!hostnameMatchesAllowedDomains(hostname, domains)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `URL must be a ${link.provider} link on ${domains.join(", ")}`,
+      path: ["url"]
+    });
+  }
+});
+
 export const listingSchema = z.object({
   id: z.string().uuid(),
   propertyName: z.string().min(2),
@@ -60,7 +94,7 @@ export const listingSchema = z.object({
   photos: z.array(mediaAssetSchema).default([]),
   videos: z.array(mediaAssetSchema).default([]),
   documents: z.array(mediaAssetSchema).default([]),
-  externalLinks: z.array(externalLinkSchema).default([]),
+  externalLinks: z.array(validatedExternalLinkSchema).default([]),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date()
 });

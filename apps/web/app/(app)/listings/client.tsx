@@ -24,7 +24,33 @@ import {
 import { fetchOwnerLink, updateProcessStage } from "@/lib/process-log/api";
 import { encodeOwnerViewToken } from "@/lib/owner-link";
 import { cn } from "@/lib/utils";
-import { CheckCircle2, Copy, Trash2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { 
+  CheckCircle2, 
+  Copy, 
+  Trash2, 
+  Plus, 
+  Search, 
+  Filter, 
+  ChevronDown, 
+  ChevronUp,
+  Building2,
+  MapPin,
+  Bed,
+  Bath,
+  Maximize,
+  ExternalLink,
+  MoreHorizontal,
+  Edit3,
+  Bell,
+  Clock,
+  TrendingUp,
+  Eye,
+  X,
+  Sparkles,
+  Home,
+  Calendar
+} from "lucide-react";
 
 type ProcessLogMap = Record<string, ProcessLogEntry[]>;
 
@@ -51,6 +77,29 @@ const emptyListing: ListingFormValues = {
   documents: [],
   externalLinks: []
 };
+
+const propertyTypeOptions = [
+  "Condominium",
+  "Serviced Apartment",
+  "Apartment",
+  "Landed",
+  "Townhouse",
+  "Semi-D",
+  "Bungalow",
+  "Land",
+  "Shop Lot",
+  "Office",
+  "Retail",
+  "Warehouse",
+  "Other"
+];
+
+const FieldLabel = ({ children, required }: { children: React.ReactNode; required?: boolean }) => (
+  <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+    {children}
+    {required ? <span className="ml-0.5 text-red-500">*</span> : null}
+  </label>
+);
 
 const stageOrder = Object.values(ProcessStage);
 const sortProcessEntries = (entries: ProcessLogEntry[]) =>
@@ -82,6 +131,18 @@ const dateToInputValue = (value?: Date) => {
   return value.toISOString().slice(0, 10);
 };
 
+const selectAllIfZero = (event: React.FocusEvent<HTMLInputElement>) => {
+  if (event.currentTarget.value === "0") {
+    event.currentTarget.select();
+  }
+};
+
+const keepSelectionOnMouseUpIfZero = (event: React.MouseEvent<HTMLInputElement>) => {
+  if (event.currentTarget.value === "0") {
+    event.preventDefault();
+  }
+};
+
 const listingToFormValues = (listing: ListingInput): ListingFormValues => ({
   propertyName: listing.propertyName,
   type: listing.type,
@@ -105,6 +166,398 @@ const listingToFormValues = (listing: ListingInput): ListingFormValues => ({
     })) ?? []
 });
 
+const formatPrice = (price: number) => {
+  if (price >= 1000000) {
+    return `RM ${(price / 1000000).toFixed(price % 1000000 === 0 ? 0 : 1)}M`;
+  }
+  if (price >= 1000) {
+    return `RM ${(price / 1000).toFixed(0)}K`;
+  }
+  return `RM ${price.toLocaleString()}`;
+};
+
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.08 }
+  }
+};
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.95 },
+  visible: { 
+    opacity: 1, 
+    y: 0, 
+    scale: 1,
+    transition: { duration: 0.4, ease: [0.25, 0.4, 0.25, 1] }
+  },
+  exit: { 
+    opacity: 0, 
+    scale: 0.95, 
+    transition: { duration: 0.2 } 
+  }
+};
+
+const filterChipVariants = {
+  hidden: { opacity: 0, scale: 0.8 },
+  visible: { opacity: 1, scale: 1 },
+  exit: { opacity: 0, scale: 0.8 }
+};
+
+// Status and category styling
+const statusConfig: Record<ListingStatus, { color: string; bg: string; icon: React.ReactNode }> = {
+  [ListingStatus.ACTIVE]: { 
+    color: "text-emerald-700 dark:text-emerald-400", 
+    bg: "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20",
+    icon: <TrendingUp className="h-3 w-3" />
+  },
+  [ListingStatus.SOLD]: { 
+    color: "text-blue-700 dark:text-blue-400", 
+    bg: "bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20",
+    icon: <CheckCircle2 className="h-3 w-3" />
+  },
+  [ListingStatus.RENTED]: { 
+    color: "text-violet-700 dark:text-violet-400", 
+    bg: "bg-violet-50 dark:bg-violet-500/10 border-violet-200 dark:border-violet-500/20",
+    icon: <Home className="h-3 w-3" />
+  },
+  [ListingStatus.EXPIRED]: { 
+    color: "text-amber-700 dark:text-amber-400", 
+    bg: "bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20",
+    icon: <Clock className="h-3 w-3" />
+  },
+  [ListingStatus.WITHDRAWN]: { 
+    color: "text-slate-600 dark:text-slate-400", 
+    bg: "bg-slate-100 dark:bg-slate-500/10 border-slate-200 dark:border-slate-500/20",
+    icon: <X className="h-3 w-3" />
+  }
+};
+
+const categoryConfig: Record<ListingCategory, { color: string; bg: string }> = {
+  [ListingCategory.FOR_SALE]: { 
+    color: "text-rose-700 dark:text-rose-400", 
+    bg: "bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-500/20"
+  },
+  [ListingCategory.FOR_RENT]: { 
+    color: "text-sky-700 dark:text-sky-400", 
+    bg: "bg-sky-50 dark:bg-sky-500/10 border-sky-200 dark:border-sky-500/20"
+  },
+  [ListingCategory.SOLD]: { 
+    color: "text-emerald-700 dark:text-emerald-400", 
+    bg: "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20"
+  },
+  [ListingCategory.RENTED]: { 
+    color: "text-violet-700 dark:text-violet-400", 
+    bg: "bg-violet-50 dark:bg-violet-500/10 border-violet-200 dark:border-violet-500/20"
+  },
+  [ListingCategory.HOLD_FOR_SALE]: { 
+    color: "text-amber-700 dark:text-amber-400", 
+    bg: "bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20"
+  },
+  [ListingCategory.BOOKED]: { 
+    color: "text-orange-700 dark:text-orange-400", 
+    bg: "bg-orange-50 dark:bg-orange-500/10 border-orange-200 dark:border-orange-500/20"
+  },
+  [ListingCategory.OFF_MARKET]: { 
+    color: "text-slate-600 dark:text-slate-400", 
+    bg: "bg-slate-100 dark:bg-slate-500/10 border-slate-200 dark:border-slate-500/20"
+  }
+};
+
+// Quick Stats Component
+function QuickStats({ listings }: { listings: ListingInput[] }) {
+  const stats = useMemo(() => {
+    const active = listings.filter(l => l.status === ListingStatus.ACTIVE).length;
+    const sold = listings.filter(l => l.category === ListingCategory.SOLD).length;
+    const rented = listings.filter(l => l.category === ListingCategory.RENTED).length;
+    const totalValue = listings.reduce((sum, l) => sum + l.price, 0);
+    return { active, sold, rented, totalValue };
+  }, [listings]);
+
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {[
+        { label: "Active", value: stats.active, icon: TrendingUp, color: "text-emerald-600" },
+        { label: "Sold", value: stats.sold, icon: CheckCircle2, color: "text-blue-600" },
+        { label: "Rented", value: stats.rented, icon: Home, color: "text-violet-600" },
+        { label: "Portfolio", value: formatPrice(stats.totalValue), icon: Sparkles, color: "text-amber-600" }
+      ].map((stat, i) => (
+        <motion.div
+          key={stat.label}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: i * 0.1 }}
+          className="group relative overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br from-white to-slate-50/50 p-4 shadow-sm transition-all hover:shadow-md dark:from-slate-900 dark:to-slate-800/50"
+        >
+          <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-gradient-to-br from-primary/5 to-transparent" />
+          <stat.icon className={cn("h-5 w-5 mb-2", stat.color)} />
+          <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+          <p className="text-xs text-muted-foreground">{stat.label}</p>
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+// Filter Chip Component
+function FilterChip({ 
+  label, 
+  onRemove 
+}: { 
+  label: string; 
+  onRemove: () => void;
+}) {
+  return (
+    <motion.span
+      variants={filterChipVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary"
+    >
+      {label}
+      <button
+        onClick={onRemove}
+        className="rounded-full p-0.5 hover:bg-primary/20 transition-colors"
+      >
+        <X className="h-3 w-3" />
+      </button>
+    </motion.span>
+  );
+}
+
+// Listing Card Component
+function ListingCard({
+  listing,
+  logEntries,
+  isPending,
+  onEdit,
+  onDelete,
+  onStatusChange,
+  onCategoryChange,
+  onProcessLogUpdate
+}: {
+  listing: ListingInput;
+  logEntries: ProcessLogEntry[];
+  isPending: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+  onStatusChange: (status: ListingStatus) => void;
+  onCategoryChange: (category: ListingCategory) => void;
+  onProcessLogUpdate: (entry: ProcessLogEntry) => void;
+}) {
+  const [showActions, setShowActions] = useState(false);
+  const coverImage = coverImageFor(listing.id, listing.photos);
+  const completedStages = logEntries.filter(e => e.completedAt).length;
+  const progress = (completedStages / stageOrder.length) * 100;
+  const statusStyle = statusConfig[listing.status];
+  const categoryStyle = categoryConfig[listing.category];
+
+  return (
+    <motion.div
+      variants={cardVariants}
+      layout
+      className="group relative overflow-hidden rounded-3xl border border-border/40 bg-card shadow-sm transition-all duration-300 hover:border-border hover:shadow-xl hover:shadow-slate-200/50 dark:hover:shadow-slate-900/50"
+    >
+      {/* Image Section */}
+      <div className="relative aspect-[16/10] overflow-hidden">
+        <img 
+          src={coverImage} 
+          alt={listing.propertyName} 
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" 
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+        
+        {/* Top badges */}
+        <div className="absolute left-4 top-4 flex flex-wrap gap-2">
+          <span className={cn(
+            "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold backdrop-blur-sm",
+            categoryStyle.bg, categoryStyle.color
+          )}>
+            {listing.category}
+          </span>
+          <span className={cn(
+            "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold backdrop-blur-sm",
+            statusStyle.bg, statusStyle.color
+          )}>
+            {statusStyle.icon}
+            {listing.status}
+          </span>
+        </div>
+
+        {/* Quick actions overlay */}
+        <div className="absolute right-3 top-3 flex gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+          <button
+            onClick={onEdit}
+            className="rounded-full bg-white/90 p-2 text-slate-700 shadow-lg backdrop-blur-sm transition-all hover:bg-white hover:scale-110"
+          >
+            <Edit3 className="h-4 w-4" />
+          </button>
+          <button
+            onClick={onDelete}
+            disabled={isPending}
+            className="rounded-full bg-white/90 p-2 text-red-600 shadow-lg backdrop-blur-sm transition-all hover:bg-white hover:scale-110 disabled:opacity-50"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Price tag */}
+        <div className="absolute bottom-4 left-4">
+          <p className="text-2xl font-bold text-white drop-shadow-lg">
+            RM {listing.price.toLocaleString()}
+          </p>
+        </div>
+
+        {/* External links */}
+        {listing.externalLinks.length > 0 && (
+          <div className="absolute bottom-4 right-4 flex gap-1.5">
+            {listing.externalLinks.slice(0, 3).map((link, i) => (
+              <a
+                key={i}
+                href={link.url}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-medium text-slate-700 backdrop-blur-sm transition-all hover:bg-white hover:scale-105"
+              >
+                {link.provider}
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Content Section */}
+      <div className="p-5">
+        <div className="mb-3">
+          <h3 className="text-lg font-bold text-foreground line-clamp-1 group-hover:text-primary transition-colors">
+            {listing.propertyName}
+          </h3>
+          <div className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
+            <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
+            <span className="line-clamp-1">
+              {listing.buildingProject ? `${listing.buildingProject}, ` : ""}{listing.location}
+            </span>
+          </div>
+        </div>
+
+        {/* Property specs */}
+        <div className="mb-4 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5 rounded-lg bg-muted/50 px-2 py-1">
+            <Building2 className="h-3.5 w-3.5" />
+            {listing.type}
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-lg bg-muted/50 px-2 py-1">
+            <Bed className="h-3.5 w-3.5" />
+            {listing.bedrooms}
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-lg bg-muted/50 px-2 py-1">
+            <Bath className="h-3.5 w-3.5" />
+            {listing.bathrooms}
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-lg bg-muted/50 px-2 py-1">
+            <Maximize className="h-3.5 w-3.5" />
+            {listing.size.toLocaleString()} sqft
+          </span>
+        </div>
+
+        {/* Progress bar */}
+        <div className="mb-4">
+          <div className="flex items-center justify-between text-xs mb-1.5">
+            <span className="text-muted-foreground">Process Progress</span>
+            <span className="font-medium text-foreground">{completedStages}/{stageOrder.length}</span>
+          </div>
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="h-full rounded-full bg-gradient-to-r from-primary to-primary/70"
+            />
+          </div>
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex flex-wrap items-center gap-2">
+          <ProcessLogDialog
+            listing={listing}
+            entries={logEntries}
+            onUpdated={onProcessLogUpdate}
+          />
+          <ListingReminderDialog listingId={listing.id} listingName={listing.propertyName} />
+          
+          <div className="ml-auto flex items-center gap-2">
+            <Select
+              value={listing.category}
+              disabled={isPending}
+              onValueChange={(value) => onCategoryChange(value as ListingCategory)}
+            >
+              <SelectTrigger className="h-8 w-auto gap-1 text-xs border-dashed">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.values(ListingCategory).map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={listing.status}
+              disabled={isPending}
+              onValueChange={(value) => onStatusChange(value as ListingStatus)}
+            >
+              <SelectTrigger className="h-8 w-auto gap-1 text-xs border-dashed">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.values(ListingStatus).map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {status}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// Empty State Component
+function EmptyState({ hasFilters, onClearFilters }: { hasFilters: boolean; onClearFilters: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex flex-col items-center justify-center py-16 text-center"
+    >
+      <div className="mb-6 rounded-full bg-gradient-to-br from-primary/10 to-primary/5 p-6">
+        <Home className="h-12 w-12 text-primary/60" />
+      </div>
+      <h3 className="text-xl font-semibold text-foreground mb-2">
+        {hasFilters ? "No listings match your filters" : "No listings yet"}
+      </h3>
+      <p className="text-muted-foreground max-w-sm mb-6">
+        {hasFilters 
+          ? "Try adjusting your filters or clear them to see all listings."
+          : "Start building your property portfolio by adding your first listing."
+        }
+      </p>
+      {hasFilters && (
+        <Button variant="outline" onClick={onClearFilters}>
+          Clear all filters
+        </Button>
+      )}
+    </motion.div>
+  );
+}
+
+// Main Component
 export default function ListingsClient({ initialListings, initialProcessLogs }: ListingsClientProps) {
   const [listings, setListings] = useState<ListingInput[]>(initialListings);
   const [processLogMap, setProcessLogMap] = useState<ProcessLogMap>(initialProcessLogs);
@@ -112,6 +565,10 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
   const [error, setError] = useState<string | null>(null);
   const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
   const [editingListing, setEditingListing] = useState<ListingInput | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  
+  // Filters
   const [categoryFilter, setCategoryFilter] = useState<"All" | ListingCategory>("All");
   const [statusFilter, setStatusFilter] = useState<"All" | ListingStatus>("All");
   const [locationFilter, setLocationFilter] = useState("");
@@ -121,7 +578,11 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
   const [maxPriceFilter, setMaxPriceFilter] = useState("");
   const [noEnquiryDaysFilter, setNoEnquiryDaysFilter] = useState("");
   const [expiringInDaysFilter, setExpiringInDaysFilter] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [isPending, startTransition] = useTransition();
+
+  const propertyTypesForSelect =
+    form.type && !propertyTypeOptions.includes(form.type) ? [form.type, ...propertyTypeOptions] : propertyTypeOptions;
 
   useEffect(() => {
     setListings(initialListings);
@@ -236,8 +697,16 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
       const noEnquiryDays = noEnquiryDaysFilter.trim() ? Number(noEnquiryDaysFilter) : null;
       const expiringInDays = expiringInDaysFilter.trim() ? Number(expiringInDaysFilter) : null;
       const now = new Date();
+      const query = searchQuery.toLowerCase().trim();
 
       return listings.filter((listing) => {
+        // Search query filter
+        if (query) {
+          const searchable = `${listing.propertyName} ${listing.location} ${listing.buildingProject ?? ""} ${listing.type}`.toLowerCase();
+          if (!searchable.includes(query)) {
+            return false;
+          }
+        }
         if (categoryFilter !== "All" && listing.category !== categoryFilter) {
           return false;
         }
@@ -293,9 +762,49 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
       minPriceFilter,
       maxPriceFilter,
       noEnquiryDaysFilter,
-      expiringInDaysFilter
+      expiringInDaysFilter,
+      searchQuery
     ]
   );
+
+  const activeFilters = useMemo(() => {
+    const filters: { key: string; label: string; onRemove: () => void }[] = [];
+    if (categoryFilter !== "All") {
+      filters.push({ key: "category", label: `Category: ${categoryFilter}`, onRemove: () => setCategoryFilter("All") });
+    }
+    if (statusFilter !== "All") {
+      filters.push({ key: "status", label: `Status: ${statusFilter}`, onRemove: () => setStatusFilter("All") });
+    }
+    if (locationFilter) {
+      filters.push({ key: "location", label: `Location: ${locationFilter}`, onRemove: () => setLocationFilter("") });
+    }
+    if (buildingProjectFilter) {
+      filters.push({ key: "building", label: `Building: ${buildingProjectFilter}`, onRemove: () => setBuildingProjectFilter("") });
+    }
+    if (propertyTypeFilter) {
+      filters.push({ key: "type", label: `Type: ${propertyTypeFilter}`, onRemove: () => setPropertyTypeFilter("") });
+    }
+    if (minPriceFilter) {
+      filters.push({ key: "minPrice", label: `Min: RM ${Number(minPriceFilter).toLocaleString()}`, onRemove: () => setMinPriceFilter("") });
+    }
+    if (maxPriceFilter) {
+      filters.push({ key: "maxPrice", label: `Max: RM ${Number(maxPriceFilter).toLocaleString()}`, onRemove: () => setMaxPriceFilter("") });
+    }
+    return filters;
+  }, [categoryFilter, statusFilter, locationFilter, buildingProjectFilter, propertyTypeFilter, minPriceFilter, maxPriceFilter]);
+
+  const clearAllFilters = () => {
+    setCategoryFilter("All");
+    setStatusFilter("All");
+    setLocationFilter("");
+    setBuildingProjectFilter("");
+    setPropertyTypeFilter("");
+    setMinPriceFilter("");
+    setMaxPriceFilter("");
+    setNoEnquiryDaysFilter("");
+    setExpiringInDaysFilter("");
+    setSearchQuery("");
+  };
 
   const handleProcessLogUpdate = (listingId: string, entry: ProcessLogEntry) => {
     setProcessLogMap((prev) => {
@@ -327,420 +836,99 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Listing Management</h1>
-          <p className="text-sm text-slate-600">
-            Centralized inventory with status workflow, media, external links, and owner-ready sharing.
-          </p>
-        </div>
-        <Dialog
-          open={isFormDialogOpen}
-          onOpenChange={(open) => {
-            setIsFormDialogOpen(open);
-            if (!open) {
-              setError(null);
-              setEditingListing(null);
-              setForm({ ...emptyListing });
-            }
-          }}
-        >
-          <DialogTrigger asChild>
-            <Button variant="secondary" size="sm" onClick={() => openListingForm()}>
-              New Listing
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-3xl">
-            <DialogHeader>
-              <DialogTitle>{editingListing ? "Edit Listing" : "Create Listing"}</DialogTitle>
-              <DialogDescription>
-                {editingListing ? "Update property details and share them instantly." : "Share-ready listings with media, external links, and workflow tracking."}
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="mt-4 grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Property Name</label>
-                <Input
-                  required
-                  value={form.propertyName}
-                  onChange={(e) => setForm({ ...form, propertyName: e.target.value })}
-                  placeholder="e.g. Seri Maya Condo"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Type</label>
-                <Input
-                  required
-                  value={form.type}
-                  onChange={(e) => setForm({ ...form, type: e.target.value })}
-                  placeholder="Condominium, Landed"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Category</label>
-                <Select
-                  value={(form.category as ListingCategory | undefined) ?? ListingCategory.FOR_SALE}
-                  onValueChange={(value) => setForm({ ...form, category: value as ListingCategory })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.values(ListingCategory).map((category) => (
-                      <SelectItem key={category} value={category}>
-                        {category}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Price (RM)</label>
-                <Input
-                  required
-                  type="number"
-                  value={form.price}
-                  onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Size (sqft)</label>
-                <Input
-                  required
-                  type="number"
-                  value={form.size}
-                  onChange={(e) => setForm({ ...form, size: Number(e.target.value) })}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Bedrooms</label>
-                <Input
-                  required
-                  type="number"
-                  value={form.bedrooms}
-                  onChange={(e) => setForm({ ...form, bedrooms: Number(e.target.value) })}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Bathrooms</label>
-                <Input
-                  required
-                  type="number"
-                  value={form.bathrooms}
-                  onChange={(e) => setForm({ ...form, bathrooms: Number(e.target.value) })}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Location</label>
-                <Input
-                  required
-                  value={form.location}
-                  onChange={(e) => setForm({ ...form, location: e.target.value })}
-                  placeholder="City / State"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Building / Project</label>
-                <Input
-                  value={(form.buildingProject as string | undefined) ?? ""}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      buildingProject: e.target.value.trim() ? e.target.value : undefined
-                    })
-                  }
-                  placeholder="e.g. Mont Kiara, Serenia City"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Cover Photo URL</label>
-                <Input
-                  type="url"
-                  value={form.photos[0]?.url ?? ""}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      photos: e.target.value ? [{ url: e.target.value, label: "Cover photo" }] : []
-                    })
-                  }
-                  placeholder="https://images.unsplash.com/..."
-                />
-                <p className="text-xs text-slate-500">Upload to your preferred storage and drop the public URL here.</p>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Status</label>
-                <Select value={form.status} onValueChange={(value) => setForm({ ...form, status: value as ListingStatus })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.values(ListingStatus).map((status) => (
-                      <SelectItem key={status} value={status}>
-                        {status}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Listing Expiry Date</label>
-                <Input
-                  type="date"
-                  value={(form.expiresAt as string | undefined) ?? ""}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      expiresAt: e.target.value ? e.target.value : undefined
-                    })
-                  }
-                />
-                <p className="text-xs text-slate-500">Used for expiring listing filters and reminders.</p>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Last Enquiry Date</label>
-                <Input
-                  type="date"
-                  value={(form.lastEnquiryAt as string | undefined) ?? ""}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      lastEnquiryAt: e.target.value ? e.target.value : undefined
-                    })
-                  }
-                />
-                <p className="text-xs text-slate-500">Helps identify listings with no enquiry for X days.</p>
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-sm font-semibold text-slate-700">External Portal Links</label>
-                <div className="space-y-3">
-                  {form.externalLinks.map((link, index) => (
-                    <div
-                      key={`${link.url}-${index}`}
-                      className="grid gap-2 rounded-xl border border-border bg-muted/40 p-3 md:grid-cols-[180px_1fr_180px_auto]"
-                    >
-                      <Select
-                        value={link.provider}
-                        onValueChange={(value) =>
-                          setForm({
-                            ...form,
-                            externalLinks: form.externalLinks.map((item, current) =>
-                              current === index ? { ...item, provider: value as any } : item
-                            )
-                          })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Platform" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Mudah">Mudah</SelectItem>
-                          <SelectItem value="PropertyGuru">PropertyGuru</SelectItem>
-                          <SelectItem value="iProperty">iProperty</SelectItem>
-                          <SelectItem value="Other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Input
-                        type="url"
-                        value={link.url}
-                        onChange={(e) =>
-                          setForm({
-                            ...form,
-                            externalLinks: form.externalLinks.map((item, current) =>
-                              current === index ? { ...item, url: e.target.value } : item
-                            )
-                          })
-                        }
-                        placeholder="https://propertyguru.com/..."
-                      />
-                      <Input
-                        type="date"
-                        value={(link.expiresAt as string | undefined) ?? ""}
-                        onChange={(e) =>
-                          setForm({
-                            ...form,
-                            externalLinks: form.externalLinks.map((item, current) =>
-                              current === index ? { ...item, expiresAt: e.target.value || undefined } : item
-                            )
-                          })
-                        }
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          setForm({
-                            ...form,
-                            externalLinks: form.externalLinks.filter((_, current) => current !== index)
-                          })
-                        }
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Remove link</span>
-                      </Button>
-                    </div>
-                  ))}
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    onClick={() =>
-                      setForm({
-                        ...form,
-                        externalLinks: [
-                          ...form.externalLinks,
-                          { provider: "PropertyGuru", url: "", expiresAt: undefined } as any
-                        ]
-                      })
-                    }
-                  >
-                    Add portal link
-                  </Button>
-                </div>
-                <p className="text-xs text-slate-500">
-                  Add platform URLs + expiry dates to generate "listing expiring in 1 day" reminders automatically.
-                </p>
-              </div>
-              <div className="md:col-span-2 flex items-center justify-between">
-                <div className="text-sm text-red-600">{error}</div>
-                <Button type="submit" disabled={isPending}>
-                  {isPending ? "Saving..." : editingListing ? "Update Listing" : "Save Listing"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <Card>
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      {/* Header Section */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-8 text-white">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-50" />
+        <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
+        <div className="absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
+        
+        <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">Listings</h2>
-            <p className="text-xs text-slate-500">
-              Showing {filteredListings.length} of {listings.length} properties
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Input
-              value={locationFilter}
-              onChange={(e) => setLocationFilter(e.target.value)}
-              placeholder="Location"
-              className="w-[160px]"
-            />
-            <Input
-              value={buildingProjectFilter}
-              onChange={(e) => setBuildingProjectFilter(e.target.value)}
-              placeholder="Building / Project"
-              className="w-[200px]"
-            />
-            <Input
-              value={propertyTypeFilter}
-              onChange={(e) => setPropertyTypeFilter(e.target.value)}
-              placeholder="Property type"
-              className="w-[160px]"
-            />
-            <Input
-              type="number"
-              value={minPriceFilter}
-              onChange={(e) => setMinPriceFilter(e.target.value)}
-              placeholder="Min price"
-              className="w-[140px]"
-            />
-            <Input
-              type="number"
-              value={maxPriceFilter}
-              onChange={(e) => setMaxPriceFilter(e.target.value)}
-              placeholder="Max price"
-              className="w-[140px]"
-            />
-            <Input
-              type="number"
-              value={noEnquiryDaysFilter}
-              onChange={(e) => setNoEnquiryDaysFilter(e.target.value)}
-              placeholder="No enquiry (days)"
-              className="w-[160px]"
-            />
-            <Input
-              type="number"
-              value={expiringInDaysFilter}
-              onChange={(e) => setExpiringInDaysFilter(e.target.value)}
-              placeholder="Expiring in (days)"
-              className="w-[160px]"
-            />
-            <Select
-              value={categoryFilter}
-              onValueChange={(value) => setCategoryFilter(value as "All" | ListingCategory)}
+            <motion.h1 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-3xl font-bold tracking-tight"
             >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="All">All Categories</SelectItem>
-                {Object.values(ListingCategory).map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as "All" | ListingStatus)}>
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="All">All Statuses</SelectItem>
-                {Object.values(ListingStatus).map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {status}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              Listing Management
+            </motion.h1>
+            <motion.p 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="mt-2 text-slate-300"
+            >
+              Your centralized property inventory with workflow tracking and owner-ready sharing
+            </motion.p>
           </div>
-        </div>
-        <div className="mt-4 divide-y divide-slate-100">
-          {filteredListings.map((listing) => {
-            const logEntries = processLogMap[listing.id] ?? [];
-            const coverImage = coverImageFor(listing.id, listing.photos);
-            return (
-              <div key={listing.id} className="grid gap-3 py-4 md:grid-cols-[2fr_auto_auto] md:items-center">
-                <div className="flex gap-4">
-                  <div className="h-28 w-36 overflow-hidden rounded-2xl bg-slate-100 shadow-inner">
-                    <img src={coverImage} alt={listing.propertyName} className="h-full w-full object-cover" />
-                  </div>
-                  <div className="flex flex-1 flex-col">
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-base font-semibold text-slate-900">{listing.propertyName}</h3>
-                      <Badge tone={categoryTone(listing.category)}>{listing.category}</Badge>
-                      <Badge tone={statusTone(listing.status)}>{listing.status}</Badge>
-                    </div>
-                    <p className="text-sm text-slate-600">
-                      {listing.type} • {listing.bedrooms} bed / {listing.bathrooms} bath • {listing.size} sqft •{" "}
-                      {listing.buildingProject ? `${listing.buildingProject} • ` : ""}
-                      {listing.location}
-                    </p>
-                    <p className="text-sm font-semibold text-brand-700">RM {listing.price.toLocaleString()}</p>
-                    <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
-                      {listing.externalLinks.map((link) => (
-                        <a key={link.url} href={link.url} className="underline" target="_blank" rel="noreferrer">
-                          {link.provider} link
-                        </a>
-                      ))}
-                    </div>
-                  </div>
+          
+          <Dialog
+            open={isFormDialogOpen}
+            onOpenChange={(open) => {
+              setIsFormDialogOpen(open);
+              if (!open) {
+                setError(null);
+                setEditingListing(null);
+                setForm({ ...emptyListing });
+              }
+            }}
+          >
+            <DialogTrigger asChild>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.2 }}
+              >
+                <Button 
+                  onClick={() => openListingForm()}
+                  className="gap-2 bg-white text-slate-900 hover:bg-slate-100 shadow-lg"
+                  size="lg"
+                >
+                  <Plus className="h-5 w-5" />
+                  New Listing
+                </Button>
+              </motion.div>
+            </DialogTrigger>
+
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="text-xl">{editingListing ? "Edit Listing" : "Create New Listing"}</DialogTitle>
+                <DialogDescription>
+                  {editingListing ? "Update property details and share them instantly." : "Add a new property to your portfolio with all the details."}
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="mt-6 grid gap-5 md:grid-cols-2">
+                <div className="space-y-2">
+                  <FieldLabel required>Property Name</FieldLabel>
+                  <Input
+                    required
+                    value={form.propertyName}
+                    onChange={(e) => setForm({ ...form, propertyName: e.target.value })}
+                    placeholder="e.g. Seri Maya Condo"
+                    className="h-11"
+                  />
                 </div>
-                <ProcessLogDialog
-                  listing={listing}
-                  entries={logEntries}
-                  onUpdated={(entry) => handleProcessLogUpdate(listing.id, entry)}
-                />
-                <div className="flex items-center gap-2 md:justify-end">
+                <div className="space-y-2">
+                  <FieldLabel required>Type</FieldLabel>
+                  <Select value={form.type || undefined} onValueChange={(value) => setForm({ ...form, type: value })}>
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="Select property type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {propertyTypesForSelect.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <FieldLabel required>Category</FieldLabel>
                   <Select
-                    value={listing.category}
-                    disabled={isPending}
-                    onValueChange={(value) => handleCategoryChange(listing.id, value as ListingCategory)}
+                    value={(form.category as ListingCategory | undefined) ?? ListingCategory.FOR_SALE}
+                    onValueChange={(value) => setForm({ ...form, category: value as ListingCategory })}
                   >
-                    <SelectTrigger className="max-w-[180px]">
+                    <SelectTrigger className="h-11">
                       <SelectValue placeholder="Category" />
                     </SelectTrigger>
                     <SelectContent>
@@ -751,12 +939,110 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
                       ))}
                     </SelectContent>
                   </Select>
-                  <Select
-                    value={listing.status}
-                    disabled={isPending}
-                    onValueChange={(value) => handleStatusChange(listing.id, value as ListingStatus)}
-                  >
-                    <SelectTrigger className="max-w-[160px]">
+                </div>
+                <div className="space-y-2">
+                  <FieldLabel required>Price (RM)</FieldLabel>
+                  <Input
+                    required
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={form.price}
+                    onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
+                    onFocus={selectAllIfZero}
+                    onMouseUp={keepSelectionOnMouseUpIfZero}
+                    className="h-11"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <FieldLabel required>Size (sqft)</FieldLabel>
+                  <Input
+                    required
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={form.size}
+                    onChange={(e) => setForm({ ...form, size: Number(e.target.value) })}
+                    onFocus={selectAllIfZero}
+                    onMouseUp={keepSelectionOnMouseUpIfZero}
+                    className="h-11"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <FieldLabel required>Bedrooms</FieldLabel>
+                    <Input
+                      required
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={form.bedrooms}
+                      onChange={(e) => setForm({ ...form, bedrooms: Number(e.target.value) })}
+                      onFocus={selectAllIfZero}
+                      onMouseUp={keepSelectionOnMouseUpIfZero}
+                      className="h-11"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <FieldLabel required>Bathrooms</FieldLabel>
+                    <Input
+                      required
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={form.bathrooms}
+                      onChange={(e) => setForm({ ...form, bathrooms: Number(e.target.value) })}
+                      onFocus={selectAllIfZero}
+                      onMouseUp={keepSelectionOnMouseUpIfZero}
+                      className="h-11"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <FieldLabel required>Location</FieldLabel>
+                  <Input
+                    required
+                    value={form.location}
+                    onChange={(e) => setForm({ ...form, location: e.target.value })}
+                    placeholder="City / State"
+                    className="h-11"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <FieldLabel>Building / Project</FieldLabel>
+                  <Input
+                    value={(form.buildingProject as string | undefined) ?? ""}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        buildingProject: e.target.value.trim() ? e.target.value : undefined
+                      })
+                    }
+                    placeholder="e.g. Mont Kiara, Serenia City"
+                    className="h-11"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <FieldLabel>Cover Photo URL</FieldLabel>
+                  <Input
+                    type="url"
+                    value={form.photos[0]?.url ?? ""}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        photos: e.target.value ? [{ url: e.target.value, label: "Cover photo" }] : []
+                      })
+                    }
+                    placeholder="https://images.unsplash.com/..."
+                    className="h-11"
+                  />
+                  <p className="text-xs text-muted-foreground">Upload to your preferred storage and drop the public URL here.</p>
+                </div>
+                <div className="space-y-2">
+                  <FieldLabel required>Status</FieldLabel>
+                  <Select value={form.status} onValueChange={(value) => setForm({ ...form, status: value as ListingStatus })}>
+                    <SelectTrigger className="h-11">
                       <SelectValue placeholder="Status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -767,23 +1053,340 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
                       ))}
                     </SelectContent>
                   </Select>
-                  <ListingReminderDialog listingId={listing.id} listingName={listing.propertyName} />
-                  <Button variant="outline" size="sm" onClick={() => openListingForm(listing)}>
-                    Edit
-                  </Button>
-                  <Button variant="danger" size="sm" disabled={isPending} onClick={() => handleDelete(listing.id)}>
-                    Delete
-                  </Button>
+                </div>
+                <div className="space-y-2">
+                  <FieldLabel>Listing Expiry Date</FieldLabel>
+                  <Input
+                    type="date"
+                    value={(form.expiresAt as string | undefined) ?? ""}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        expiresAt: e.target.value ? e.target.value : undefined
+                      })
+                    }
+                    className="h-11"
+                  />
+                  <p className="text-xs text-muted-foreground">Used for expiring listing filters and reminders.</p>
+                </div>
+                <div className="space-y-2">
+                  <FieldLabel>Last Enquiry Date</FieldLabel>
+                  <Input
+                    type="date"
+                    value={(form.lastEnquiryAt as string | undefined) ?? ""}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        lastEnquiryAt: e.target.value ? e.target.value : undefined
+                      })
+                    }
+                    className="h-11"
+                  />
+                  <p className="text-xs text-muted-foreground">Helps identify listings with no enquiry for X days.</p>
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <FieldLabel>External Portal Links</FieldLabel>
+                  <div className="space-y-3">
+                    {form.externalLinks.map((link, index) => (
+                      <div
+                        key={index}
+                        className="grid gap-2 rounded-xl border border-border bg-muted/30 p-3 md:grid-cols-[180px_1fr_180px_auto]"
+                      >
+                        <Select
+                          value={link.provider}
+                          onValueChange={(value) =>
+                            setForm({
+                              ...form,
+                              externalLinks: form.externalLinks.map((item, current) =>
+                                current === index ? { ...item, provider: value as any } : item
+                              )
+                            })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Platform" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Mudah">Mudah</SelectItem>
+                            <SelectItem value="PropertyGuru">PropertyGuru</SelectItem>
+                            <SelectItem value="iProperty">iProperty</SelectItem>
+                            <SelectItem value="Other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          type="url"
+                          value={link.url}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              externalLinks: form.externalLinks.map((item, current) =>
+                                current === index ? { ...item, url: e.target.value } : item
+                              )
+                            })
+                          }
+                          placeholder="https://propertyguru.com/..."
+                        />
+                        <Input
+                          type="date"
+                          value={(link.expiresAt as string | undefined) ?? ""}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              externalLinks: form.externalLinks.map((item, current) =>
+                                current === index ? { ...item, expiresAt: e.target.value || undefined } : item
+                              )
+                            })
+                          }
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            setForm({
+                              ...form,
+                              externalLinks: form.externalLinks.filter((_, current) => current !== index)
+                            })
+                          }
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setForm({
+                          ...form,
+                          externalLinks: [
+                            ...form.externalLinks,
+                            { provider: "PropertyGuru", url: "", expiresAt: undefined } as any
+                          ]
+                        })
+                      }
+                      className="gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add portal link
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Add platform URLs + expiry dates to generate "listing expiring in 1 day" reminders automatically.
+                  </p>
+                </div>
+                <div className="md:col-span-2 flex items-center justify-between pt-4 border-t">
+                  <div className="text-sm text-destructive">{error}</div>
+                  <div className="flex gap-3">
+                    <Button type="button" variant="outline" onClick={() => setIsFormDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={isPending} className="gap-2">
+                      {isPending ? "Saving..." : editingListing ? "Update Listing" : "Create Listing"}
+                    </Button>
+                  </div>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      {/* Quick Stats */}
+      <QuickStats listings={listings} />
+
+      {/* Search and Filters */}
+      <Card className="overflow-hidden">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-1 items-center gap-3">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search listings..."
+                className="pl-10 h-11"
+              />
+            </div>
+            <Button
+              variant={showFilters ? "secondary" : "outline"}
+              onClick={() => setShowFilters(!showFilters)}
+              className="gap-2"
+            >
+              <Filter className="h-4 w-4" />
+              Filters
+              {activeFilters.length > 0 && (
+                <span className="ml-1 rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
+                  {activeFilters.length}
+                </span>
+              )}
+            </Button>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>{filteredListings.length} of {listings.length} listings</span>
+          </div>
+        </div>
+
+        {/* Active filter chips */}
+        <AnimatePresence>
+          {activeFilters.length > 0 && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="mt-4 flex flex-wrap items-center gap-2"
+            >
+              {activeFilters.map((filter) => (
+                <FilterChip key={filter.key} label={filter.label} onRemove={filter.onRemove} />
+              ))}
+              <button
+                onClick={clearAllFilters}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Clear all
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Expanded filters */}
+        <AnimatePresence>
+          {showFilters && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div className="mt-4 grid gap-4 border-t pt-4 md:grid-cols-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground">Location</label>
+                  <Input
+                    value={locationFilter}
+                    onChange={(e) => setLocationFilter(e.target.value)}
+                    placeholder="Any location"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground">Building / Project</label>
+                  <Input
+                    value={buildingProjectFilter}
+                    onChange={(e) => setBuildingProjectFilter(e.target.value)}
+                    placeholder="Any building"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground">Property Type</label>
+                  <Input
+                    value={propertyTypeFilter}
+                    onChange={(e) => setPropertyTypeFilter(e.target.value)}
+                    placeholder="Any type"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground">Category</label>
+                  <Select
+                    value={categoryFilter}
+                    onValueChange={(value) => setCategoryFilter(value as "All" | ListingCategory)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Categories" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All">All Categories</SelectItem>
+                      {Object.values(ListingCategory).map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground">Status</label>
+                  <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as "All" | ListingStatus)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Statuses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All">All Statuses</SelectItem>
+                      {Object.values(ListingStatus).map((status) => (
+                        <SelectItem key={status} value={status}>
+                          {status}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground">Min Price (RM)</label>
+                  <Input
+                    type="number"
+                    value={minPriceFilter}
+                    onChange={(e) => setMinPriceFilter(e.target.value)}
+                    placeholder="No minimum"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground">Max Price (RM)</label>
+                  <Input
+                    type="number"
+                    value={maxPriceFilter}
+                    onChange={(e) => setMaxPriceFilter(e.target.value)}
+                    placeholder="No maximum"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground">No Enquiry (days)</label>
+                  <Input
+                    type="number"
+                    value={noEnquiryDaysFilter}
+                    onChange={(e) => setNoEnquiryDaysFilter(e.target.value)}
+                    placeholder="Any"
+                  />
                 </div>
               </div>
-            );
-          })}
-        </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </Card>
+
+      {/* Listings Grid */}
+      {filteredListings.length === 0 ? (
+        <EmptyState hasFilters={activeFilters.length > 0 || searchQuery.length > 0} onClearFilters={clearAllFilters} />
+      ) : (
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+        >
+          <AnimatePresence mode="popLayout">
+            {filteredListings.map((listing) => (
+              <ListingCard
+                key={listing.id}
+                listing={listing}
+                logEntries={processLogMap[listing.id] ?? []}
+                isPending={isPending}
+                onEdit={() => openListingForm(listing)}
+                onDelete={() => handleDelete(listing.id)}
+                onStatusChange={(status) => handleStatusChange(listing.id, status)}
+                onCategoryChange={(category) => handleCategoryChange(listing.id, category)}
+                onProcessLogUpdate={(entry) => handleProcessLogUpdate(listing.id, entry)}
+              />
+            ))}
+          </AnimatePresence>
+        </motion.div>
+      )}
     </div>
   );
 }
 
+
+// Process Log Dialog Component
 type ProcessLogDialogProps = {
   listing: ListingInput;
   entries: ProcessLogEntry[];
@@ -1015,351 +1618,294 @@ function ProcessLogDialog({ listing, entries, onUpdated }: ProcessLogDialogProps
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <div className="flex flex-col gap-1">
-        <DialogTrigger asChild>
-          <Button variant="outline" size="sm">
-            Process Log
-          </Button>
-        </DialogTrigger>
-        <p className="text-xs text-muted-foreground">
-          {completedCount} / {stageOrder.length} stages complete
-        </p>
-      </div>
-      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto border-0 p-0">
-        <div className="grid gap-0 md:grid-cols-[1.25fr_1fr]">
-          <div className="space-y-4 bg-slate-50 p-6 dark:bg-slate-900/30">
-            <DialogHeader className="text-left">
-              <DialogTitle>Process Timeline</DialogTitle>
-              <DialogDescription>Live transparency for {listing.propertyName}</DialogDescription>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="gap-2">
+          <Eye className="h-3.5 w-3.5" />
+          Process
+          <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+            {completedCount}/{stageOrder.length}
+          </span>
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden p-0">
+        <div className="grid h-full md:grid-cols-[280px_1fr]">
+          {/* Left sidebar - Timeline */}
+          <div className="border-r border-border bg-muted/30 p-5 overflow-y-auto max-h-[85vh]">
+            <DialogHeader className="mb-4">
+              <DialogTitle className="text-lg">Process Timeline</DialogTitle>
+              <DialogDescription className="text-xs">
+                Track progress for {listing.propertyName}
+              </DialogDescription>
             </DialogHeader>
-            <div className="rounded-xl border border-dashed border-slate-300/70 bg-white/80 p-4 text-sm shadow-sm dark:border-slate-700/80 dark:bg-slate-900/60">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Owner access</p>
-                  <p className="text-sm text-muted-foreground">Share a read-only link for this listing.</p>
-                </div>
+
+            {/* Owner share section */}
+            <div className="mb-4 rounded-xl border border-dashed border-border bg-background p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-muted-foreground">Owner Access</span>
                 <Button
                   type="button"
                   size="sm"
-                  variant="secondary"
+                  variant="ghost"
                   onClick={handleGenerateOwnerLink}
                   disabled={isGeneratingOwnerLink}
+                  className="h-7 text-xs"
                 >
-                  {isGeneratingOwnerLink ? "Generating..." : "Generate link"}
+                  {isGeneratingOwnerLink ? "..." : "Generate"}
                 </Button>
               </div>
-              {ownerLinkError ? <p className="mt-2 text-xs text-destructive">{ownerLinkError}</p> : null}
-              {ownerShareLink ? (
-                <div className="mt-3 space-y-2">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
-                    <code className="flex-1 rounded-lg border border-slate-200/80 bg-slate-50/80 px-3 py-2 text-xs text-slate-700 dark:border-slate-800 dark:bg-slate-900 break-all">
+              {ownerLinkError && <p className="text-xs text-destructive">{ownerLinkError}</p>}
+              {ownerShareLink && (
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <code className="flex-1 rounded-lg bg-muted px-2 py-1.5 text-[10px] text-muted-foreground truncate">
                       {ownerShareLink}
                     </code>
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
-                      className="flex items-center gap-2"
                       onClick={handleCopyOwnerLink}
+                      className="h-7 w-7 p-0"
                     >
-                      {hasCopiedOwnerLink ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
-                      {hasCopiedOwnerLink ? "Copied" : "Copy link"}
+                      {hasCopiedOwnerLink ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
                     </Button>
                   </div>
-                  <p className="text-[11px] text-muted-foreground">
-                    {hasCopiedOwnerLink ? "Link copied" : `Expires ${formatDateTime(ownerShareExpiresAt) ?? ""}`}
+                  <p className="text-[10px] text-muted-foreground">
+                    Expires {formatDateTime(ownerShareExpiresAt)}
                   </p>
                 </div>
-              ) : null}
+              )}
             </div>
-            <div className="max-h-[60vh] space-y-3 overflow-y-auto pr-1">
+
+            {/* Timeline stages */}
+            <div className="space-y-2">
               {stageOrder.map((stage, index) => {
                 const entry = entries.find((item) => item.stage === stage);
                 const isComplete = Boolean(entry?.completedAt);
-                const isActiveStage = selectedStage === stage;
+                const isActive = selectedStage === stage;
                 return (
-                  <div key={stage} className="flex gap-3">
-                    <div className="flex flex-col items-center">
-                      <span
-                        className={`h-2.5 w-2.5 rounded-full ${isComplete ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-700"}`}
-                      />
+                  <button
+                    key={stage}
+                    type="button"
+                    onClick={() => setSelectedStage(stage)}
+                    className={cn(
+                      "w-full flex items-start gap-3 rounded-xl p-3 text-left transition-all",
+                      isActive 
+                        ? "bg-primary/10 border border-primary/20" 
+                        : "hover:bg-muted/50"
+                    )}
+                  >
+                    <div className="flex flex-col items-center pt-0.5">
+                      <span className={cn(
+                        "h-2.5 w-2.5 rounded-full transition-colors",
+                        isComplete ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-600"
+                      )} />
                       {index < stageOrder.length - 1 && (
-                        <span
-                          className={`mt-1 w-px flex-1 ${isComplete ? "bg-emerald-200" : "bg-slate-200 dark:bg-slate-800"}`}
-                        />
+                        <span className={cn(
+                          "mt-1 w-px flex-1 min-h-[20px]",
+                          isComplete ? "bg-emerald-200 dark:bg-emerald-800" : "bg-slate-200 dark:bg-slate-700"
+                        )} />
                       )}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedStage(stage)}
-                      className={cn(
-                        "flex-1 rounded-xl border border-border/50 bg-card/90 p-3 text-left shadow-sm shadow-slate-100 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-slate-800/80 dark:bg-slate-900/60",
-                        isActiveStage && "border-primary/40 ring-2 ring-primary/20"
-                      )}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-sm font-semibold text-foreground">{stage}</p>
-                        <Badge tone={isComplete ? "success" : "neutral"}>
-                          {isComplete ? "Completed" : "Pending"}
-                        </Badge>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-medium text-foreground truncate">{stage}</span>
+                        {isComplete && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />}
                       </div>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {entry?.notes ?? "No remarks yet. Keep owners in the loop."}
+                      <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">
+                        {entry?.notes || "No notes"}
                       </p>
-                      <p className="mt-1 text-[11px] text-muted-foreground/80">
-                        {entry?.actor ? `Handled by ${entry.actor}` : "Awaiting assignment"}
-                        {entry?.completedAt ? ` • ${formatDate(entry.completedAt)}` : ""}
-                      </p>
-                      {stage === ProcessStage.VIEWING_RECORD && entry?.viewings?.length ? (
-                        <div className="mt-3 space-y-2">
-                          {entry.viewings.map((viewing) => {
-                            const contact = [viewing.phone, viewing.email].filter(Boolean).join(" • ");
-                            const isBuyer = entry.successfulBuyerId === viewing.id;
-                            return (
-                              <div
-                                key={viewing.id}
-                                className="rounded-lg border border-border/70 bg-background/70 p-3 text-xs dark:border-slate-800/60 dark:bg-slate-900/60"
-                              >
-                                <div className="flex flex-wrap items-center justify-between gap-2">
-                                  <div>
-                                    <p className="text-sm font-semibold text-foreground">{viewing.name}</p>
-                                    <p className="text-xs text-muted-foreground">{contact || "Contact pending"}</p>
-                                    <p className="text-[11px] text-muted-foreground/80">{viewingDateLabel(viewing.viewedAt)}</p>
-                                  </div>
-                                  <Badge tone={isBuyer ? "success" : "info"} className="text-[11px]">
-                                    {isBuyer ? "Successful buyer" : "Viewing"}
-                                  </Badge>
-                                </div>
-                                {viewing.notes && (
-                                  <p className="mt-2 text-xs text-muted-foreground">{viewing.notes}</p>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : null}
-                    </button>
-                  </div>
+                    </div>
+                  </button>
                 );
               })}
             </div>
           </div>
-          <div className="space-y-5 p-6">
-            <DialogHeader className="text-left">
-              <DialogTitle>Update Stage</DialogTitle>
-              <DialogDescription>Sync buyers, owners, and teammates with one log.</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-medium text-slate-600">Stage</label>
-                <Select value={selectedStage} onValueChange={(value) => setSelectedStage(value as ProcessStage)}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="Choose stage" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {stageOrder.map((stage) => (
-                      <SelectItem key={stage} value={stage}>
-                        {stage}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+
+          {/* Right content - Stage details */}
+          <div className="p-6 overflow-y-auto max-h-[85vh]">
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold text-foreground">{selectedStage}</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Update the status and add notes for this stage
+              </p>
+            </div>
+
+            <div className="space-y-5">
+              {/* Status toggle */}
+              <div className="flex items-center gap-4 p-4 rounded-xl bg-muted/30 border border-border/50">
+                <span className="text-sm font-medium">Status</span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setStatus("pending")}
+                    className={cn(
+                      "px-4 py-2 rounded-lg text-sm font-medium transition-all",
+                      status === "pending"
+                        ? "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    )}
+                  >
+                    Pending
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStatus("done")}
+                    className={cn(
+                      "px-4 py-2 rounded-lg text-sm font-medium transition-all",
+                      status === "done"
+                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    )}
+                  >
+                    Completed
+                  </button>
+                </div>
               </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-medium text-slate-600">Status</label>
-                <Select value={status} onValueChange={(value) => setStatus(value as "done" | "pending")}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="done">Completed</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <label className="text-xs font-medium text-slate-600">Actor</label>
+
+              {/* Actor field */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Handled by</label>
                 <Input
                   value={actor}
                   onChange={(e) => setActor(e.target.value)}
-                  placeholder="Person in charge"
-                  className="h-9"
+                  placeholder="Agent name or team member"
+                  className="h-11"
                 />
               </div>
-              <div className="grid gap-2">
-                <label className="text-xs font-medium text-slate-600">Notes / Summary</label>
+
+              {/* Notes field */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Notes</label>
                 <Textarea
-                  rows={3}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="e.g. SPA drafted, LOI countersigned."
+                  placeholder="Add remarks or updates for this stage..."
+                  rows={4}
+                  className="resize-none"
                 />
               </div>
+
+              {/* Viewing records section */}
               {isViewingStage && (
-                <div className="space-y-3 rounded-2xl border border-dashed border-border/70 bg-muted/20 p-4 dark:bg-slate-900/40">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">Viewing Records</p>
-                      <p className="text-xs text-muted-foreground">Log prospects and select the successful buyer.</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {viewings.length > 0 && (
-                        <Button type="button" variant="outline" size="sm" onClick={() => setIsViewingsDialogOpen(true)}>
-                          View list
-                        </Button>
-                      )}
-                      {successfulBuyerId && (
-                        <Badge tone="success" className="text-xs">
-                          Buyer appointed
-                        </Badge>
-                      )}
-                    </div>
+                <div className="space-y-4 pt-4 border-t">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-semibold text-foreground">Viewing Records</h4>
+                    <span className="text-xs text-muted-foreground">{viewings.length} viewings</span>
                   </div>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <div className="space-y-1">
-                      <label htmlFor="viewingName" className="text-xs font-medium text-muted-foreground">
-                        Customer Name
-                      </label>
+
+                  {/* Add viewing form */}
+                  <div className="grid gap-3 p-4 rounded-xl bg-muted/30 border border-dashed border-border">
+                    <div className="grid gap-3 md:grid-cols-2">
                       <Input
-                        id="viewingName"
                         value={viewingForm.name}
-                        onChange={(event) => handleViewingInputChange("name", event.target.value)}
-                        placeholder="e.g. Tan Family"
+                        onChange={(e) => handleViewingInputChange("name", e.target.value)}
+                        placeholder="Customer name *"
                       />
-                    </div>
-                    <div className="space-y-1">
-                      <label htmlFor="viewingPhone" className="text-xs font-medium text-muted-foreground">
-                        Phone
-                      </label>
                       <Input
-                        id="viewingPhone"
                         value={viewingForm.phone}
-                        onChange={(event) => handleViewingInputChange("phone", event.target.value)}
-                        placeholder="+60 ..."
+                        onChange={(e) => handleViewingInputChange("phone", e.target.value)}
+                        placeholder="Phone number"
                       />
-                    </div>
-                    <div className="space-y-1">
-                      <label htmlFor="viewingEmail" className="text-xs font-medium text-muted-foreground">
-                        Email (optional)
-                      </label>
                       <Input
-                        id="viewingEmail"
                         value={viewingForm.email}
-                        onChange={(event) => handleViewingInputChange("email", event.target.value)}
-                        placeholder="customer@email.com"
+                        onChange={(e) => handleViewingInputChange("email", e.target.value)}
+                        placeholder="Email"
                       />
-                    </div>
-                    <div className="space-y-1">
-                      <label htmlFor="viewingDate" className="text-xs font-medium text-muted-foreground">
-                        Viewing Date
-                      </label>
                       <Input
-                        id="viewingDate"
                         type="datetime-local"
                         value={viewingForm.viewedAt}
-                        onChange={(event) => handleViewingInputChange("viewedAt", event.target.value)}
+                        onChange={(e) => handleViewingInputChange("viewedAt", e.target.value)}
                       />
                     </div>
-                  </div>
-                  <div className="space-y-1">
-                    <label htmlFor="viewingNotes" className="text-xs font-medium text-muted-foreground">
-                      Notes
-                    </label>
-                    <Textarea
-                      id="viewingNotes"
-                      rows={2}
+                    <Input
                       value={viewingForm.notes}
-                      onChange={(event) => handleViewingInputChange("notes", event.target.value)}
-                      placeholder="Interest level, objections, follow-up plan"
+                      onChange={(e) => handleViewingInputChange("notes", e.target.value)}
+                      placeholder="Notes about this viewing"
                     />
-                  </div>
-                  {viewingError && <p className="text-xs text-red-600">{viewingError}</p>}
-                  <div className="flex items-center justify-end">
-                    <Button type="button" variant="secondary" size="sm" onClick={handleAddViewing}>
+                    {viewingError && <p className="text-xs text-destructive">{viewingError}</p>}
+                    <Button type="button" variant="secondary" size="sm" onClick={handleAddViewing} className="w-fit gap-2">
+                      <Plus className="h-4 w-4" />
                       Add Viewing
                     </Button>
                   </div>
+
+                  {/* Viewing list */}
+                  {viewings.length > 0 && (
+                    <div className="space-y-2">
+                      {viewings.map((viewing) => {
+                        const isBuyer = successfulBuyerId === viewing.id;
+                        return (
+                          <div
+                            key={viewing.id}
+                            className={cn(
+                              "flex items-center justify-between gap-3 p-3 rounded-xl border transition-all",
+                              isBuyer 
+                                ? "bg-emerald-50 border-emerald-200 dark:bg-emerald-500/10 dark:border-emerald-500/20" 
+                                : "bg-background border-border"
+                            )}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-foreground">{viewing.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {[viewing.phone, viewing.email].filter(Boolean).join(" • ") || "No contact info"}
+                              </p>
+                              <p className="text-[11px] text-muted-foreground">{viewingDateLabel(viewing.viewedAt)}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                type="button"
+                                variant={isBuyer ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => handleSelectBuyer(viewing.id)}
+                                className="text-xs"
+                              >
+                                {isBuyer ? "✓ Buyer" : "Mark as Buyer"}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRemoveViewing(viewing.id)}
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
+
+              {/* Message */}
               {message && (
-                <p className={`text-xs ${message.tone === "success" ? "text-emerald-600" : "text-red-600"}`}>
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={cn(
+                    "p-3 rounded-lg text-sm",
+                    message.tone === "success" 
+                      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400" 
+                      : "bg-destructive/10 text-destructive"
+                  )}
+                >
                   {message.text}
-                </p>
+                </motion.div>
               )}
-              <Button onClick={handleSave} disabled={isSaving} className="w-full">
-                {isSaving ? "Updating..." : "Save Stage Update"}
-              </Button>
+
+              {/* Save button */}
+              <div className="flex justify-end pt-4 border-t">
+                <Button onClick={handleSave} disabled={isSaving} className="gap-2">
+                  {isSaving ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
             </div>
           </div>
         </div>
       </DialogContent>
-      {isViewingStage && (
-        <Dialog open={isViewingsDialogOpen} onOpenChange={setIsViewingsDialogOpen}>
-          <DialogContent className="max-w-2xl space-y-4">
-            <DialogHeader>
-              <DialogTitle>Viewings for {listing.propertyName}</DialogTitle>
-              <DialogDescription>Review all prospects and appoint the successful buyer.</DialogDescription>
-            </DialogHeader>
-            {viewings.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No viewings recorded yet.</p>
-            ) : (
-              <div className="space-y-3">
-                {viewings.map((viewing) => {
-                  const contact = [viewing.phone, viewing.email].filter(Boolean).join(" • ");
-                  const isBuyer = successfulBuyerId === viewing.id;
-                  return (
-                    <div
-                      key={viewing.id}
-                      className="rounded-2xl border border-border/80 bg-muted/30 p-4 dark:border-slate-800 dark:bg-slate-900/60"
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                          <p className="text-base font-semibold text-foreground">{viewing.name}</p>
-                          <p className="text-sm text-muted-foreground">{contact || "Contact pending"}</p>
-                          <p className="text-xs text-muted-foreground/80">{viewingDateLabel(viewing.viewedAt)}</p>
-                          {viewing.notes && <p className="mt-2 text-sm text-muted-foreground">{viewing.notes}</p>}
-                        </div>
-                        <div className="flex flex-col gap-2">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant={isBuyer ? "default" : "outline"}
-                            onClick={() => handleSelectBuyer(viewing.id)}
-                          >
-                            {isBuyer ? (
-                              <>
-                                <CheckCircle2 className="mr-2 h-4 w-4" />
-                                Buyer
-                              </>
-                            ) : (
-                              "Mark Buyer"
-                            )}
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            className="text-muted-foreground hover:text-destructive"
-                            onClick={() => handleRemoveViewing(viewing.id)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Remove
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            <div className="flex justify-end">
-              <Button type="button" variant="secondary" onClick={() => setIsViewingsDialogOpen(false)}>
-                Close
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
     </Dialog>
   );
 }
