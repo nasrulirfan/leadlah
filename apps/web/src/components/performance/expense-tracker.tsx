@@ -80,7 +80,7 @@ export function ExpenseTracker() {
                 type="month"
                 value={filterMonth}
                 onChange={(e) => setFilterMonth(e.target.value)}
-                className="w-40"
+                className="w-44"
               />
               <Button size="sm" onClick={() => setIsCreating(true)}>
                 <Plus className="mr-2 h-4 w-4" />
@@ -191,7 +191,7 @@ function ExpenseForm({
     category: initialData?.category || ExpenseCategory.FUEL,
     amount: initialData?.amount || 0,
     description: initialData?.description || "",
-    date: initialData?.date 
+    date: initialData?.date
       ? new Date(initialData.date).toISOString().split('T')[0]
       : new Date().toISOString().split('T')[0]
   });

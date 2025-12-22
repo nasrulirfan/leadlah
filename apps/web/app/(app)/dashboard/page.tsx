@@ -1,22 +1,25 @@
 import { requireSession } from "@/lib/session";
-import { fetchDashboardReminders } from "@/data/reminders";
-import { fetchProfile } from "@/data/profile";
-import { fetchListingStatusCounts } from "@/data/listings";
 import {
   fetchDashboardActivities,
   fetchDashboardPerformance,
+  fetchDashboardProfile,
+  fetchDashboardReminders,
+  fetchListingStatusCounts,
 } from "@/data/dashboard";
 import { DashboardClient } from "./client";
 
 export default async function DashboardPage() {
   const session = await requireSession();
-  const profile = await fetchProfile(session.user.id);
-  const listingCounts = await fetchListingStatusCounts();
-  const reminders = await fetchDashboardReminders(
-    session.user.id,
-    profile.timezone,
-  );
-  const [{ performanceData, monthlyData }, activities] = await Promise.all([
+  const profile = await fetchDashboardProfile(session.user.id);
+
+  const [
+    listingCounts,
+    reminders,
+    { performanceData, monthlyData },
+    activities,
+  ] = await Promise.all([
+    fetchListingStatusCounts(),
+    fetchDashboardReminders(session.user.id, profile.timezone),
     fetchDashboardPerformance(session.user.id),
     fetchDashboardActivities(session.user.id),
   ]);

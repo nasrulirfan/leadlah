@@ -1,12 +1,31 @@
 import { ReminderType } from "@leadlah/core";
 import { describe, beforeEach, expect, it, vi, afterEach } from "vitest";
 import { RemindersService } from "../src/reminders/reminders.service";
+import type { Repository } from "typeorm";
+import type { ReminderEntity } from "../src/reminders/entities/reminder.entity";
 
 describe("RemindersService", () => {
   let service: RemindersService;
+  let repository: Partial<Record<keyof Repository<ReminderEntity>, ReturnType<typeof vi.fn>>>;
+  let counter = 1;
 
   beforeEach(() => {
-    service = new RemindersService();
+    counter = 1;
+    repository = {
+      create: vi.fn((payload: any) => ({
+        id: `mock-${counter++}`,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        completedAt: null,
+        dismissedAt: null,
+        ...payload
+      })),
+      save: vi.fn(async (payload: any) => payload),
+      find: vi.fn(async () => []),
+      findOne: vi.fn(async () => null)
+    };
+
+    service = new RemindersService(repository as unknown as Repository<ReminderEntity>);
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2025-01-01T00:00:00Z"));
   });
@@ -16,36 +35,39 @@ describe("RemindersService", () => {
   });
 
   it("records ad portal reminders", () => {
-    const reminders = service.schedulePortal("listing", 10);
+    const reminders = service.schedulePortal("user", "listing", 10);
 
-    expect(reminders).toHaveLength(2);
-    expect(reminders.every((r) => r.type === "PORTAL_EXPIRY")).toBe(true);
-    expect(service.list()).toHaveLength(2);
+    return reminders.then((items) => {
+      expect(items).toHaveLength(2);
+      expect(items.every((r) => r.type === "PORTAL_EXPIRY")).toBe(true);
 
-    const dueDates = reminders.map((r) => r.dueAt.toISOString());
-    expect(dueDates[1]).toBe("2025-01-11T00:00:00.000Z");
+      const dueDates = items.map((r) => r.dueAt.toISOString());
+      expect(dueDates[1]).toBe("2025-01-11T00:00:00.000Z");
+    });
   });
 
   it("creates tenancy reminders and filters by type", () => {
     const tenancyEnd = new Date("2025-06-01T00:00:00Z");
-    const reminders = service.scheduleTenancy("listing", tenancyEnd);
+    const reminders = service.scheduleTenancy("user", "listing", tenancyEnd);
 
-    expect(reminders).toHaveLength(1);
-    expect(reminders[0].type).toBe<ReminderType>("TENANCY_RENEWAL");
-    expect(service.list("TENANCY_RENEWAL")).toHaveLength(1);
-    expect(service.list("PORTAL_EXPIRY")).toHaveLength(0);
+    return reminders.then((items) => {
+      expect(items).toHaveLength(1);
+      expect(items[0].type).toBe<ReminderType>("TENANCY_RENEWAL");
+    });
   });
 
   it("adds ad-hoc reminders", () => {
-    const reminder = service.add({
-      id: "manual",
-      type: "LEAD_FOLLOWUP",
-      listingId: "listing",
-      dueAt: new Date(),
-      message: "Follow up with owner"
-    });
-
-    expect(reminder.id).toBe("manual");
-    expect(service.list()).toContainEqual(reminder);
+    return service
+      .create("user", {
+        type: "LEAD_FOLLOWUP",
+        listingId: "listing",
+        dueAt: new Date().toISOString(),
+        message: "Follow up with owner"
+      })
+      .then((reminder) => {
+        expect(reminder.type).toBe("LEAD_FOLLOWUP");
+        expect(reminder.message).toBe("Follow up with owner");
+        expect(reminder.status).toBe("PENDING");
+      });
   });
 });

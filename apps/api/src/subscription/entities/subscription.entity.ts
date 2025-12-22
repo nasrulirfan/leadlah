@@ -9,6 +9,8 @@ import {
 } from "typeorm";
 import { SubscriptionStatus } from "@leadlah/core";
 import { SubscriptionInvoiceEntity } from "./subscription-invoice.entity";
+import { jsonColumnType, timestampColumnType } from "../../database/column-types";
+import { numericTransformer } from "../../database/numeric.transformer";
 
 @Entity({ name: "subscriptions" })
 @Index("subscriptions_user_idx", ["userId"], { unique: true })
@@ -30,7 +32,13 @@ export class SubscriptionEntity {
   @Column({ type: "varchar", length: 24, default: SubscriptionStatus.TRIALING })
   status!: SubscriptionStatus;
 
-  @Column({ type: "numeric", precision: 10, scale: 2, default: 0 })
+  @Column({
+    type: "numeric",
+    precision: 10,
+    scale: 2,
+    default: 0,
+    transformer: numericTransformer
+  })
   planAmount!: number;
 
   @Column({ type: "varchar", length: 8, default: "MYR" })
@@ -39,19 +47,19 @@ export class SubscriptionEntity {
   @Column({ type: "varchar", length: 16, default: "monthly" })
   planInterval!: string;
 
-  @Column({ type: "timestamptz", nullable: true })
+  @Column({ type: timestampColumnType as any, nullable: true })
   trialEndsAt?: Date | null;
 
-  @Column({ type: "timestamptz", nullable: true })
+  @Column({ type: timestampColumnType as any, nullable: true })
   nextBillingAt?: Date | null;
 
-  @Column({ type: "timestamptz", nullable: true })
+  @Column({ type: timestampColumnType as any, nullable: true })
   graceEndsAt?: Date | null;
 
-  @Column({ type: "timestamptz", nullable: true })
+  @Column({ type: timestampColumnType as any, nullable: true })
   canceledAt?: Date | null;
 
-  @Column({ type: "jsonb", nullable: true })
+  @Column({ type: jsonColumnType as any, nullable: true })
   metadata?: Record<string, unknown> | null;
 
   @OneToMany(() => SubscriptionInvoiceEntity, (invoice) => invoice.subscription)

@@ -12,6 +12,7 @@ import {
 import { ProcessStage } from "@leadlah/core";
 import { ListingEntity } from "../../listings/entities/listing.entity";
 import { ProcessViewingEntity } from "./process-viewing.entity";
+import { timestampColumnType } from "../../database/column-types";
 
 @Entity({ name: "process_logs" })
 @Index(["listingId", "stage"], { unique: true })
@@ -35,7 +36,7 @@ export class ProcessLogEntity {
   @Column({ type: "varchar", length: 120, nullable: true })
   actor?: string | null;
 
-  @Column({ type: "timestamptz", nullable: true })
+  @Column({ type: timestampColumnType as any, nullable: true })
   completedAt?: Date | null;
 
   @OneToMany(() => ProcessViewingEntity, (viewing) => viewing.processLog)

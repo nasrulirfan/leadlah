@@ -22,7 +22,7 @@ describe("SubscriptionController", () => {
     } as any;
     vi.spyOn(service, "handleWebhook").mockReturnValue({ status: "ok" } as any);
 
-    expect(controller.webhook(payload)).toEqual({ status: "ok" });
-    expect(service.handleWebhook).toHaveBeenCalledWith("user", payload);
+    expect(controller.webhook(undefined, payload)).toEqual({ status: "ok" });
+    expect(service.handleWebhook).toHaveBeenCalledWith(undefined, payload);
   });
 });

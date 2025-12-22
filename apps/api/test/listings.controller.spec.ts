@@ -9,14 +9,22 @@ describe("ListingsController", () => {
 
   beforeEach(() => {
     service = {
+      statusCounts: vi.fn(),
       create: vi.fn(),
       findAll: vi.fn(),
       findOne: vi.fn(),
       update: vi.fn(),
-      remove: vi.fn()
+      remove: vi.fn(),
     } as unknown as ListingsService;
 
     controller = new ListingsController(service);
+  });
+
+  it("routes status counts", async () => {
+    vi.spyOn(service, "statusCounts").mockResolvedValue({ Active: 2 } as any);
+
+    await expect(controller.statusCounts()).resolves.toEqual({ Active: 2 });
+    expect(service.statusCounts).toHaveBeenCalled();
   });
 
   it("routes create requests", async () => {
@@ -28,7 +36,7 @@ describe("ListingsController", () => {
       bedrooms: 2,
       bathrooms: 1,
       location: "SG",
-      status: ListingStatus.ACTIVE
+      status: ListingStatus.ACTIVE,
     };
     const response = { id: "1", ...payload };
     vi.spyOn(service, "create").mockResolvedValue(response as any);
@@ -49,7 +57,10 @@ describe("ListingsController", () => {
     await expect(controller.findOne("1")).resolves.toEqual({ id: "1" });
     expect(service.findOne).toHaveBeenCalledWith("1");
 
-    await expect(controller.update("1", { price: 2 } as any)).resolves.toEqual({ id: "1", price: 2 });
+    await expect(controller.update("1", { price: 2 } as any)).resolves.toEqual({
+      id: "1",
+      price: 2,
+    });
     expect(service.update).toHaveBeenCalledWith("1", { price: 2 });
 
     await expect(controller.remove("1")).resolves.toEqual({ id: "1" });

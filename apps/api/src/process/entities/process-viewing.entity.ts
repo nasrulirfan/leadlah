@@ -10,6 +10,7 @@ import {
 } from "typeorm";
 import { ListingEntity } from "../../listings/entities/listing.entity";
 import { ProcessLogEntity } from "./process-log.entity";
+import { timestampColumnType } from "../../database/column-types";
 
 @Entity({ name: "process_viewings" })
 @Index("process_viewings_listing_idx", ["listingId"])
@@ -44,7 +45,7 @@ export class ProcessViewingEntity {
   @Column({ type: "text", nullable: true })
   notes?: string | null;
 
-  @Column({ type: "timestamptz", nullable: true })
+  @Column({ type: timestampColumnType as any, nullable: true })
   viewedAt?: Date | null;
 
   @Column({ type: "boolean", default: false })

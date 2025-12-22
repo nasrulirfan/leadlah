@@ -57,6 +57,13 @@
       "when": 1766385952640,
       "tag": "0007_add_reminders",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1766520000000,
+      "tag": "0008_add_leads",
+      "breakpoints": true
     }
   ]
 }

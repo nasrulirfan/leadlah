@@ -11,10 +11,13 @@ import { ListListingsQueryDto } from "./dto/list-listings.query";
 export class ListingsService {
   constructor(
     @InjectRepository(ListingEntity)
-    private readonly repository: Repository<ListingEntity>
+    private readonly repository: Repository<ListingEntity>,
   ) {}
 
-  private resolveCategory(payload: { category?: ListingCategory; status?: ListingStatus }) {
+  private resolveCategory(payload: {
+    category?: ListingCategory;
+    status?: ListingStatus;
+  }) {
     if (payload.category) {
       return payload.category;
     }
@@ -35,14 +38,16 @@ export class ListingsService {
       photos: payload.photos ?? [],
       videos: payload.videos ?? [],
       documents: payload.documents ?? [],
-      externalLinks: payload.externalLinks ?? []
+      externalLinks: payload.externalLinks ?? [],
     };
     const entity = this.repository.create(entityData);
     return this.repository.save(entity);
   }
 
   findAll(filters: ListListingsQueryDto = {}) {
-    const hasFilters = Object.values(filters).some((value) => value != null && value !== "");
+    const hasFilters = Object.values(filters).some(
+      (value) => value != null && value !== "",
+    );
     if (!hasFilters) {
       return this.repository.find({ order: { createdAt: "DESC" } });
     }
@@ -52,40 +57,60 @@ export class ListingsService {
       .orderBy("listing.createdAt", "DESC");
 
     if (filters.category) {
-      query.andWhere("listing.category = :category", { category: filters.category });
+      query.andWhere("listing.category = :category", {
+        category: filters.category,
+      });
     }
     if (filters.status) {
       query.andWhere("listing.status = :status", { status: filters.status });
     }
     if (filters.location) {
-      query.andWhere("listing.location ILIKE :location", { location: `%${filters.location}%` });
+      query.andWhere("listing.location ILIKE :location", {
+        location: `%${filters.location}%`,
+      });
     }
     if (filters.buildingProject) {
       query.andWhere("listing.buildingProject ILIKE :buildingProject", {
-        buildingProject: `%${filters.buildingProject}%`
+        buildingProject: `%${filters.buildingProject}%`,
       });
     }
     if (filters.propertyType) {
-      query.andWhere("listing.type ILIKE :type", { type: `%${filters.propertyType}%` });
+      query.andWhere("listing.type ILIKE :type", {
+        type: `%${filters.propertyType}%`,
+      });
     }
     if (filters.minPrice != null) {
-      query.andWhere("listing.price >= :minPrice", { minPrice: filters.minPrice });
+      query.andWhere("listing.price >= :minPrice", {
+        minPrice: filters.minPrice,
+      });
     }
     if (filters.maxPrice != null) {
-      query.andWhere("listing.price <= :maxPrice", { maxPrice: filters.maxPrice });
+      query.andWhere("listing.price <= :maxPrice", {
+        maxPrice: filters.maxPrice,
+      });
     }
     if (filters.noEnquiryDays != null) {
-      const threshold = new Date(Date.now() - filters.noEnquiryDays * 24 * 60 * 60 * 1000);
-      query.andWhere("(listing.lastEnquiryAt IS NULL OR listing.lastEnquiryAt < :threshold)", { threshold });
+      const threshold = new Date(
+        Date.now() - filters.noEnquiryDays * 24 * 60 * 60 * 1000,
+      );
+      query.andWhere(
+        "(listing.lastEnquiryAt IS NULL OR listing.lastEnquiryAt < :threshold)",
+        { threshold },
+      );
     }
     if (filters.expiringInDays != null) {
       const now = new Date();
-      const expiresBefore = new Date(now.getTime() + filters.expiringInDays * 24 * 60 * 60 * 1000);
+      const expiresBefore = new Date(
+        now.getTime() + filters.expiringInDays * 24 * 60 * 60 * 1000,
+      );
       query.andWhere("listing.expiresAt IS NOT NULL");
-      query.andWhere("listing.expiresAt >= :now AND listing.expiresAt <= :expiresBefore", {
-        now,
-        expiresBefore
-      });
+      query.andWhere(
+        "listing.expiresAt >= :now AND listing.expiresAt <= :expiresBefore",
+        {
+          now,
+          expiresBefore,
+        },
+      );
     }
 
     return query.getMany();
@@ -112,7 +137,7 @@ export class ListingsService {
       id,
       ...payload,
       ...(derivedCategory ? { category: derivedCategory } : {}),
-      updatedAt: new Date()
+      updatedAt: new Date(),
     } as DeepPartial<ListingEntity>);
     if (!entity) {
       throw new NotFoundException("Listing not found");
@@ -124,5 +149,19 @@ export class ListingsService {
     const entity = await this.findOne(id);
     await this.repository.remove(entity);
     return { id };
+  }
+
+  async statusCounts(): Promise<Record<string, number>> {
+    const rows = await this.repository
+      .createQueryBuilder("listing")
+      .select("listing.status", "status")
+      .addSelect("COUNT(*)", "count")
+      .groupBy("listing.status")
+      .getRawMany<{ status: string; count: string }>();
+
+    return rows.reduce<Record<string, number>>((acc, row) => {
+      acc[row.status] = Number(row.count ?? 0);
+      return acc;
+    }, {});
   }
 }

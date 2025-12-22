@@ -9,6 +9,8 @@ import {
   UpdateDateColumn
 } from "typeorm";
 import { SubscriptionEntity } from "./subscription.entity";
+import { jsonColumnType, timestampColumnType } from "../../database/column-types";
+import { numericTransformer } from "../../database/numeric.transformer";
 
 @Entity({ name: "subscription_invoices" })
 @Index("subscription_invoices_subscription_idx", ["subscriptionId"])
@@ -35,19 +37,25 @@ export class SubscriptionInvoiceEntity {
   @Column({ type: "varchar", length: 16, default: "Pending" })
   status!: string;
 
-  @Column({ type: "numeric", precision: 10, scale: 2, default: 0 })
+  @Column({
+    type: "numeric",
+    precision: 10,
+    scale: 2,
+    default: 0,
+    transformer: numericTransformer
+  })
   amount!: number;
 
   @Column({ type: "varchar", length: 8, default: "MYR" })
   currency!: string;
 
-  @Column({ type: "timestamptz", nullable: true })
+  @Column({ type: timestampColumnType as any, nullable: true })
   paidAt?: Date | null;
 
-  @Column({ type: "timestamptz", nullable: true })
+  @Column({ type: timestampColumnType as any, nullable: true })
   failedAt?: Date | null;
 
-  @Column({ type: "jsonb", nullable: true })
+  @Column({ type: jsonColumnType as any, nullable: true })
   rawPayload?: Record<string, unknown> | null;
 
   @CreateDateColumn()

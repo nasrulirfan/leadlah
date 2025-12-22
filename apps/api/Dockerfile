@@ -34,8 +34,9 @@ COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
 # Copy built artifacts and workspace sources needed by symlinks
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/apps/api/package.json ./apps/api/package.json
+COPY --from=builder /app/apps/api/drizzle ./apps/api/drizzle
 COPY --from=builder /app/packages/core ./packages/core
 
 EXPOSE 3001
 WORKDIR /app/apps/api
-CMD ["node", "dist/main.js"]
+CMD ["sh", "-c", "node dist/database/migrate.js && node dist/main.js"]

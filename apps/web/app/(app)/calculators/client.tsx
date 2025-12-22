@@ -62,6 +62,7 @@ type CalculatorsClientProps = {
     name: string;
     renNumber?: string;
     agencyLogoUrl?: string;
+    avatarUrl?: string;
   };
   defaultCustomerName?: string;
 };
@@ -213,9 +214,9 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
     calculatorType: CalculatorSlug
   ):
     | {
-        inputs: Record<string, number | string | boolean>;
-        outputs: Record<string, number | string>;
-      }
+      inputs: Record<string, number | string | boolean>;
+      outputs: Record<string, number | string>;
+    }
     | null => {
     switch (calculatorType) {
       case "loan":
@@ -531,8 +532,13 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
           <div className="space-y-3 rounded-2xl bg-muted/50 p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Registered Agent</p>
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-background text-sm font-semibold text-muted-foreground shadow-sm">
-                {agentInitials}
+              <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-background text-sm font-semibold text-muted-foreground shadow-sm">
+                {agent.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={agent.avatarUrl} alt="Agent avatar" className="h-full w-full object-cover" />
+                ) : (
+                  agentInitials
+                )}
               </div>
               <div>
                 <p className="font-semibold text-foreground">{agentDisplayName}</p>
@@ -630,7 +636,7 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
             </div>
           </Card>
 
-          <Card className="bg-gradient-to-br from-blue-50 to-indigo-50">
+          <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/40 dark:to-indigo-900/40">
             <h3 className="text-lg font-semibold text-foreground">Results</h3>
             <div className="mt-6 space-y-4">
               <div className="rounded-lg bg-card p-4 shadow-sm border border-border">
@@ -720,7 +726,7 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
             </div>
           </Card>
 
-          <Card className="bg-gradient-to-br from-purple-50 to-pink-50">
+          <Card className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/40 dark:to-pink-900/40">
             <h3 className="text-lg font-semibold text-foreground">Cost Breakdown</h3>
             <div className="mt-6 space-y-3">
               <div className="flex items-center justify-between rounded-lg bg-card p-3 shadow-sm border border-border">
@@ -773,7 +779,7 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
             </div>
           </Card>
 
-          <Card className="bg-gradient-to-br from-indigo-50 to-blue-50">
+          <Card className="bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/40 dark:to-blue-900/40">
             <h3 className="text-lg font-semibold text-foreground">Agreement Costs</h3>
             <div className="mt-6 space-y-3">
               <div className="flex items-center justify-between rounded-lg bg-card p-3 shadow-sm border border-border">
@@ -838,7 +844,7 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
             </div>
           </Card>
 
-          <Card className="bg-gradient-to-br from-green-50 to-emerald-50">
+          <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/40 dark:to-emerald-900/40">
             <h3 className="text-lg font-semibold text-foreground">Yield Analysis</h3>
             <div className="mt-6 space-y-4">
               <div className="rounded-lg bg-card p-4 shadow-sm border border-border">
@@ -862,8 +868,8 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
                   {roi.netYield >= 0.05
                     ? "✅ Strong investment potential"
                     : roi.netYield >= 0.03
-                    ? "⚠️ Moderate returns"
-                    : "❌ Low yield - review pricing"}
+                      ? "⚠️ Moderate returns"
+                      : "❌ Low yield - review pricing"}
                 </p>
               </div>
             </div>
@@ -916,7 +922,7 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
             </div>
           </Card>
 
-          <Card className="bg-gradient-to-br from-orange-50 to-amber-50">
+          <Card className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/40 dark:to-amber-900/40">
             <h3 className="text-lg font-semibold text-foreground">MFS Assessment</h3>
             <div className="mt-6 space-y-4">
               <div className="rounded-lg bg-card p-4 shadow-sm border border-border">
@@ -978,7 +984,7 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
             </div>
           </Card>
 
-          <Card className="bg-gradient-to-br from-amber-50 to-yellow-50">
+          <Card className="bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/40 dark:to-yellow-900/40">
             <h3 className="text-lg font-semibold text-foreground">Feasibility Analysis</h3>
             <div className="mt-6 space-y-4">
               <div className="rounded-lg bg-card p-4 shadow-sm border border-border">
@@ -1002,12 +1008,12 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
                   {land.grade === "A"
                     ? "✅ Excellent - Strong profit potential"
                     : land.grade === "B"
-                    ? "✅ Good - Viable development"
-                    : land.grade === "C"
-                    ? "⚠️ Fair - Marginal returns"
-                    : land.grade === "D"
-                    ? "⚠️ Poor - High risk"
-                    : "❌ Not feasible"}
+                      ? "✅ Good - Viable development"
+                      : land.grade === "C"
+                        ? "⚠️ Fair - Marginal returns"
+                        : land.grade === "D"
+                          ? "⚠️ Poor - High risk"
+                          : "❌ Not feasible"}
                 </p>
               </div>
             </div>
@@ -1049,7 +1055,7 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
             </div>
           </Card>
 
-          <Card className="bg-gradient-to-br from-teal-50 to-cyan-50">
+          <Card className="bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/40 dark:to-cyan-900/40">
             <h3 className="text-lg font-semibold text-foreground">Stamp Duty Breakdown</h3>
             <div className="mt-6 space-y-3">
               <div className="flex items-center justify-between rounded-lg bg-card p-3 shadow-sm border border-border">
