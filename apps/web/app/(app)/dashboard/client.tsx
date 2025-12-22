@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import {
   Home,
+  CalendarClock,
   DollarSign,
   Target,
   TrendingUp,
@@ -21,7 +22,7 @@ import {
   ActivityFeed,
 } from "@/components/dashboard";
 import type { DashboardReminders } from "@/lib/reminders/types";
-import { completeReminderAction, dismissReminderAction } from "./actions";
+import { completeReminderAction, dismissReminderAction } from "@/app/actions/reminders";
 
 interface DashboardClientProps {
   listingCounts: Record<string, number>;
@@ -50,7 +51,7 @@ export function DashboardClient({
   performanceData,
   monthlyData,
 }: DashboardClientProps) {
-  const [isPending, startTransition] = useTransition();
+  const [_isPending, startTransition] = useTransition();
 
   const handleComplete = (id: string) => {
     startTransition(() => {
@@ -99,6 +100,12 @@ export function DashboardClient({
             <Link href="/listings" className="gap-2">
               <Home className="h-4 w-4" />
               View Listings
+            </Link>
+          </Button>
+          <Button asChild variant="secondary">
+            <Link href="/appointments" className="gap-2">
+              <CalendarClock className="h-4 w-4" />
+              Appointments
             </Link>
           </Button>
           <Button asChild>

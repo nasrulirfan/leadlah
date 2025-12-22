@@ -1420,6 +1420,7 @@ function ProcessLogDialog({ listing, entries, onUpdated }: ProcessLogDialogProps
   const [viewings, setViewings] = useState<ViewingCustomer[]>([]);
   const [successfulBuyerId, setSuccessfulBuyerId] = useState<string | null>(null);
   const [viewingForm, setViewingForm] = useState<ViewingFormState>(emptyViewingForm);
+  const [editingViewingId, setEditingViewingId] = useState<string | null>(null);
   const [viewingError, setViewingError] = useState<string | null>(null);
   const [isViewingsDialogOpen, setIsViewingsDialogOpen] = useState(false);
   const [ownerShareLink, setOwnerShareLink] = useState<string | null>(null);
@@ -1432,6 +1433,16 @@ function ProcessLogDialog({ listing, entries, onUpdated }: ProcessLogDialogProps
     typeof crypto !== "undefined" && "randomUUID" in crypto && typeof crypto.randomUUID === "function"
       ? crypto.randomUUID()
       : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+  const toDatetimeLocalValue = (date: Date) => {
+    const pad = (value: number) => value.toString().padStart(2, "0");
+    const year = date.getFullYear();
+    const month = pad(date.getMonth() + 1);
+    const day = pad(date.getDate());
+    const hours = pad(date.getHours());
+    const minutes = pad(date.getMinutes());
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
 
   const completedCount = entries.filter((entry) => entry.completedAt).length;
   const pendingStage = useMemo(
@@ -1450,16 +1461,45 @@ function ProcessLogDialog({ listing, entries, onUpdated }: ProcessLogDialogProps
       return;
     }
 
+    const viewedAt = viewingForm.viewedAt ? new Date(viewingForm.viewedAt) : undefined;
+    if (viewedAt && Number.isNaN(viewedAt.getTime())) {
+      setViewingError("Viewing date is invalid.");
+      return;
+    }
+
     const record: ViewingCustomer = {
-      id: generateViewingId(),
+      id: editingViewingId ?? generateViewingId(),
       name: viewingForm.name.trim(),
       phone: viewingForm.phone.trim() || undefined,
       email: viewingForm.email.trim() || undefined,
       notes: viewingForm.notes.trim() || undefined,
-      viewedAt: viewingForm.viewedAt ? new Date(viewingForm.viewedAt) : undefined
+      viewedAt
     };
 
-    setViewings((prev) => [...prev, record]);
+    if (editingViewingId) {
+      setViewings((prev) => prev.map((viewing) => (viewing.id === editingViewingId ? record : viewing)));
+    } else {
+      setViewings((prev) => [...prev, record]);
+    }
+    setViewingForm(emptyViewingForm);
+    setViewingError(null);
+    setEditingViewingId(null);
+  };
+
+  const handleEditViewing = (viewing: ViewingCustomer) => {
+    setEditingViewingId(viewing.id);
+    setViewingForm({
+      name: viewing.name ?? "",
+      phone: viewing.phone ?? "",
+      email: viewing.email ?? "",
+      notes: viewing.notes ?? "",
+      viewedAt: viewing.viewedAt ? toDatetimeLocalValue(viewing.viewedAt) : ""
+    });
+    setViewingError(null);
+  };
+
+  const cancelEditingViewing = () => {
+    setEditingViewingId(null);
     setViewingForm(emptyViewingForm);
     setViewingError(null);
   };
@@ -1468,6 +1508,9 @@ function ProcessLogDialog({ listing, entries, onUpdated }: ProcessLogDialogProps
     setViewings((prev) => prev.filter((viewing) => viewing.id !== id));
     if (successfulBuyerId === id) {
       setSuccessfulBuyerId(null);
+    }
+    if (editingViewingId === id) {
+      cancelEditingViewing();
     }
   };
 
@@ -1525,6 +1568,7 @@ function ProcessLogDialog({ listing, entries, onUpdated }: ProcessLogDialogProps
       setMessage(null);
       setViewingError(null);
       setViewingForm(emptyViewingForm);
+      setEditingViewingId(null);
       setViewings([]);
       setSuccessfulBuyerId(null);
       setOwnerShareLink(null);
@@ -1549,6 +1593,7 @@ function ProcessLogDialog({ listing, entries, onUpdated }: ProcessLogDialogProps
       setSuccessfulBuyerId(current?.successfulBuyerId ?? null);
     }
     setViewingForm(emptyViewingForm);
+    setEditingViewingId(null);
   }, [selectedStage, entries, open]);
 
   useEffect(() => {
@@ -1824,10 +1869,17 @@ function ProcessLogDialog({ listing, entries, onUpdated }: ProcessLogDialogProps
                       placeholder="Notes about this viewing"
                     />
                     {viewingError && <p className="text-xs text-destructive">{viewingError}</p>}
-                    <Button type="button" variant="secondary" size="sm" onClick={handleAddViewing} className="w-fit gap-2">
-                      <Plus className="h-4 w-4" />
-                      Add Viewing
-                    </Button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button type="button" variant="secondary" size="sm" onClick={handleAddViewing} className="w-fit gap-2">
+                        {editingViewingId ? <Edit3 className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                        {editingViewingId ? "Update Viewing" : "Add Viewing"}
+                      </Button>
+                      {editingViewingId ? (
+                        <Button type="button" variant="outline" size="sm" onClick={cancelEditingViewing} className="w-fit">
+                          Cancel
+                        </Button>
+                      ) : null}
+                    </div>
                   </div>
 
                   {/* Viewing list */}
@@ -1861,6 +1913,15 @@ function ProcessLogDialog({ listing, entries, onUpdated }: ProcessLogDialogProps
                                 className="text-xs"
                               >
                                 {isBuyer ? "✓ Buyer" : "Mark as Buyer"}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditViewing(viewing)}
+                                className="text-xs"
+                              >
+                                <Edit3 className="h-3.5 w-3.5" />
                               </Button>
                               <Button
                                 type="button"

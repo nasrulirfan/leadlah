@@ -12,6 +12,7 @@ export async function completeReminderAction(reminderId: string, _formData?: For
   const parsedId = reminderIdSchema.parse(reminderId);
   await completeReminder(session.user.id, parsedId);
   revalidatePath("/dashboard");
+  revalidatePath("/appointments");
 }
 
 export async function dismissReminderAction(reminderId: string, _formData?: FormData) {
@@ -19,5 +20,6 @@ export async function dismissReminderAction(reminderId: string, _formData?: Form
   const parsedId = reminderIdSchema.parse(reminderId);
   await dismissReminder(session.user.id, parsedId);
   revalidatePath("/dashboard");
+  revalidatePath("/appointments");
 }
 

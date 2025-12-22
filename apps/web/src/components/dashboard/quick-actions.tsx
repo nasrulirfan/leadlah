@@ -4,9 +4,9 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import {
   Calculator,
+  CalendarClock,
   Home,
   TrendingUp,
-  FileText,
   PlusCircle,
   ArrowRight,
 } from "lucide-react";
@@ -22,6 +22,15 @@ const actions = [
     color: "from-blue-500 to-blue-600",
     iconBg: "bg-blue-500/10",
     iconColor: "text-blue-500",
+  },
+  {
+    title: "Appointments",
+    description: "Viewings & schedule",
+    icon: CalendarClock,
+    href: "/appointments",
+    color: "from-rose-500 to-rose-600",
+    iconBg: "bg-rose-500/10",
+    iconColor: "text-rose-500",
   },
   {
     title: "Loan Calculator",

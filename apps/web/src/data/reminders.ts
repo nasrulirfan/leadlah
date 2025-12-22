@@ -199,6 +199,33 @@ export const fetchDashboardReminders = cache(async (userId: string, timeZone: st
   }
 });
 
+export const fetchAppointmentReminders = cache(async (userId: string): Promise<StoredReminder[]> => {
+  try {
+    const result = await db.query<ReminderRow>(
+      `
+        SELECT
+          ${reminderSelectColumns},
+          l."propertyName" AS "listingName"
+        FROM "reminders" r
+        LEFT JOIN "listings" l ON l.id = r."listingId"
+        WHERE r."userId" = $1
+          AND r.type = ANY($2::text[])
+        ORDER BY r."dueAt" DESC
+        LIMIT 500
+      `,
+      [userId, ["LISTING_EVENT", "EXCLUSIVE_APPOINTMENT"]]
+    );
+
+    return result.rows.map(toReminder);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (message.includes('relation "reminders" does not exist')) {
+      return [];
+    }
+    throw error;
+  }
+});
+
 export async function syncPlatformExpiryReminders(params: {
   userId: string;
   listingId: string;

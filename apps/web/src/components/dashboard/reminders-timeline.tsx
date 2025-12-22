@@ -1,7 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Clock, CheckCircle2, XCircle, Calendar, Bell } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, Clock, CheckCircle2, XCircle, Calendar, Bell } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -155,6 +156,9 @@ export function RemindersTimeline({
   ];
 
   const hasReminders = allReminders.length > 0;
+  const appointmentCount = allReminders.filter(
+    (reminder) => reminder.metadata && typeof reminder.metadata === "object" && "kind" in reminder.metadata && reminder.metadata.kind === "EVENT"
+  ).length;
 
   return (
     <motion.div
@@ -172,9 +176,20 @@ export function RemindersTimeline({
                 : "No upcoming reminders"}
             </p>
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Calendar className="h-4 w-4" />
-            {timezone}
+          <div className="flex flex-col items-end gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center">
+            {appointmentCount ? (
+              <Link
+                href="/appointments"
+                className="inline-flex items-center gap-1 font-semibold text-primary transition hover:underline"
+              >
+                {appointmentCount} appointment{appointmentCount > 1 ? "s" : ""}
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            ) : null}
+            <span className="inline-flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              {timezone}
+            </span>
           </div>
         </div>
 
