@@ -40,7 +40,7 @@ export type MediaAsset = {
 };
 
 export type ExternalLink = {
-  provider: "Mudah" | "PropertyGuru" | "Other";
+  provider: "Mudah" | "PropertyGuru" | "iProperty" | "Other";
   url: string;
   expiresAt?: Date;
 };
@@ -117,7 +117,10 @@ export type ReminderType =
   | "PORTAL_EXPIRY"
   | "EXCLUSIVE_APPOINTMENT"
   | "LEAD_FOLLOWUP"
-  | "TENANCY_RENEWAL";
+  | "TENANCY_RENEWAL"
+  | "PLATFORM_LISTING_EXPIRY"
+  | "LISTING_EVENT"
+  | "OWNER_UPDATE";
 
 export type Reminder = {
   id: string;

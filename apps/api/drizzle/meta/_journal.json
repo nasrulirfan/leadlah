@@ -50,6 +50,13 @@
       "when": 1766385951640,
       "tag": "0006_absent_black_bolt",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1766385952640,
+      "tag": "0007_add_reminders",
+      "breakpoints": true
     }
   ]
 }

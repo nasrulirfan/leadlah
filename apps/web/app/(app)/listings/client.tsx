@@ -4,9 +4,9 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { ListingCategory, ListingStatus, ProcessStage } from "@leadlah/core";
 import type { ListingInput, ProcessLogEntry, ViewingCustomer } from "@leadlah/core";
-import { reminders } from "@/lib/mock-data";
 import { listingFormSchema, type ListingFormValues } from "@/lib/listings/form";
 import { createListingAction, deleteListingAction, updateListingAction, updateListingCategoryAction, updateListingStatusAction } from "./actions";
+import { ListingReminderDialog } from "./ListingReminderDialog";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -98,7 +98,11 @@ const listingToFormValues = (listing: ListingInput): ListingFormValues => ({
   photos: listing.photos ?? [],
   videos: listing.videos ?? [],
   documents: listing.documents ?? [],
-  externalLinks: listing.externalLinks ?? []
+  externalLinks:
+    listing.externalLinks?.map((link) => ({
+      ...link,
+      expiresAt: link.expiresAt ? dateToInputValue(link.expiresAt) : undefined
+    })) ?? []
 });
 
 export default function ListingsClient({ initialListings, initialProcessLogs }: ListingsClientProps) {
@@ -508,21 +512,93 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
               </div>
               <div className="space-y-2 md:col-span-2">
                 <label className="text-sm font-semibold text-slate-700">External Portal Links</label>
-                <Textarea
-                  rows={3}
-                  value={(form.externalLinks[0]?.url as string | undefined) ?? ""}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      externalLinks: e.target.value
-                        ? [{ provider: "Other", url: e.target.value }]
-                        : []
-                    })
-                  }
-                  placeholder="https://propertyguru.com/..."
-                />
+                <div className="space-y-3">
+                  {form.externalLinks.map((link, index) => (
+                    <div
+                      key={`${link.url}-${index}`}
+                      className="grid gap-2 rounded-xl border border-border bg-muted/40 p-3 md:grid-cols-[180px_1fr_180px_auto]"
+                    >
+                      <Select
+                        value={link.provider}
+                        onValueChange={(value) =>
+                          setForm({
+                            ...form,
+                            externalLinks: form.externalLinks.map((item, current) =>
+                              current === index ? { ...item, provider: value as any } : item
+                            )
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Platform" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Mudah">Mudah</SelectItem>
+                          <SelectItem value="PropertyGuru">PropertyGuru</SelectItem>
+                          <SelectItem value="iProperty">iProperty</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        type="url"
+                        value={link.url}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            externalLinks: form.externalLinks.map((item, current) =>
+                              current === index ? { ...item, url: e.target.value } : item
+                            )
+                          })
+                        }
+                        placeholder="https://propertyguru.com/..."
+                      />
+                      <Input
+                        type="date"
+                        value={(link.expiresAt as string | undefined) ?? ""}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            externalLinks: form.externalLinks.map((item, current) =>
+                              current === index ? { ...item, expiresAt: e.target.value || undefined } : item
+                            )
+                          })
+                        }
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setForm({
+                            ...form,
+                            externalLinks: form.externalLinks.filter((_, current) => current !== index)
+                          })
+                        }
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Remove link</span>
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() =>
+                      setForm({
+                        ...form,
+                        externalLinks: [
+                          ...form.externalLinks,
+                          { provider: "PropertyGuru", url: "", expiresAt: undefined } as any
+                        ]
+                      })
+                    }
+                  >
+                    Add portal link
+                  </Button>
+                </div>
                 <p className="text-xs text-slate-500">
-                  Add portal URLs for quick reference. Expiry reminders auto-created from portal settings.
+                  Add platform URLs + expiry dates to generate "listing expiring in 1 day" reminders automatically.
                 </p>
               </div>
               <div className="md:col-span-2 flex items-center justify-between">
@@ -691,6 +767,7 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
                       ))}
                     </SelectContent>
                   </Select>
+                  <ListingReminderDialog listingId={listing.id} listingName={listing.propertyName} />
                   <Button variant="outline" size="sm" onClick={() => openListingForm(listing)}>
                     Edit
                   </Button>
@@ -701,22 +778,6 @@ export default function ListingsClient({ initialListings, initialProcessLogs }: 
               </div>
             );
           })}
-        </div>
-      </Card>
-
-      <Card>
-        <h2 className="text-lg font-semibold text-slate-900">Scheduler & Reminders</h2>
-        <p className="text-sm text-slate-600">Portal expiry, exclusive appointment, follow-up, and tenancy renewal alerts.</p>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          {reminders.map((reminder) => (
-            <div key={reminder.id} className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
-              <div className="flex items-center justify-between text-xs text-slate-500">
-                <span>{reminder.dueAt.toLocaleDateString()}</span>
-                <Badge tone="warning">{reminder.type}</Badge>
-              </div>
-              <p className="mt-2 text-sm font-semibold text-slate-800">{reminder.message}</p>
-            </div>
-          ))}
         </div>
       </Card>
     </div>

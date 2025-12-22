@@ -72,6 +72,16 @@ export async function fetchListings(): Promise<ListingInput[]> {
   return result.rows.map(toListing);
 }
 
+export async function fetchListingStatusCounts(): Promise<Record<string, number>> {
+  const result = await db.query<{ status: string; count: string }>(
+    `SELECT status, COUNT(*)::text AS count FROM "listings" GROUP BY status`
+  );
+  return result.rows.reduce<Record<string, number>>((acc, row) => {
+    acc[row.status] = Number(row.count ?? 0);
+    return acc;
+  }, {});
+}
+
 export async function insertListing(values: ListingFormValues): Promise<ListingInput> {
   const payload = listingFormSchema.parse(values);
 

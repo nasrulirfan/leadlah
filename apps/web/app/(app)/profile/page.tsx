@@ -5,7 +5,6 @@ import { ProfileForm } from "@/components/profile/ProfileForm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { reminders } from "@/lib/mock-data";
 import { requireSession } from "@/lib/session";
 import { fetchProfile } from "@/data/profile";
 

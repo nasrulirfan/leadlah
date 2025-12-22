@@ -38,7 +38,7 @@ export const mediaAssetSchema = z.object({
 });
 
 export const externalLinkSchema = z.object({
-  provider: z.enum(["Mudah", "PropertyGuru", "Other"]),
+  provider: z.enum(["Mudah", "PropertyGuru", "iProperty", "Other"]),
   url: z.string().url(),
   expiresAt: z.coerce.date().optional()
 });
@@ -84,7 +84,10 @@ export const reminderSchema = z.object({
     "PORTAL_EXPIRY",
     "EXCLUSIVE_APPOINTMENT",
     "LEAD_FOLLOWUP",
-    "TENANCY_RENEWAL"
+    "TENANCY_RENEWAL",
+    "PLATFORM_LISTING_EXPIRY",
+    "LISTING_EVENT",
+    "OWNER_UPDATE"
   ]),
   listingId: z.string().uuid().optional(),
   contactId: z.string().uuid().optional(),

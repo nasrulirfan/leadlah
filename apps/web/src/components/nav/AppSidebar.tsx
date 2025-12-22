@@ -7,6 +7,7 @@ import type { SubscriptionState } from "@leadlah/core";
 import { SubscriptionStatus } from "@leadlah/core";
 import { appNavLinks } from "./app-links";
 import { cn } from "@/lib/utils";
+import { LogoMark } from "@/components/branding/LogoMark";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -33,8 +34,8 @@ export function AppSidebar({ userName, onSignOut, subscription }: SidebarProps) 
   return (
     <aside className="hidden w-full max-w-xs flex-col rounded-3xl border border-border/70 bg-card/90 p-6 text-foreground shadow-[0_10px_50px_rgba(15,23,42,0.08)] backdrop-blur lg:flex dark:border-slate-800/80 dark:bg-slate-900/40">
       <div className="flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/70 text-lg font-semibold text-primary-foreground">
-          LL
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-card ring-1 ring-border/60 dark:bg-white">
+          <LogoMark size={28} priority />
         </div>
         <div>
           <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">LeadLah</p>

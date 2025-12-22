@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Fragment } from "react";
 
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LogoMark } from "@/components/branding/LogoMark";
 import { Button } from "../ui/button";
 
 type Props = {
@@ -54,8 +55,8 @@ export function StickyHeader({ variant = "marketing", userName, onSignOut }: Pro
     <header className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur">
       <div className="container flex h-16 items-center justify-between">
         <Link href="/" className="flex items-center gap-3 font-semibold text-base tracking-tight">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-card">
-            LL
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white shadow-card ring-1 ring-border/60 dark:bg-white">
+            <LogoMark size={24} priority />
           </div>
           <div className="leading-tight">
             <span className="block text-sm uppercase tracking-[0.2em] text-muted-foreground">LeadLah</span>
