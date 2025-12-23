@@ -45,7 +45,7 @@ export function PerformanceReports() {
               />
               <Button size="sm" variant="secondary" onClick={() => handleDownloadReport(`${selectedYear}`)}>
                 <Download className="mr-2 h-4 w-4" />
-                Export Invoice
+                Export Annual Report
               </Button>
             </div>
           </div>
@@ -120,13 +120,22 @@ export function PerformanceReports() {
                   <th className="pb-3 text-right">Expenses</th>
                   <th className="pb-3 text-right">Net Income</th>
                   <th className="pb-3 text-right">Progress</th>
-                  <th className="pb-3 text-right">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {monthlyReports?.map((report) => {
-                  const monthName = new Date(report.period.year, (report.period.month || 1) - 1).toLocaleString('default', { month: 'long' });
-                  const progressPercent = Math.min(100, report.progress.incomePercent);
+                  const monthName = new Date(
+                    report.period.year,
+                    (report.period.month || 1) - 1
+                  ).toLocaleString("default", { month: "long" });
+                  const rawProgress =
+                    report.target.income > 0
+                      ? report.progress.incomePercent
+                      : report.target.units > 0
+                        ? report.progress.unitsPercent
+                        : 0;
+                  const safeProgress = Number.isFinite(rawProgress) ? rawProgress : 0;
+                  const progressPercent = Math.max(0, Math.min(100, safeProgress));
 
                   return (
                     <tr key={`${report.period.year}-${report.period.month}`} className="border-b border-border">
@@ -155,15 +164,6 @@ export function PerformanceReports() {
                             {progressPercent.toFixed(0)}%
                           </span>
                         </div>
-                      </td>
-                      <td className="py-3 text-right">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleDownloadReport(`${report.period.year}-${report.period.month}`)}
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
                       </td>
                     </tr>
                   );
