@@ -27,6 +27,9 @@ function badgeToneFor(type: string) {
   if (type === "LEAD_FOLLOWUP") {
     return "info" as const;
   }
+  if (type === "VIEWING_APPOINTMENT") {
+    return "info" as const;
+  }
   if (type === "OWNER_UPDATE") {
     return "neutral" as const;
   }
@@ -35,6 +38,9 @@ function badgeToneFor(type: string) {
 
 function renderReminderSummary(reminder: StoredReminder, timeZone: string) {
   const metadata = reminder.metadata;
+  if (metadata?.kind === "VIEWING") {
+    return `Viewing with ${metadata.customerName}`;
+  }
   if (metadata?.kind === "EVENT") {
     return `${reminder.message} at ${formatTime(reminder.dueAt, timeZone)}`;
   }
@@ -74,6 +80,8 @@ function ReminderItem({
   onDismiss: (id: string) => void;
   index: number;
 }) {
+  const isViewingAppointment = reminder.metadata?.kind === "VIEWING";
+
   return (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
@@ -111,23 +119,34 @@ function ReminderItem({
           </div>
 
           <div className="flex shrink-0 gap-2">
-            <Button
-              size="sm"
-              variant="secondary"
-              className="h-8 gap-1"
-              onClick={() => onComplete(reminder.id)}
-            >
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              Done
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 gap-1"
-              onClick={() => onDismiss(reminder.id)}
-            >
-              <XCircle className="h-3.5 w-3.5" />
-            </Button>
+            {isViewingAppointment ? (
+              <Button size="sm" variant="secondary" className="h-8 gap-1" asChild>
+                <Link href="/appointments">
+                  <ArrowRight className="h-3.5 w-3.5" />
+                  Open
+                </Link>
+              </Button>
+            ) : (
+              <>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="h-8 gap-1"
+                  onClick={() => onComplete(reminder.id)}
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Done
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 gap-1"
+                  onClick={() => onDismiss(reminder.id)}
+                >
+                  <XCircle className="h-3.5 w-3.5" />
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -149,7 +168,7 @@ export function RemindersTimeline({
 
   const hasReminders = allReminders.length > 0;
   const appointmentCount = allReminders.filter(
-    (reminder) => reminder.metadata?.kind === "EVENT"
+    (reminder) => reminder.metadata?.kind === "EVENT" || reminder.metadata?.kind === "VIEWING"
   ).length;
 
   return (

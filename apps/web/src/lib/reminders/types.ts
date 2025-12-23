@@ -12,6 +12,13 @@ export type ReminderMetadata =
       leadDays?: number;
     }
   | {
+      kind: "VIEWING";
+      viewingId: string;
+      customerName: string;
+      phone?: string;
+      email?: string;
+    }
+  | {
       kind: "EVENT";
       eventType: "Viewing" | "Inspection" | "Appointment";
       location?: string;

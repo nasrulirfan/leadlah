@@ -9,7 +9,7 @@ import {
   buildPortalReminders,
   buildTenancyRenewalReminders,
 } from "@leadlah/core";
-import { LessThanOrEqual, Repository } from "typeorm";
+import { Between, LessThanOrEqual, Repository } from "typeorm";
 import {
   ReminderEntity,
   ReminderRecurrence,
@@ -18,6 +18,7 @@ import {
 import { CreateReminderDto } from "./dto/create-reminder.dto";
 import { ListRemindersQueryDto } from "./dto/list-reminders.query";
 import { SyncPlatformExpiryDto } from "./dto/sync-platform-expiry.dto";
+import { ProcessViewingEntity } from "../process/entities/process-viewing.entity";
 
 export type StoredReminder = {
   id: string;
@@ -115,7 +116,39 @@ export class RemindersService {
   constructor(
     @InjectRepository(ReminderEntity)
     private readonly reminders: Repository<ReminderEntity>,
+    @InjectRepository(ProcessViewingEntity)
+    private readonly viewings: Repository<ProcessViewingEntity>,
   ) {}
+
+  private toViewingReminder(userId: string, viewing: ProcessViewingEntity): StoredReminder | null {
+    if (!viewing.viewedAt) {
+      return null;
+    }
+
+    return {
+      id: `viewing:${viewing.id}`,
+      userId,
+      listingId: viewing.listingId,
+      listingName: viewing.listing?.propertyName ?? undefined,
+      type: "VIEWING_APPOINTMENT",
+      status: "PENDING",
+      dueAt: viewing.viewedAt,
+      message: `Viewing scheduled with ${viewing.name}`,
+      recurrence: "NONE",
+      recurrenceInterval: 1,
+      metadata: {
+        kind: "VIEWING",
+        viewingId: viewing.id,
+        customerName: viewing.name,
+        phone: viewing.phone ?? undefined,
+        email: viewing.email ?? undefined,
+      } satisfies Record<string, unknown>,
+      completedAt: undefined,
+      dismissedAt: undefined,
+      createdAt: viewing.createdAt,
+      updatedAt: viewing.updatedAt,
+    };
+  }
 
   private buildPlatformExpiryReminder(
     link: { provider: string; url: string; expiresAt?: string | Date | null },
@@ -192,20 +225,31 @@ export class RemindersService {
     const resolvedTz = timeZone || "UTC";
     const now = new Date();
     const days = daysUntilSunday(now, resolvedTz);
+    const rangeDays = Math.max(days, 2);
     const end = new Date(now);
-    end.setDate(end.getDate() + Math.max(days, 2));
+    end.setDate(end.getDate() + rangeDays);
     end.setHours(23, 59, 59, 999);
 
-    const items = await this.reminders.find({
-      where: {
-        userId,
-        status: "PENDING",
-        dueAt: LessThanOrEqual(end),
-      },
-      relations: { listing: true },
-      order: { dueAt: "ASC" },
-      take: 250,
-    });
+    const [items, upcomingViewings] = await Promise.all([
+      this.reminders.find({
+        where: {
+          userId,
+          status: "PENDING",
+          dueAt: LessThanOrEqual(end),
+        },
+        relations: { listing: true },
+        order: { dueAt: "ASC" },
+        take: 250,
+      }),
+      this.viewings.find({
+        where: {
+          viewedAt: Between(now, end),
+        },
+        relations: { listing: true },
+        order: { viewedAt: "ASC" },
+        take: 250,
+      }),
+    ]);
 
     const todayKey = zonedDateKey(now, resolvedTz);
     const tomorrowKey = zonedDateKey(
@@ -214,7 +258,7 @@ export class RemindersService {
     );
 
     const thisWeekKeys = new Set<string>();
-    for (let offset = 2; offset <= days; offset += 1) {
+    for (let offset = 2; offset <= rangeDays; offset += 1) {
       thisWeekKeys.add(
         zonedDateKey(
           new Date(now.getTime() + offset * 24 * 60 * 60 * 1000),
@@ -228,6 +272,7 @@ export class RemindersService {
       tomorrow: [],
       thisWeek: [],
     };
+
     for (const entity of items) {
       const reminder = toStoredReminder(entity);
       const dueKey = zonedDateKey(reminder.dueAt, resolvedTz);
@@ -238,6 +283,25 @@ export class RemindersService {
       } else if (thisWeekKeys.has(dueKey)) {
         groups.thisWeek.push(reminder);
       }
+    }
+
+    for (const viewing of upcomingViewings) {
+      const reminder = this.toViewingReminder(userId, viewing);
+      if (!reminder) {
+        continue;
+      }
+      const dueKey = zonedDateKey(reminder.dueAt, resolvedTz);
+      if (dueKey === todayKey) {
+        groups.today.push(reminder);
+      } else if (dueKey === tomorrowKey) {
+        groups.tomorrow.push(reminder);
+      } else if (thisWeekKeys.has(dueKey)) {
+        groups.thisWeek.push(reminder);
+      }
+    }
+
+    for (const key of ["today", "tomorrow", "thisWeek"] as const) {
+      groups[key].sort((a, b) => a.dueAt.getTime() - b.dueAt.getTime());
     }
 
     return groups;
