@@ -8,11 +8,9 @@ import { PageHero } from "@/components/app/PageHero";
 import { ProfileForm } from "@/components/profile/ProfileForm";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
 
 type ProfileClientProps = {
   profile: UserProfile;
-  stats: { label: string; value: string; caption: string }[];
 };
 
 const containerVariants = {
@@ -33,7 +31,7 @@ const cardVariants = {
   }
 };
 
-export function ProfileClient({ profile, stats }: ProfileClientProps) {
+export function ProfileClient({ profile }: ProfileClientProps) {
   const initials =
     profile.name
       .split(" ")
@@ -64,8 +62,8 @@ export function ProfileClient({ profile, stats }: ProfileClientProps) {
         }
       />
 
-      <motion.div variants={containerVariants} initial="hidden" animate="visible" className="grid gap-4 lg:grid-cols-3">
-        <motion.div variants={cardVariants} className="lg:col-span-2">
+      <motion.div variants={containerVariants} initial="hidden" animate="visible">
+        <motion.div variants={cardVariants}>
           <Card className="border-border/70 bg-card/90 shadow-sm dark:bg-slate-900/40">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-4">
@@ -100,23 +98,6 @@ export function ProfileClient({ profile, stats }: ProfileClientProps) {
             </div>
           </Card>
         </motion.div>
-
-        <motion.div variants={cardVariants}>
-          <Card className="border-border/70 bg-card/90 shadow-sm dark:bg-slate-900/40">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Highlights</p>
-            <div className="mt-4 space-y-3">
-              {stats.map((stat) => (
-                <div key={stat.label} className="flex items-start justify-between gap-3 rounded-2xl bg-muted/30 p-3">
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">{stat.label}</p>
-                    <p className="text-xs text-muted-foreground">{stat.caption}</p>
-                  </div>
-                  <p className={cn("text-sm font-semibold text-foreground")}>{stat.value}</p>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </motion.div>
       </motion.div>
 
       <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.05 }}>
@@ -125,3 +106,4 @@ export function ProfileClient({ profile, stats }: ProfileClientProps) {
     </div>
   );
 }
+
