@@ -69,6 +69,50 @@ type ViewingEditFormState = {
   markAsBuyer: boolean;
 };
 
+type ReminderActionResult = {
+  id: string;
+  userId: string;
+  listingId?: string | null;
+  listingName?: string | null;
+  type: string;
+  status: "PENDING" | "DONE" | "DISMISSED";
+  dueAt: string;
+  message: string;
+  recurrence: "NONE" | "WEEKLY" | "MONTHLY";
+  recurrenceInterval: number;
+  metadata?: Record<string, unknown> | null;
+  completedAt?: string | null;
+  dismissedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+const toDate = (value: string | null | undefined) => {
+  if (!value) {
+    return undefined;
+  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date;
+};
+
+const toReminder = (reminder: ReminderActionResult): StoredReminder => ({
+  id: reminder.id,
+  userId: reminder.userId,
+  listingId: reminder.listingId ?? undefined,
+  listingName: reminder.listingName ?? undefined,
+  type: reminder.type,
+  status: reminder.status,
+  dueAt: toDate(reminder.dueAt) ?? new Date(),
+  message: reminder.message,
+  recurrence: reminder.recurrence,
+  recurrenceInterval: reminder.recurrenceInterval,
+  metadata: (reminder.metadata ?? undefined) as StoredReminder["metadata"],
+  completedAt: toDate(reminder.completedAt),
+  dismissedAt: toDate(reminder.dismissedAt),
+  createdAt: toDate(reminder.createdAt) ?? new Date(),
+  updatedAt: toDate(reminder.updatedAt) ?? new Date(),
+});
+
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -581,10 +625,10 @@ export function AppointmentsClient({
     setError(null);
     startTransition(async () => {
       try {
-        await completeReminderAction(id);
-        const completedAt = new Date();
+        const updated = await completeReminderAction(id);
+        const completed = toReminder(updated as ReminderActionResult);
         setAppointments((prev) =>
-          prev.map((item) => (item.id === id ? { ...item, status: "DONE", completedAt } : item))
+          prev.map((item) => (item.id === id ? completed : item))
         );
       } catch (actionError) {
         setError(actionError instanceof Error ? actionError.message : "Unable to complete this appointment.");
@@ -596,10 +640,10 @@ export function AppointmentsClient({
     setError(null);
     startTransition(async () => {
       try {
-        await dismissReminderAction(id);
-        const dismissedAt = new Date();
+        const updated = await dismissReminderAction(id);
+        const dismissed = toReminder(updated as ReminderActionResult);
         setAppointments((prev) =>
-          prev.map((item) => (item.id === id ? { ...item, status: "DISMISSED", dismissedAt } : item))
+          prev.map((item) => (item.id === id ? dismissed : item))
         );
       } catch (actionError) {
         setError(actionError instanceof Error ? actionError.message : "Unable to dismiss this appointment.");

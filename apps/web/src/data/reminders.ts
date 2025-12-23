@@ -1,4 +1,3 @@
-import { cache } from "react";
 import type { ExternalLink } from "@leadlah/core";
 import { requestApi } from "@/lib/api";
 import type {
@@ -78,7 +77,10 @@ export async function dismissReminder(userId: string, reminderId: string) {
   return toReminder(updated);
 }
 
-export const fetchDashboardReminders = cache(async (userId: string, timeZone: string): Promise<DashboardReminders> => {
+export async function fetchDashboardReminders(
+  userId: string,
+  timeZone: string,
+): Promise<DashboardReminders> {
   const result = await requestApi<{
     today: ApiReminder[];
     tomorrow: ApiReminder[];
@@ -91,9 +93,11 @@ export const fetchDashboardReminders = cache(async (userId: string, timeZone: st
     tomorrow: result.tomorrow.map(toReminder),
     thisWeek: result.thisWeek.map(toReminder),
   };
-});
+}
 
-export const fetchAppointmentReminders = cache(async (userId: string): Promise<StoredReminder[]> => {
+export async function fetchAppointmentReminders(
+  userId: string,
+): Promise<StoredReminder[]> {
   const [events, exclusives] = await Promise.all([
     requestApi<ApiReminder[]>(
       `/reminders/${userId}?type=${encodeURIComponent("LISTING_EVENT")}&limit=250`,
@@ -107,7 +111,7 @@ export const fetchAppointmentReminders = cache(async (userId: string): Promise<S
     .map(toReminder)
     .sort((a, b) => b.dueAt.getTime() - a.dueAt.getTime())
     .slice(0, 500);
-});
+}
 
 export async function syncPlatformExpiryReminders(params: {
   userId: string;

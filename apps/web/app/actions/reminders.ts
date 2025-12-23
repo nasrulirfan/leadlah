@@ -7,17 +7,39 @@ import { requestApi } from "@/lib/api";
 
 const reminderIdSchema = z.string().uuid();
 
+type ApiReminder = {
+  id: string;
+  userId: string;
+  listingId?: string | null;
+  listingName?: string | null;
+  type: string;
+  status: "PENDING" | "DONE" | "DISMISSED";
+  dueAt: string;
+  message: string;
+  recurrence: "NONE" | "WEEKLY" | "MONTHLY";
+  recurrenceInterval: number;
+  metadata?: Record<string, unknown> | null;
+  completedAt?: string | null;
+  dismissedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export async function completeReminderAction(
   reminderId: string,
   _formData?: FormData,
 ) {
   const session = await requireSession();
   const parsedId = reminderIdSchema.parse(reminderId);
-  await requestApi(`/reminders/${session.user.id}/${parsedId}/complete`, {
-    method: "POST",
-  });
+  const updated = await requestApi<ApiReminder>(
+    `/reminders/${session.user.id}/${parsedId}/complete`,
+    {
+      method: "POST",
+    },
+  );
   revalidatePath("/dashboard");
   revalidatePath("/appointments");
+  return updated;
 }
 
 export async function dismissReminderAction(
@@ -26,9 +48,15 @@ export async function dismissReminderAction(
 ) {
   const session = await requireSession();
   const parsedId = reminderIdSchema.parse(reminderId);
-  await requestApi(`/reminders/${session.user.id}/${parsedId}/dismiss`, {
-    method: "POST",
-  });
+  const updated = await requestApi<ApiReminder>(
+    `/reminders/${session.user.id}/${parsedId}/dismiss`,
+    {
+      method: "POST",
+    },
+  );
   revalidatePath("/dashboard");
   revalidatePath("/appointments");
+  return updated;
 }
+
+export type ReminderActionResult = ApiReminder;

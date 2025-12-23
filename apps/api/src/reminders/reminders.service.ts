@@ -335,6 +335,7 @@ export class RemindersService {
   async complete(userId: string, reminderId: string): Promise<StoredReminder> {
     const entity = await this.reminders.findOne({
       where: { id: reminderId, userId },
+      relations: { listing: true },
     });
     if (!entity) {
       throw new NotFoundException("Reminder not found");
@@ -356,12 +357,17 @@ export class RemindersService {
     }
 
     const saved = await this.reminders.save(entity);
-    return toStoredReminder(saved);
+    const hydrated = await this.reminders.findOne({
+      where: { id: saved.id, userId },
+      relations: { listing: true },
+    });
+    return toStoredReminder(hydrated ?? saved);
   }
 
   async dismiss(userId: string, reminderId: string): Promise<StoredReminder> {
     const entity = await this.reminders.findOne({
       where: { id: reminderId, userId },
+      relations: { listing: true },
     });
     if (!entity) {
       throw new NotFoundException("Reminder not found");
@@ -370,7 +376,11 @@ export class RemindersService {
     entity.status = "DISMISSED";
     entity.dismissedAt = new Date();
     const saved = await this.reminders.save(entity);
-    return toStoredReminder(saved);
+    const hydrated = await this.reminders.findOne({
+      where: { id: saved.id, userId },
+      relations: { listing: true },
+    });
+    return toStoredReminder(hydrated ?? saved);
   }
 
   async syncPlatformExpiry(
