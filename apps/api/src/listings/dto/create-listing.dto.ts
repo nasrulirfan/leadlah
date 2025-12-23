@@ -12,8 +12,8 @@ class MediaAssetDto {
 }
 
 class ExternalLinkDto {
-  @IsIn(["Mudah", "PropertyGuru", "Other"])
-  provider!: "Mudah" | "PropertyGuru" | "Other";
+  @IsIn(["Mudah", "PropertyGuru", "iProperty", "Other"])
+  provider!: "Mudah" | "PropertyGuru" | "iProperty" | "Other";
 
   @IsUrl()
   url!: string;

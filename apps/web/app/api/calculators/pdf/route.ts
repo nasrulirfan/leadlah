@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     const html = generateCalculatorReceiptHtml(receipt, { leadlahMarkDataUri });
 
     const browser = await puppeteer.launch({
-      headless: "new",
+      headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
 
@@ -57,7 +57,9 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      return new NextResponse(pdf, {
+      const pdfBody = Uint8Array.from(pdf).buffer as ArrayBuffer;
+
+      return new NextResponse(pdfBody, {
         headers: {
           "Content-Type": "application/pdf",
           "Content-Disposition": `attachment; filename=${buildFileName(receipt)}`,
@@ -114,18 +116,19 @@ function normalizeReceipt(payload: Record<string, unknown>): CalculatorReceipt {
     throw new Error("Issued at timestamp is invalid.");
   }
 
-  const calculationType = payload.calculationType;
-  if (!allowedTypes.includes(calculationType as AllowableType)) {
+  const calculationTypeRaw = payload.calculationType;
+  if (!allowedTypes.includes(calculationTypeRaw as AllowableType)) {
     throw new Error("Unsupported calculation type.");
   }
+  const calculationType = calculationTypeRaw as AllowableType;
 
   const agentName = extractRequiredString(payload.agentName, "Agent name");
   const renNumber = extractRequiredString(payload.renNumber, "REN number");
   const customerName = extractOptionalString(payload.customerName);
   const agencyLogoUrl = extractOptionalString(payload.agencyLogoUrl);
 
-  const inputs = extractRecord(payload.inputs, "inputs");
-  const outputs = extractRecord(payload.outputs, "outputs");
+  const inputs = extractInputsRecord(payload.inputs, "inputs");
+  const outputs = extractOutputsRecord(payload.outputs, "outputs");
 
   return {
     agentName,
@@ -139,9 +142,38 @@ function normalizeReceipt(payload: Record<string, unknown>): CalculatorReceipt {
   };
 }
 
-function extractRecord(
+function extractInputsRecord(
   source: unknown,
   fieldName: string,
+): Record<string, number | string | boolean> {
+  return extractRecordInternal(source, fieldName, true);
+}
+
+function extractOutputsRecord(
+  source: unknown,
+  fieldName: string,
+): Record<string, number | string> {
+  if (!source || typeof source !== "object") {
+    throw new Error(`Receipt ${fieldName} are missing.`);
+  }
+
+  return Object.entries(source).reduce<Record<string, number | string>>(
+    (acc, [key, value]) => {
+      if (typeof value === "string" || typeof value === "number") {
+        acc[key] = value;
+      } else if (value != null) {
+        acc[key] = String(value);
+      }
+      return acc;
+    },
+    {},
+  );
+}
+
+function extractRecordInternal(
+  source: unknown,
+  fieldName: string,
+  allowBoolean: boolean,
 ): Record<string, number | string | boolean> {
   if (!source || typeof source !== "object") {
     throw new Error(`Receipt ${fieldName} are missing.`);
@@ -153,7 +185,7 @@ function extractRecord(
     if (
       typeof value === "string" ||
       typeof value === "number" ||
-      typeof value === "boolean"
+      (allowBoolean && typeof value === "boolean")
     ) {
       acc[key] = value;
     } else if (value != null) {

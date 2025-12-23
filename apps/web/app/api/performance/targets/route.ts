@@ -1,24 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { requestApi } from "@/lib/api";
 import { requireSession } from "@/lib/session";
-import { serializeTargetRow } from "@/lib/performance/serializers";
+
+export const dynamic = "force-dynamic";
+
+type ApiTarget = {
+  id: string;
+  userId: string;
+  year: number;
+  month: number | null;
+  targetUnits: number;
+  targetIncome: number;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+type ApiError = Error & { status?: number };
+
+const toApiTarget = (payload: any): ApiTarget => ({
+  id: String(payload.id),
+  userId: String(payload.userId),
+  year: Number(payload.year ?? 0),
+  month: typeof payload.month === "number" ? payload.month : null,
+  targetUnits: Number(payload.targetUnits ?? 0),
+  targetIncome: Number(payload.targetIncome ?? 0),
+  createdAt: payload.createdAt ? String(payload.createdAt) : null,
+  updatedAt: payload.updatedAt ? String(payload.updatedAt) : null,
+});
 
 export async function GET(request: NextRequest) {
   try {
     const session = await requireSession();
     const userId = session.user.id;
 
-    const result = await db.query(
-      `SELECT * FROM targets 
-       WHERE user_id = $1 
-       ORDER BY year DESC, month DESC NULLS LAST`,
-      [userId]
-    );
-
-    return NextResponse.json(result.rows.map(serializeTargetRow));
+    const targets = await requestApi<any[]>(`/performance/${userId}/targets`);
+    return NextResponse.json(targets.map(toApiTarget));
   } catch (error) {
     console.error("Error fetching targets:", error);
-    return NextResponse.json({ error: "Failed to fetch targets" }, { status: 500 });
+    const status = (error as ApiError)?.status;
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to fetch targets" },
+      { status: status === 404 ? 404 : 500 },
+    );
   }
 }
 
@@ -28,23 +51,23 @@ export async function POST(request: NextRequest) {
     const userId = session.user.id;
     const body = await request.json();
 
-    const { year, month, targetUnits, targetIncome } = body;
+    const created = await requestApi<any>(`/performance/${userId}/targets`, {
+      method: "POST",
+      body: JSON.stringify({
+        year: body.year,
+        month: body.month,
+        targetUnits: body.targetUnits,
+        targetIncome: body.targetIncome,
+      }),
+    });
 
-    const result = await db.query(
-      `INSERT INTO targets (user_id, year, month, target_units, target_income)
-       VALUES ($1, $2, $3, $4, $5)
-       ON CONFLICT (user_id, year, month) 
-       DO UPDATE SET 
-         target_units = EXCLUDED.target_units,
-         target_income = EXCLUDED.target_income,
-         updated_at = NOW()
-       RETURNING *`,
-      [userId, year, month || null, targetUnits, targetIncome]
-    );
-
-    return NextResponse.json(serializeTargetRow(result.rows[0]));
+    return NextResponse.json(toApiTarget(created));
   } catch (error) {
     console.error("Error creating target:", error);
-    return NextResponse.json({ error: "Failed to create target" }, { status: 500 });
+    const status = (error as ApiError)?.status;
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to create target" },
+      { status: status === 404 ? 404 : 500 },
+    );
   }
 }

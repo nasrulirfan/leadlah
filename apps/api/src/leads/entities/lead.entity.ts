@@ -36,8 +36,24 @@ export class LeadEntity {
   @Column({ type: "varchar", length: 40, nullable: true })
   phone!: string | null;
 
+  @Column({
+    name: "phone_normalized",
+    type: "varchar",
+    length: 64,
+    nullable: true,
+  })
+  phoneNormalized!: string | null;
+
   @Column({ type: "varchar", length: 255, nullable: true })
   email!: string | null;
+
+  @Column({
+    name: "email_normalized",
+    type: "varchar",
+    length: 255,
+    nullable: true,
+  })
+  emailNormalized!: string | null;
 
   @Column({ type: "varchar", length: 64, default: "manual" })
   source!: string;
@@ -48,7 +64,11 @@ export class LeadEntity {
   @Column({ type: "text", nullable: true })
   message!: string | null;
 
-  @Column({ name: "last_contacted_at", type: timestampColumnType as any, nullable: true })
+  @Column({
+    name: "last_contacted_at",
+    type: timestampColumnType as any,
+    nullable: true,
+  })
   lastContactedAt!: Date | null;
 
   @CreateDateColumn({ name: "created_at", type: timestampColumnType as any })

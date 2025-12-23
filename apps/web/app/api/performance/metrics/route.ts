@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { requestApi } from "@/lib/api";
 import { requireSession } from "@/lib/session";
+
+export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,75 +13,27 @@ export async function GET(request: NextRequest) {
     const year = parseInt(searchParams.get("year") || new Date().getFullYear().toString());
     const month = searchParams.get("month") ? parseInt(searchParams.get("month")!) : null;
 
-    // Get target
-    const targetResult = await db.query(
-      `SELECT * FROM targets 
-       WHERE user_id = $1 AND year = $2 AND month ${month ? '= $3' : 'IS NULL'}
-       LIMIT 1`,
-      month ? [userId, year, month] : [userId, year]
+    const reports = await requestApi<any>(
+      `/performance/${userId}/reports?year=${year}`,
     );
+    const monthlyReports = Array.isArray(reports?.monthlyReports)
+      ? reports.monthlyReports
+      : [];
+    const yearlyReport = reports?.yearlyReport;
 
-    // Get commissions
-    const commissionQuery = month
-      ? `SELECT COALESCE(SUM(amount), 0) as total, COUNT(*) as units
-         FROM commissions 
-         WHERE user_id = $1 
-         AND EXTRACT(YEAR FROM closed_date) = $2 
-         AND EXTRACT(MONTH FROM closed_date) = $3`
-      : `SELECT COALESCE(SUM(amount), 0) as total, COUNT(*) as units
-         FROM commissions 
-         WHERE user_id = $1 
-         AND EXTRACT(YEAR FROM closed_date) = $2`;
-
-    const commissionResult = await db.query(
-      commissionQuery,
-      month ? [userId, year, month] : [userId, year]
-    );
-
-    // Get expenses
-    const expenseQuery = month
-      ? `SELECT COALESCE(SUM(amount), 0) as total
-         FROM expenses 
-         WHERE user_id = $1 
-         AND EXTRACT(YEAR FROM date) = $2 
-         AND EXTRACT(MONTH FROM date) = $3`
-      : `SELECT COALESCE(SUM(amount), 0) as total
-         FROM expenses 
-         WHERE user_id = $1 
-         AND EXTRACT(YEAR FROM date) = $2`;
-
-    const expenseResult = await db.query(
-      expenseQuery,
-      month ? [userId, year, month] : [userId, year]
-    );
-
-    const targetRow = targetResult.rows[0] || { target_units: 0, target_income: 0 };
-    const targetUnits = Number(targetRow.target_units ?? 0);
-    const targetIncome = Number(targetRow.target_income ?? 0);
-    const commission = Number(commissionResult.rows[0].total ?? 0);
-    const units = Number(commissionResult.rows[0].units ?? 0);
-    const expenses = Number(expenseResult.rows[0].total ?? 0);
-    const netIncome = commission - expenses;
-
-    const metrics = {
-      period: { year, month },
-      target: {
-        units: targetUnits,
-        income: targetIncome
-      },
-      actual: {
-        units,
-        commission,
-        expenses,
-        netIncome
-      },
-      progress: {
-        unitsPercent: targetUnits > 0 ? (units / targetUnits) * 100 : 0,
-        incomePercent: targetIncome > 0 ? (netIncome / targetIncome) * 100 : 0
-      }
+    const emptyMetrics = {
+      period: month ? { year, month } : { year, month: null },
+      target: { units: 0, income: 0 },
+      actual: { units: 0, commission: 0, expenses: 0, netIncome: 0 },
+      progress: { unitsPercent: 0, incomePercent: 0 },
     };
 
-    return NextResponse.json(metrics);
+    const resolved =
+      typeof month === "number"
+        ? monthlyReports.find((report: any) => report?.period?.month === month)
+        : yearlyReport;
+
+    return NextResponse.json(resolved ?? emptyMetrics);
   } catch (error) {
     console.error("Error fetching metrics:", error);
     return NextResponse.json({ error: "Failed to fetch metrics" }, { status: 500 });

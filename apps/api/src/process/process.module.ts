@@ -4,11 +4,15 @@ import { ProcessService } from "./process.service";
 import { ProcessController } from "./process.controller";
 import { ProcessLogEntity } from "./entities/process-log.entity";
 import { ProcessViewingEntity } from "./entities/process-viewing.entity";
+import { LeadsModule } from "../leads/leads.module";
 
 @Module({
-  imports: [TypeOrmModule.forFeature([ProcessLogEntity, ProcessViewingEntity])],
+  imports: [
+    TypeOrmModule.forFeature([ProcessLogEntity, ProcessViewingEntity]),
+    LeadsModule,
+  ],
   providers: [ProcessService],
   controllers: [ProcessController],
-  exports: [ProcessService]
+  exports: [ProcessService],
 })
 export class ProcessModule {}

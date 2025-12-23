@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { DeepPartial, Repository } from "typeorm";
+import type { ExternalLink, Listing } from "@leadlah/core";
 import { ListingCategory, ListingStatus } from "@leadlah/core";
 import { ListingEntity } from "./entities/listing.entity";
 import { CreateListingDto } from "./dto/create-listing.dto";
@@ -13,6 +14,37 @@ export class ListingsService {
     @InjectRepository(ListingEntity)
     private readonly repository: Repository<ListingEntity>,
   ) {}
+
+  private normalizeExternalLinks(links: ExternalLink[] | null | undefined) {
+    return (links ?? []).map((link) => ({
+      ...link,
+      expiresAt: link.expiresAt ?? undefined,
+    }));
+  }
+
+  private toListing(entity: ListingEntity): Listing {
+    return {
+      id: entity.id,
+      propertyName: entity.propertyName,
+      type: entity.type,
+      category: entity.category,
+      price: Number(entity.price),
+      size: Number(entity.size),
+      bedrooms: entity.bedrooms,
+      bathrooms: entity.bathrooms,
+      location: entity.location,
+      buildingProject: entity.buildingProject ?? undefined,
+      status: entity.status,
+      expiresAt: entity.expiresAt ?? undefined,
+      lastEnquiryAt: entity.lastEnquiryAt ?? undefined,
+      photos: entity.photos ?? [],
+      videos: entity.videos ?? [],
+      documents: entity.documents ?? [],
+      externalLinks: this.normalizeExternalLinks(entity.externalLinks),
+      createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
+    };
+  }
 
   private resolveCategory(payload: {
     category?: ListingCategory;
@@ -41,15 +73,17 @@ export class ListingsService {
       externalLinks: payload.externalLinks ?? [],
     };
     const entity = this.repository.create(entityData);
-    return this.repository.save(entity);
+    const saved = await this.repository.save(entity);
+    return this.toListing(saved);
   }
 
-  findAll(filters: ListListingsQueryDto = {}) {
+  async findAll(filters: ListListingsQueryDto = {}) {
     const hasFilters = Object.values(filters).some(
       (value) => value != null && value !== "",
     );
     if (!hasFilters) {
-      return this.repository.find({ order: { createdAt: "DESC" } });
+      const items = await this.repository.find({ order: { createdAt: "DESC" } });
+      return items.map((item) => this.toListing(item));
     }
 
     const query = this.repository
@@ -113,7 +147,8 @@ export class ListingsService {
       );
     }
 
-    return query.getMany();
+    const items = await query.getMany();
+    return items.map((item) => this.toListing(item));
   }
 
   async findOne(id: string) {
@@ -121,7 +156,7 @@ export class ListingsService {
     if (!entity) {
       throw new NotFoundException("Listing not found");
     }
-    return entity;
+    return this.toListing(entity);
   }
 
   async update(id: string, payload: UpdateListingDto) {
@@ -142,11 +177,15 @@ export class ListingsService {
     if (!entity) {
       throw new NotFoundException("Listing not found");
     }
-    return this.repository.save(entity);
+    const saved = await this.repository.save(entity);
+    return this.toListing(saved);
   }
 
   async remove(id: string) {
-    const entity = await this.findOne(id);
+    const entity = await this.repository.findOne({ where: { id } });
+    if (!entity) {
+      throw new NotFoundException("Listing not found");
+    }
     await this.repository.remove(entity);
     return { id };
   }

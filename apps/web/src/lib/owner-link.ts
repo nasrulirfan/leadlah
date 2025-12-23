@@ -1,7 +1,9 @@
 import type { OwnerViewToken } from "@leadlah/core";
 import { Buffer } from "buffer";
 
-type SerializableOwnerToken = OwnerViewToken & { expiresAt: string };
+type SerializableOwnerToken = Omit<OwnerViewToken, "expiresAt"> & {
+  expiresAt: string;
+};
 
 const serializeToken = (token: OwnerViewToken): SerializableOwnerToken => ({
   ...token,

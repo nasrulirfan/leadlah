@@ -7,4 +7,21 @@ export const listingFormSchema = listingSchema.omit({
   updatedAt: true
 });
 
-export type ListingFormValues = z.input<typeof listingFormSchema>;
+type ListingFormSchemaInput = z.input<typeof listingFormSchema>;
+export type ListingFormPayload = z.output<typeof listingFormSchema>;
+type ListingExternalLinkInput = NonNullable<
+  ListingFormSchemaInput["externalLinks"]
+>[number];
+
+type ListingExternalLinkFormValue = Omit<ListingExternalLinkInput, "expiresAt"> & {
+  expiresAt?: string;
+};
+
+export type ListingFormValues = Omit<
+  ListingFormSchemaInput,
+  "expiresAt" | "lastEnquiryAt" | "externalLinks"
+> & {
+  expiresAt?: string;
+  lastEnquiryAt?: string;
+  externalLinks: ListingExternalLinkFormValue[];
+};

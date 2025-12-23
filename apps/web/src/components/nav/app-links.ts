@@ -8,7 +8,7 @@ export type AppNavLink = {
   icon: LucideIcon;
 };
 
-export const appNavLinks: AppNavLink[] = [
+export const appNavLinks = [
   {
     href: "/dashboard",
     label: "Dashboard",
@@ -51,4 +51,4 @@ export const appNavLinks: AppNavLink[] = [
     description: "Plan & invoices",
     icon: CreditCard
   }
-];
+] as const satisfies ReadonlyArray<AppNavLink>;

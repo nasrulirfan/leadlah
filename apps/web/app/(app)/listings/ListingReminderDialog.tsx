@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { createListingReminderAction } from "./actions";
 import { motion } from "framer-motion";
 import { Bell, Calendar, MessageSquare, Users, Clock, CheckCircle2 } from "lucide-react";
@@ -185,28 +186,27 @@ export function ListingReminderDialog({ listingId, listingName }: ListingReminde
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">Date & Time</label>
-                    <Input 
-                      type="datetime-local" 
-                      value={eventStartsAt} 
-                      onChange={(e) => setEventStartsAt(e.target.value)} 
-                      className="h-11"
+                    <DateTimePicker
+                      value={eventStartsAt}
+                      onChange={(val) => setEventStartsAt(val)}
+                      placeholder="Select date & time"
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">Contact Name</label>
-                    <Input 
-                      value={eventContactName} 
-                      onChange={(e) => setEventContactName(e.target.value)} 
-                      placeholder="John / Siti" 
+                    <Input
+                      value={eventContactName}
+                      onChange={(e) => setEventContactName(e.target.value)}
+                      placeholder="John / Siti"
                       className="h-11"
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">Location</label>
-                    <Input 
-                      value={eventLocation} 
-                      onChange={(e) => setEventLocation(e.target.value)} 
-                      placeholder="Mont Kiara, Lobby" 
+                    <Input
+                      value={eventLocation}
+                      onChange={(e) => setEventLocation(e.target.value)}
+                      placeholder="Mont Kiara, Lobby"
                       className="h-11"
                     />
                   </div>
@@ -229,11 +229,10 @@ export function ListingReminderDialog({ listingId, listingName }: ListingReminde
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">Follow-up Time</label>
-                    <Input 
-                      type="datetime-local" 
-                      value={followUpAt} 
-                      onChange={(e) => setFollowUpAt(e.target.value)} 
-                      className="h-11"
+                    <DateTimePicker
+                      value={followUpAt}
+                      onChange={(val) => setFollowUpAt(val)}
+                      placeholder="Select follow-up time"
                     />
                   </div>
                   <div className="space-y-2">
@@ -251,19 +250,19 @@ export function ListingReminderDialog({ listingId, listingName }: ListingReminde
                   </div>
                   <div className="space-y-2 md:col-span-2">
                     <label className="text-sm font-medium text-foreground">Contact Name</label>
-                    <Input 
-                      value={followUpContactName} 
-                      onChange={(e) => setFollowUpContactName(e.target.value)} 
-                      placeholder="Buyer / tenant name" 
+                    <Input
+                      value={followUpContactName}
+                      onChange={(e) => setFollowUpContactName(e.target.value)}
+                      placeholder="Buyer / tenant name"
                       className="h-11"
                     />
                   </div>
                   <div className="space-y-2 md:col-span-2">
                     <label className="text-sm font-medium text-foreground">Message</label>
-                    <Textarea 
-                      value={followUpMessage} 
-                      onChange={(e) => setFollowUpMessage(e.target.value)} 
-                      rows={3} 
+                    <Textarea
+                      value={followUpMessage}
+                      onChange={(e) => setFollowUpMessage(e.target.value)}
+                      rows={3}
                       className="resize-none"
                     />
                   </div>
@@ -286,19 +285,18 @@ export function ListingReminderDialog({ listingId, listingName }: ListingReminde
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">First Due Date</label>
-                    <Input 
-                      type="datetime-local" 
-                      value={ownerFirstDueAt} 
-                      onChange={(e) => setOwnerFirstDueAt(e.target.value)} 
-                      className="h-11"
+                    <DateTimePicker
+                      value={ownerFirstDueAt}
+                      onChange={(val) => setOwnerFirstDueAt(val)}
+                      placeholder="Select first due date"
                     />
                   </div>
                   <div className="space-y-2 md:col-span-2">
                     <label className="text-sm font-medium text-foreground">Message</label>
-                    <Textarea 
-                      value={ownerMessage} 
-                      onChange={(e) => setOwnerMessage(e.target.value)} 
-                      rows={3} 
+                    <Textarea
+                      value={ownerMessage}
+                      onChange={(e) => setOwnerMessage(e.target.value)}
+                      rows={3}
                       className="resize-none"
                     />
                     <p className="text-xs text-muted-foreground flex items-center gap-1.5">

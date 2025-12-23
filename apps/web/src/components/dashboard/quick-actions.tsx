@@ -59,7 +59,7 @@ const actions = [
     iconBg: "bg-amber-500/10",
     iconColor: "text-amber-500",
   },
-];
+] as const;
 
 const calculators = [
   { name: "Loan Eligibility", icon: "💰" },

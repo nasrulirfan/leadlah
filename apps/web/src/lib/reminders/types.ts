@@ -27,7 +27,7 @@ export type ReminderMetadata =
       cadence: "Weekly" | "Monthly";
       recommendation?: string;
     }
-  | Record<string, unknown>;
+  | (Record<string, unknown> & { kind?: undefined });
 
 export type StoredReminder = {
   id: string;
@@ -52,4 +52,3 @@ export type DashboardReminders = {
   tomorrow: StoredReminder[];
   thisWeek: StoredReminder[];
 };
-

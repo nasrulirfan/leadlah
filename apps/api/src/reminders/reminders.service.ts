@@ -17,6 +17,7 @@ import {
 } from "./entities/reminder.entity";
 import { CreateReminderDto } from "./dto/create-reminder.dto";
 import { ListRemindersQueryDto } from "./dto/list-reminders.query";
+import { SyncPlatformExpiryDto } from "./dto/sync-platform-expiry.dto";
 
 export type StoredReminder = {
   id: string;
@@ -115,6 +116,43 @@ export class RemindersService {
     @InjectRepository(ReminderEntity)
     private readonly reminders: Repository<ReminderEntity>,
   ) {}
+
+  private buildPlatformExpiryReminder(
+    link: { provider: string; url: string; expiresAt?: string | Date | null },
+    leadDays: number,
+  ) {
+    if (!link.expiresAt) {
+      return null;
+    }
+    const expiresAt =
+      link.expiresAt instanceof Date ? link.expiresAt : new Date(link.expiresAt);
+    if (Number.isNaN(expiresAt.getTime())) {
+      return null;
+    }
+
+    const actionAt = new Date(expiresAt);
+    actionAt.setDate(actionAt.getDate() - leadDays);
+    actionAt.setHours(9, 0, 0, 0);
+
+    const dayLabel =
+      leadDays === 0
+        ? "today"
+        : leadDays === 1
+          ? "in 1 day"
+          : `in ${leadDays} days`;
+
+    return {
+      dueAt: actionAt,
+      message: `${link.provider} listing expiring ${dayLabel} — kindly renew.`,
+      metadata: {
+        kind: "PLATFORM_EXPIRY",
+        provider: link.provider,
+        url: link.url,
+        expiresAt: expiresAt.toISOString(),
+        leadDays,
+      } satisfies Record<string, unknown>,
+    };
+  }
 
   async list(
     userId: string,
@@ -269,6 +307,93 @@ export class RemindersService {
     entity.dismissedAt = new Date();
     const saved = await this.reminders.save(entity);
     return toStoredReminder(saved);
+  }
+
+  async syncPlatformExpiry(
+    userId: string,
+    listingId: string,
+    payload: SyncPlatformExpiryDto,
+  ): Promise<StoredReminder[]> {
+    const leadDays =
+      typeof payload.leadDays === "number" && payload.leadDays >= 0
+        ? payload.leadDays
+        : 1;
+
+    const expiryLinks = (payload.externalLinks ?? []).filter(
+      (link) => link?.url && link.expiresAt,
+    );
+    const urls = new Set(expiryLinks.map((link) => link.url));
+
+    const existing = await this.reminders.find({
+      where: { userId, listingId, type: "PLATFORM_LISTING_EXPIRY" },
+      relations: { listing: true },
+      order: { createdAt: "ASC" },
+      take: 250,
+    });
+
+    const byUrl = new Map<string, ReminderEntity>();
+    for (const reminder of existing) {
+      const url =
+        reminder.metadata && typeof reminder.metadata === "object"
+          ? String((reminder.metadata as any).url ?? "")
+          : "";
+      if (url) {
+        byUrl.set(url, reminder);
+      }
+    }
+
+    const toDelete = existing.filter((reminder) => {
+      const url =
+        reminder.metadata && typeof reminder.metadata === "object"
+          ? String((reminder.metadata as any).url ?? "")
+          : "";
+      return url && !urls.has(url);
+    });
+    if (toDelete.length) {
+      await this.reminders.delete(toDelete.map((reminder) => reminder.id));
+    }
+
+    const upserts: ReminderEntity[] = [];
+    for (const link of expiryLinks) {
+      const built = this.buildPlatformExpiryReminder(link, leadDays);
+      if (!built) {
+        continue;
+      }
+
+      const current = byUrl.get(link.url);
+      if (current) {
+        current.dueAt = built.dueAt;
+        current.message = built.message;
+        current.metadata = built.metadata;
+        current.status = "PENDING";
+        current.completedAt = null;
+        current.dismissedAt = null;
+        upserts.push(current);
+      } else {
+        upserts.push(
+          this.reminders.create({
+            userId,
+            listingId,
+            type: "PLATFORM_LISTING_EXPIRY",
+            dueAt: built.dueAt,
+            message: built.message,
+            status: "PENDING",
+            recurrence: "NONE",
+            recurrenceInterval: 1,
+            metadata: built.metadata,
+          }),
+        );
+      }
+    }
+
+    const saved = upserts.length ? await this.reminders.save(upserts) : [];
+    const persisted = await this.reminders.find({
+      where: { userId, listingId, type: "PLATFORM_LISTING_EXPIRY" },
+      relations: { listing: true },
+      order: { dueAt: "ASC" },
+      take: 250,
+    });
+    return persisted.map(toStoredReminder);
   }
 
   async schedulePortal(userId: string, listingId: string, days: number) {

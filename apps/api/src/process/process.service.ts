@@ -1,9 +1,19 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
-import { generateOwnerViewToken, ProcessLogEntry, ProcessStage, ViewingCustomer } from "@leadlah/core";
+import {
+  generateOwnerViewToken,
+  ProcessLogEntry,
+  ProcessStage,
+  ViewingCustomer,
+} from "@leadlah/core";
 import { ProcessLogEntity } from "./entities/process-log.entity";
 import { ProcessViewingEntity } from "./entities/process-viewing.entity";
+import { LeadsService } from "../leads/leads.service";
 
 type ViewingPayload = {
   id: string;
@@ -15,6 +25,7 @@ type ViewingPayload = {
 };
 
 type LogStagePayload = {
+  userId?: string;
   stage: ProcessStage;
   notes?: string;
   actor?: string;
@@ -26,7 +37,9 @@ type LogStagePayload = {
 const resolveOwnerLinkSecret = () => {
   const secret = process.env.OWNER_LINK_SECRET;
   if (!secret) {
-    throw new Error("OWNER_LINK_SECRET must be configured to generate owner links.");
+    throw new Error(
+      "OWNER_LINK_SECRET must be configured to generate owner links.",
+    );
   }
   return secret;
 };
@@ -37,7 +50,8 @@ export class ProcessService {
     @InjectRepository(ProcessLogEntity)
     private readonly repository: Repository<ProcessLogEntity>,
     @InjectRepository(ProcessViewingEntity)
-    private readonly viewingRepository: Repository<ProcessViewingEntity>
+    private readonly viewingRepository: Repository<ProcessViewingEntity>,
+    private readonly leadsService: LeadsService,
   ) {}
 
   private toViewingCustomer(entity: ProcessViewingEntity): ViewingCustomer {
@@ -47,7 +61,7 @@ export class ProcessService {
       phone: entity.phone ?? undefined,
       email: entity.email ?? undefined,
       notes: entity.notes ?? undefined,
-      viewedAt: entity.viewedAt ?? undefined
+      viewedAt: entity.viewedAt ?? undefined,
     };
   }
 
@@ -62,14 +76,16 @@ export class ProcessService {
           return left - right;
         })
       : undefined;
-    const successfulBuyerId = viewings?.find((viewing) => viewing.isSuccessfulBuyer)?.id;
+    const successfulBuyerId = viewings?.find(
+      (viewing) => viewing.isSuccessfulBuyer,
+    )?.id;
     return {
       stage: entity.stage,
       notes: entity.notes ?? undefined,
       actor: entity.actor ?? undefined,
       completedAt: entity.completedAt ?? undefined,
       viewings: viewings?.map((viewing) => this.toViewingCustomer(viewing)),
-      successfulBuyerId
+      successfulBuyerId,
     };
   }
 
@@ -96,11 +112,19 @@ export class ProcessService {
     listingId: string,
     processLogId: string,
     viewings: ViewingPayload[] = [],
-    successfulBuyerId?: string
+    successfulBuyerId?: string,
   ): Promise<ProcessViewingEntity[]> {
-    const existing = await this.viewingRepository.find({ where: { processLogId } });
-    const existingMap = new Map(existing.map((viewing) => [viewing.id, viewing]));
-    const payloadIds = new Set(viewings.map((viewing) => viewing.id).filter((id): id is string => Boolean(id)));
+    const existing = await this.viewingRepository.find({
+      where: { processLogId },
+    });
+    const existingMap = new Map(
+      existing.map((viewing) => [viewing.id, viewing]),
+    );
+    const payloadIds = new Set(
+      viewings
+        .map((viewing) => viewing.id)
+        .filter((id): id is string => Boolean(id)),
+    );
 
     for (const payload of viewings) {
       const name = payload.name.trim();
@@ -129,23 +153,27 @@ export class ProcessService {
           email: email ?? null,
           notes: notes ?? null,
           viewedAt,
-          isSuccessfulBuyer: payload.id === successfulBuyerId
+          isSuccessfulBuyer: payload.id === successfulBuyerId,
         });
         await this.viewingRepository.save(created);
       }
     }
 
-    const idsToRemove = existing.filter((viewing) => !payloadIds.has(viewing.id)).map((viewing) => viewing.id);
+    const idsToRemove = existing
+      .filter((viewing) => !payloadIds.has(viewing.id))
+      .map((viewing) => viewing.id);
     if (idsToRemove.length) {
       await this.viewingRepository.delete(idsToRemove);
     }
     if (successfulBuyerId && !payloadIds.has(successfulBuyerId)) {
-      throw new BadRequestException("Selected buyer must be part of the viewing list.");
+      throw new BadRequestException(
+        "Selected buyer must be part of the viewing list.",
+      );
     }
 
     const latest = await this.viewingRepository.find({
       where: { processLogId },
-      order: { viewedAt: "ASC", createdAt: "ASC" }
+      order: { viewedAt: "ASC", createdAt: "ASC" },
     });
 
     return latest;
@@ -154,9 +182,10 @@ export class ProcessService {
   async logStage(listingId: string, payload: LogStagePayload) {
     const existing = await this.repository.findOne({
       where: { listingId, stage: payload.stage },
-      relations: { viewings: true }
+      relations: { viewings: true },
     });
-    const entity = existing ?? this.repository.create({ listingId, stage: payload.stage });
+    const entity =
+      existing ?? this.repository.create({ listingId, stage: payload.stage });
 
     if (payload.notes !== undefined) {
       entity.notes = payload.notes;
@@ -175,17 +204,43 @@ export class ProcessService {
 
     if (payload.stage === ProcessStage.VIEWING_RECORD) {
       if (!payload.viewings || payload.viewings.length === 0) {
-        throw new BadRequestException("Viewing records cannot be empty for the viewing stage.");
+        throw new BadRequestException(
+          "Viewing records cannot be empty for the viewing stage.",
+        );
       }
-      const viewingSync = await this.syncViewings(saved.listingId, saved.id, payload.viewings, payload.successfulBuyerId);
+      const viewingSync = await this.syncViewings(
+        saved.listingId,
+        saved.id,
+        payload.viewings,
+        payload.successfulBuyerId,
+      );
       saved.viewings = viewingSync;
+
+      if (payload.userId) {
+        await Promise.all(
+          payload.viewings.map((viewing) =>
+            this.leadsService.upsertFromViewing({
+              userId: payload.userId as string,
+              listingId: saved.listingId,
+              customer: {
+                name: viewing.name,
+                phone: viewing.phone,
+                email: viewing.email,
+                notes: viewing.notes,
+              },
+            }),
+          ),
+        );
+      }
     } else if (payload.viewings || payload.successfulBuyerId) {
-      throw new BadRequestException("Viewing records may only be attached to the viewing stage.");
+      throw new BadRequestException(
+        "Viewing records may only be attached to the viewing stage.",
+      );
     }
 
     const withRelations = await this.repository.findOne({
       where: { id: saved.id },
-      relations: { viewings: true }
+      relations: { viewings: true },
     });
 
     return this.toProcessLog(withRelations ?? saved);
@@ -195,7 +250,7 @@ export class ProcessService {
     const logs = await this.repository.find({
       where: { listingId },
       order: { createdAt: "ASC" },
-      relations: { viewings: true }
+      relations: { viewings: true },
     });
     return logs.map((entry) => this.toProcessLog(entry));
   }

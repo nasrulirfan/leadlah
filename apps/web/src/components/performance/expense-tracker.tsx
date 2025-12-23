@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { DatePicker } from "@/components/ui/date-picker";
+import { MonthPicker } from "@/components/ui/month-picker";
 import { Plus, Edit2, Trash2, Receipt } from "lucide-react";
 import { useExpenses } from "@/lib/performance/hooks";
 import { ExpenseCategory } from "@leadlah/core";
@@ -76,11 +78,11 @@ export function ExpenseTracker() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle>Expense Records</CardTitle>
             <div className="flex gap-3">
-              <Input
-                type="month"
+              <MonthPicker
                 value={filterMonth}
-                onChange={(e) => setFilterMonth(e.target.value)}
-                className="w-44"
+                onChange={(val) => setFilterMonth(val)}
+                placeholder="Filter by month"
+                className="w-48"
               />
               <Button size="sm" onClick={() => setIsCreating(true)}>
                 <Plus className="mr-2 h-4 w-4" />
@@ -226,10 +228,10 @@ function ExpenseForm({
 
         <div>
           <Label>Date</Label>
-          <Input
-            type="date"
+          <DatePicker
             value={formData.date}
-            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+            onChange={(val) => setFormData({ ...formData, date: val })}
+            placeholder="Select date"
             className="mt-1.5"
           />
         </div>

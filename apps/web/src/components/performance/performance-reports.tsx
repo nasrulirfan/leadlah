@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Download, TrendingUp, TrendingDown } from "lucide-react";
+import { YearPicker } from "@/components/ui/year-picker";
 import { usePerformanceReports } from "@/lib/performance/hooks";
 
 export function PerformanceReports() {
@@ -35,15 +36,13 @@ export function PerformanceReports() {
           <div className="flex items-center justify-between">
             <CardTitle>Annual Summary {selectedYear}</CardTitle>
             <div className="flex gap-3">
-              <select
-                className="rounded-md border border-input bg-background text-foreground pl-3 pr-8 py-2 text-sm appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3Cpath%20fill%3D%22%236b7280%22%20d%3D%22M2%204l4%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:12px] bg-[right_8px_center] bg-no-repeat cursor-pointer"
+              <YearPicker
                 value={selectedYear}
-                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-              >
-                {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((year) => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
-              </select>
+                onChange={(year) => setSelectedYear(year)}
+                minYear={new Date().getFullYear() - 10}
+                maxYear={new Date().getFullYear()}
+                placeholder="Select year"
+              />
               <Button size="sm" variant="secondary" onClick={() => handleDownloadReport(`${selectedYear}`)}>
                 <Download className="mr-2 h-4 w-4" />
                 Export PDF

@@ -31,6 +31,7 @@ import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { cn } from "@/lib/utils";
 
 type StatusFilter = "Upcoming" | "Completed" | "Dismissed" | "All";
@@ -372,25 +373,25 @@ function ViewingCard({
 
 type TimelineItem =
   | {
-      kind: "REMINDER";
-      id: string;
-      listingName: string;
-      eventType?: EventTypeFilter;
-      timestamp: number;
-      reminder: StoredReminder;
-    }
+    kind: "REMINDER";
+    id: string;
+    listingName: string;
+    eventType?: EventTypeFilter;
+    timestamp: number;
+    reminder: StoredReminder;
+  }
   | {
-      kind: "VIEWING";
-      id: string;
-      listingId: string;
-      listingName: string;
-      eventType: "Viewing";
-      timestamp: number | null;
-      viewing: ViewingCustomer;
-      successfulBuyerId?: string;
-      stageNotes?: string;
-      stageActor?: string;
-    };
+    kind: "VIEWING";
+    id: string;
+    listingId: string;
+    listingName: string;
+    eventType: "Viewing";
+    timestamp: number | null;
+    viewing: ViewingCustomer;
+    successfulBuyerId?: string;
+    stageNotes?: string;
+    stageActor?: string;
+  };
 
 export function AppointmentsClient({
   initialAppointments,
@@ -616,13 +617,13 @@ export function AppointmentsClient({
       prev.map((stage) =>
         stage.listingId === listingId
           ? {
-              ...stage,
-              viewings: updated.viewings ?? [],
-              successfulBuyerId: updated.successfulBuyerId,
-              notes: updated.notes,
-              actor: updated.actor,
-              completedAt: updated.completedAt,
-            }
+            ...stage,
+            viewings: updated.viewings ?? [],
+            successfulBuyerId: updated.successfulBuyerId,
+            notes: updated.notes,
+            actor: updated.actor,
+            completedAt: updated.completedAt,
+          }
           : stage
       )
     );
@@ -725,8 +726,8 @@ export function AppointmentsClient({
         const nextBuyerId = viewingEdit.markAsBuyer
           ? editing.viewingId
           : currentBuyerId === editing.viewingId
-          ? undefined
-          : currentBuyerId;
+            ? undefined
+            : currentBuyerId;
 
         await persistViewingStage(editing.listingId, nextViewings, nextBuyerId);
         setEditing(null);
@@ -1013,11 +1014,10 @@ export function AppointmentsClient({
 
             <div className="grid gap-2">
               <label className="text-sm font-medium text-foreground">Viewed at</label>
-              <Input
-                type="datetime-local"
+              <DateTimePicker
                 value={viewingEdit.viewedAt}
-                onChange={(e) => setViewingEdit((prev) => ({ ...prev, viewedAt: e.target.value }))}
-                className="h-11"
+                onChange={(val) => setViewingEdit((prev) => ({ ...prev, viewedAt: val }))}
+                placeholder="Select viewing date & time"
               />
               {editing && !viewingEdit.viewedAt ? (
                 <p className="text-xs text-muted-foreground">

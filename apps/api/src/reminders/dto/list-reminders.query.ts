@@ -1,3 +1,4 @@
+import { Type } from "class-transformer";
 import { IsIn, IsInt, IsOptional, IsString, Max, Min } from "class-validator";
 import type { ReminderStatus } from "../entities/reminder.entity";
 
@@ -18,6 +19,6 @@ export class ListRemindersQueryDto {
   @IsInt()
   @Min(1)
   @Max(250)
+  @Type(() => Number)
   limit?: number;
 }
-

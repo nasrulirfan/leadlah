@@ -4,6 +4,7 @@ import { ReminderType } from "@leadlah/core";
 import { CreateReminderDto } from "./dto/create-reminder.dto";
 import { ListRemindersQueryDto } from "./dto/list-reminders.query";
 import { DashboardRemindersQueryDto } from "./dto/dashboard-reminders.query";
+import { SyncPlatformExpiryDto } from "./dto/sync-platform-expiry.dto";
 
 @Controller("reminders")
 export class RemindersController {
@@ -37,6 +38,15 @@ export class RemindersController {
   @Post(":userId/:reminderId/dismiss")
   dismiss(@Param("userId") userId: string, @Param("reminderId") reminderId: string) {
     return this.service.dismiss(userId, reminderId);
+  }
+
+  @Post(":userId/platform-expiry/:listingId/sync")
+  syncPlatformExpiry(
+    @Param("userId") userId: string,
+    @Param("listingId") listingId: string,
+    @Body() body: SyncPlatformExpiryDto,
+  ) {
+    return this.service.syncPlatformExpiry(userId, listingId, body);
   }
 
   @Post(":userId/portal/:listingId")

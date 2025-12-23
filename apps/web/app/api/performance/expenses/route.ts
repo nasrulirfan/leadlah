@@ -1,7 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { requestApi } from "@/lib/api";
 import { requireSession } from "@/lib/session";
-import { serializeExpenseRow } from "@/lib/performance/serializers";
+
+export const dynamic = "force-dynamic";
+
+type ApiExpense = {
+  id: string;
+  userId: string;
+  category: string;
+  amount: number;
+  description: string;
+  date: string | null;
+  receiptUrl: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+type ApiError = Error & { status?: number };
+
+const toApiExpense = (payload: any): ApiExpense => ({
+  id: String(payload.id),
+  userId: String(payload.userId),
+  category: String(payload.category),
+  amount: Number(payload.amount ?? 0),
+  description: String(payload.description ?? ""),
+  date: payload.date ? String(payload.date) : null,
+  receiptUrl: payload.receiptUrl ? String(payload.receiptUrl) : null,
+  createdAt: payload.createdAt ? String(payload.createdAt) : null,
+  updatedAt: payload.updatedAt ? String(payload.updatedAt) : null,
+});
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,27 +39,23 @@ export async function GET(request: NextRequest) {
     const year = searchParams.get("year");
     const month = searchParams.get("month");
 
-    let query = `SELECT * FROM expenses WHERE user_id = $1`;
-    const params: any[] = [userId];
+    const query = new URLSearchParams();
+    if (year) query.set("year", year);
+    if (month) query.set("month", month);
+    const suffix = query.size ? `?${query.toString()}` : "";
 
-    if (year) {
-      query += ` AND EXTRACT(YEAR FROM date) = $${params.length + 1}`;
-      params.push(year);
-    }
+    const expenses = await requestApi<any[]>(
+      `/performance/${userId}/expenses${suffix}`,
+    );
 
-    if (month) {
-      query += ` AND EXTRACT(MONTH FROM date) = $${params.length + 1}`;
-      params.push(month);
-    }
-
-    query += ` ORDER BY date DESC`;
-
-    const result = await db.query(query, params);
-
-    return NextResponse.json(result.rows.map(serializeExpenseRow));
+    return NextResponse.json(expenses.map(toApiExpense));
   } catch (error) {
     console.error("Error fetching expenses:", error);
-    return NextResponse.json({ error: "Failed to fetch expenses" }, { status: 500 });
+    const status = (error as ApiError)?.status;
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to fetch expenses" },
+      { status: status === 404 ? 404 : 500 },
+    );
   }
 }
 
@@ -42,18 +65,24 @@ export async function POST(request: NextRequest) {
     const userId = session.user.id;
     const body = await request.json();
 
-    const { category, amount, description, date, receiptUrl } = body;
+    const created = await requestApi<any>(`/performance/${userId}/expenses`, {
+      method: "POST",
+      body: JSON.stringify({
+        category: body.category,
+        amount: body.amount,
+        description: body.description,
+        date: body.date,
+        receiptUrl: body.receiptUrl,
+      }),
+    });
 
-    const result = await db.query(
-      `INSERT INTO expenses (user_id, category, amount, description, date, receipt_url)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
-      [userId, category, amount, description, date, receiptUrl || null]
-    );
-
-    return NextResponse.json(serializeExpenseRow(result.rows[0]));
+    return NextResponse.json(toApiExpense(created));
   } catch (error) {
     console.error("Error creating expense:", error);
-    return NextResponse.json({ error: "Failed to create expense" }, { status: 500 });
+    const status = (error as ApiError)?.status;
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to create expense" },
+      { status: status === 404 ? 404 : 500 },
+    );
   }
 }

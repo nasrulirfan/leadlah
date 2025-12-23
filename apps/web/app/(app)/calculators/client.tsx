@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { DatePicker } from "@/components/ui/date-picker";
 import type { CalculatorReceipt } from "@leadlah/core";
 import { PageHero } from "@/components/app/PageHero";
 import {
@@ -709,11 +710,10 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
               </div>
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="contractDate">Contract Date</Label>
-                <Input
-                  id="contractDate"
-                  type="date"
+                <DatePicker
                   value={spaInput.contractDate}
-                  onChange={(e) => setSpaInput({ ...spaInput, contractDate: e.target.value })}
+                  onChange={(val) => setSpaInput({ ...spaInput, contractDate: val })}
+                  placeholder="Select contract date"
                 />
                 {spaInput.isForeigner && (
                   <p className="text-xs text-amber-600">

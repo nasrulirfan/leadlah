@@ -9,6 +9,8 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { auth, ensureAuthReady } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 const highlights = [
   {
     icon: ShieldCheck,

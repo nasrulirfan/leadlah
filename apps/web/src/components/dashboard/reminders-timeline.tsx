@@ -34,37 +34,29 @@ function badgeToneFor(type: string) {
 }
 
 function renderReminderSummary(reminder: StoredReminder, timeZone: string) {
-  if (reminder.metadata && typeof reminder.metadata === "object" && "kind" in reminder.metadata) {
-    if (reminder.metadata.kind === "EVENT") {
-      return `${reminder.message} at ${formatTime(reminder.dueAt, timeZone)}`;
+  const metadata = reminder.metadata;
+  if (metadata?.kind === "EVENT") {
+    return `${reminder.message} at ${formatTime(reminder.dueAt, timeZone)}`;
+  }
+  if (metadata?.kind === "FOLLOW_UP") {
+    return metadata.contactName ? `Follow up with ${metadata.contactName}` : reminder.message;
+  }
+  if (metadata?.kind === "PLATFORM_EXPIRY") {
+    const expiresAt = metadata.expiresAt ? new Date(metadata.expiresAt) : null;
+    if (!expiresAt) {
+      return reminder.message;
     }
-    if (reminder.metadata.kind === "FOLLOW_UP") {
-      return reminder.metadata.contactName
-        ? `Follow up with ${reminder.metadata.contactName}`
-        : reminder.message;
-    }
-    if (reminder.metadata.kind === "PLATFORM_EXPIRY") {
-      const expiresAt = reminder.metadata.expiresAt
-        ? new Date(reminder.metadata.expiresAt)
-        : null;
-      if (!expiresAt) {
-        return reminder.message;
-      }
-      const now = new Date();
-      const todayKey = zonedDateKey(now, timeZone);
-      const tomorrowKey = zonedDateKey(
-        new Date(now.getTime() + 24 * 60 * 60 * 1000),
-        timeZone
-      );
-      const expiresKey = zonedDateKey(expiresAt, timeZone);
-      const suffix =
-        expiresKey === todayKey
-          ? "expires today"
-          : expiresKey === tomorrowKey
-          ? "expires tomorrow"
-          : `expires ${formatDateTime(expiresAt, timeZone)}`;
-      return `${reminder.metadata.provider} ${suffix}`;
-    }
+    const now = new Date();
+    const todayKey = zonedDateKey(now, timeZone);
+    const tomorrowKey = zonedDateKey(new Date(now.getTime() + 24 * 60 * 60 * 1000), timeZone);
+    const expiresKey = zonedDateKey(expiresAt, timeZone);
+    const suffix =
+      expiresKey === todayKey
+        ? "expires today"
+        : expiresKey === tomorrowKey
+        ? "expires tomorrow"
+        : `expires ${formatDateTime(expiresAt, timeZone)}`;
+    return `${metadata.provider} ${suffix}`;
   }
   return reminder.message;
 }
@@ -157,7 +149,7 @@ export function RemindersTimeline({
 
   const hasReminders = allReminders.length > 0;
   const appointmentCount = allReminders.filter(
-    (reminder) => reminder.metadata && typeof reminder.metadata === "object" && "kind" in reminder.metadata && reminder.metadata.kind === "EVENT"
+    (reminder) => reminder.metadata?.kind === "EVENT"
   ).length;
 
   return (
