@@ -60,8 +60,9 @@ export class CreateListingDto {
   @IsString()
   buildingProject?: string;
 
+  @IsOptional()
   @IsEnum(ListingStatus)
-  status: ListingStatus = ListingStatus.ACTIVE;
+  status?: ListingStatus;
 
   @IsOptional()
   @Type(() => Date)

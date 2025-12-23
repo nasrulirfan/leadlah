@@ -433,7 +433,7 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
           <Button asChild size="sm" variant="outline">
             <a href={downloadUrl} download={downloadFileName ?? "calculator-receipt.pdf"} className="flex items-center">
               <Download className="mr-2 h-4 w-4" />
-              Download PDF
+                Download Invoice
             </a>
           </Button>
         </div>
@@ -517,9 +517,15 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
               <ArrowLeft className="h-5 w-5" />
               Back
             </Button>
-            <Button onClick={handleExportPDF} size="lg" className="gap-2" disabled={isGenerating}>
+            <Button
+              onClick={handleExportPDF}
+              size="lg"
+              className="gap-2"
+              disabled={isGenerating || !customerName.trim()}
+              title={!customerName.trim() ? "Customer Name is required to export PDF" : ""}
+            >
               <Download className="h-5 w-5" />
-              {isGenerating ? "Generating..." : "Export PDF"}
+              {isGenerating ? "Generating..." : "Export Invoice"}
             </Button>
           </>
         }
@@ -548,12 +554,15 @@ export default function CalculatorsClient({ agent, defaultCustomerName }: Calcul
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="customerName">Customer Name (Receipt)</Label>
+            <Label htmlFor="customerName">
+              Customer Name (Receipt) <span className="text-destructive">*</span>
+            </Label>
             <Input
               id="customerName"
               value={customerName}
               onChange={(event) => setCustomerName(event.target.value)}
               placeholder="e.g., Tan Family"
+              required
             />
             <p className="text-xs text-muted-foreground">Appears on the PDF as the recipient.</p>
           </div>

@@ -45,7 +45,7 @@ export function PerformanceReports() {
               />
               <Button size="sm" variant="secondary" onClick={() => handleDownloadReport(`${selectedYear}`)}>
                 <Download className="mr-2 h-4 w-4" />
-                Export PDF
+                Export Invoice
               </Button>
             </div>
           </div>

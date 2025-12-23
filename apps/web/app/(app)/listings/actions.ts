@@ -28,19 +28,19 @@ export async function createListingAction(values: ListingFormValues) {
 }
 
 export async function updateListingStatusAction(params: { id: string; status: ListingInput["status"] }) {
-  await requireSession();
+  const session = await requireSession();
   const id = listingSchema.shape.id.parse(params.id);
   const status = listingSchema.shape.status.parse(params.status);
-  const listing = await updateListingStatus(id, status);
+  const listing = await updateListingStatus(id, status, session.user.id);
   revalidatePath(LISTINGS_PATH);
   return listing;
 }
 
 export async function updateListingCategoryAction(params: { id: string; category: ListingInput["category"] }) {
-  await requireSession();
+  const session = await requireSession();
   const id = listingSchema.shape.id.parse(params.id);
   const category = listingSchema.shape.category.parse(params.category);
-  const listing = await updateListingCategory(id, category);
+  const listing = await updateListingCategory(id, category, session.user.id);
   revalidatePath(LISTINGS_PATH);
   return listing;
 }
@@ -57,7 +57,7 @@ export async function updateListingAction(id: string, values: ListingFormValues)
   const session = await requireSession();
   const parsedId = listingSchema.shape.id.parse(id);
   const payload = listingFormSchema.parse(values);
-  const listing = await updateListing(parsedId, payload);
+  const listing = await updateListing(parsedId, payload, session.user.id);
   if (listing) {
     await syncPlatformExpiryReminders({
       userId: session.user.id,

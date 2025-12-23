@@ -1,18 +1,27 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { DeepPartial, Repository } from "typeorm";
+import { DeepPartial, Like, Repository } from "typeorm";
 import type { ExternalLink, Listing } from "@leadlah/core";
 import { ListingCategory, ListingStatus } from "@leadlah/core";
 import { ListingEntity } from "./entities/listing.entity";
 import { CreateListingDto } from "./dto/create-listing.dto";
 import { UpdateListingDto } from "./dto/update-listing.dto";
 import { ListListingsQueryDto } from "./dto/list-listings.query";
+import { CommissionEntity } from "../performance/entities/commission.entity";
+
+const DEFAULT_SALE_COMMISSION_RATE = 0.03;
+const DEFAULT_RENT_COMMISSION_MULTIPLIER = 1;
+const AUTO_COMMISSION_NOTE_PREFIX = "Auto-created when listing marked ";
+
+const roundMoney = (value: number) => Math.round(value * 100) / 100;
 
 @Injectable()
 export class ListingsService {
   constructor(
     @InjectRepository(ListingEntity)
     private readonly repository: Repository<ListingEntity>,
+    @InjectRepository(CommissionEntity)
+    private readonly commissions: Repository<CommissionEntity>,
   ) {}
 
   private normalizeExternalLinks(links: ExternalLink[] | null | undefined) {
@@ -60,6 +69,70 @@ export class ListingsService {
       return ListingCategory.RENTED;
     }
     return ListingCategory.FOR_SALE;
+  }
+
+  private parseEnvNumber(key: string) {
+    const raw = process.env[key];
+    if (!raw) {
+      return null;
+    }
+    const value = Number(raw);
+    return Number.isFinite(value) ? value : null;
+  }
+
+  private calculateCommissionAmount(listing: ListingEntity) {
+    if (listing.status === ListingStatus.SOLD) {
+      const rate = this.parseEnvNumber("SALE_COMMISSION_RATE") ?? DEFAULT_SALE_COMMISSION_RATE;
+      return roundMoney(Number(listing.price) * rate);
+    }
+
+    if (listing.status === ListingStatus.RENTED) {
+      const multiplier =
+        this.parseEnvNumber("RENT_COMMISSION_MULTIPLIER") ?? DEFAULT_RENT_COMMISSION_MULTIPLIER;
+      return roundMoney(Number(listing.price) * multiplier);
+    }
+
+    return 0;
+  }
+
+  private isAutoCommission(entity: CommissionEntity) {
+    return Boolean(entity.notes && entity.notes.startsWith(AUTO_COMMISSION_NOTE_PREFIX));
+  }
+
+  private async upsertAutoCommission(params: { userId: string; listing: ListingEntity }) {
+    const existing = await this.commissions.findOne({
+      where: { userId: params.userId, listingId: params.listing.id },
+    });
+
+    if (existing) {
+      if (!this.isAutoCommission(existing)) {
+        return existing;
+      }
+
+      existing.amount = this.calculateCommissionAmount(params.listing);
+      existing.closedDate = new Date();
+      existing.notes = `${AUTO_COMMISSION_NOTE_PREFIX}${params.listing.status}.`;
+      return this.commissions.save(existing);
+    }
+
+    const amount = this.calculateCommissionAmount(params.listing);
+    const entity = this.commissions.create({
+      userId: params.userId,
+      listingId: params.listing.id,
+      amount,
+      closedDate: new Date(),
+      notes: `${AUTO_COMMISSION_NOTE_PREFIX}${params.listing.status}.`,
+    });
+
+    return this.commissions.save(entity);
+  }
+
+  private async deleteAutoCommission(params: { userId: string; listingId: string }) {
+    await this.commissions.delete({
+      userId: params.userId,
+      listingId: params.listingId,
+      notes: Like(`${AUTO_COMMISSION_NOTE_PREFIX}%`),
+    });
   }
 
   async create(payload: CreateListingDto) {
@@ -160,24 +233,40 @@ export class ListingsService {
   }
 
   async update(id: string, payload: UpdateListingDto) {
-    const derivedCategory =
-      payload.category ??
-      (payload.status === ListingStatus.SOLD
-        ? ListingCategory.SOLD
-        : payload.status === ListingStatus.RENTED
-          ? ListingCategory.RENTED
-          : undefined);
-
-    const entity = await this.repository.preload({
-      id,
-      ...payload,
-      ...(derivedCategory ? { category: derivedCategory } : {}),
-      updatedAt: new Date(),
-    } as DeepPartial<ListingEntity>);
+    const { actorUserId, ...updates } = payload;
+    const entity = await this.repository.findOne({ where: { id } });
     if (!entity) {
       throw new NotFoundException("Listing not found");
     }
+
+    const previousStatus = entity.status;
+    const derivedCategory =
+      updates.category ??
+      (updates.status === ListingStatus.SOLD
+        ? ListingCategory.SOLD
+        : updates.status === ListingStatus.RENTED
+          ? ListingCategory.RENTED
+          : undefined);
+
+    Object.assign(entity, {
+      ...updates,
+      ...(derivedCategory ? { category: derivedCategory } : {}),
+      updatedAt: new Date(),
+    } as DeepPartial<ListingEntity>);
+
     const saved = await this.repository.save(entity);
+
+    const statusChanged = updates.status != null && saved.status !== previousStatus;
+    const isClosedStatus =
+      saved.status === ListingStatus.SOLD || saved.status === ListingStatus.RENTED;
+    if (statusChanged && isClosedStatus && actorUserId) {
+      await this.upsertAutoCommission({ userId: actorUserId, listing: saved });
+    }
+
+    if (statusChanged && !isClosedStatus && actorUserId) {
+      await this.deleteAutoCommission({ userId: actorUserId, listingId: saved.id });
+    }
+
     return this.toListing(saved);
   }
 

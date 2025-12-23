@@ -8,6 +8,7 @@ import {
   PrimaryGeneratedColumn,
 } from "typeorm";
 import { ListingEntity } from "../../listings/entities/listing.entity";
+import { dateTransformer } from "../../database/date.transformer";
 import { numericTransformer } from "../../database/numeric.transformer";
 import { timestampColumnType } from "../../database/column-types";
 
@@ -35,7 +36,7 @@ export class CommissionEntity {
   })
   amount!: number;
 
-  @Column({ name: "closed_date", type: "date" })
+  @Column({ name: "closed_date", type: "date", transformer: dateTransformer })
   closedDate!: Date;
 
   @Column({ type: "text", nullable: true })

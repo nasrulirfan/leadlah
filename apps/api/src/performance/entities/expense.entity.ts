@@ -7,6 +7,7 @@ import {
   UpdateDateColumn,
 } from "typeorm";
 import { ExpenseCategory } from "@leadlah/core";
+import { dateTransformer } from "../../database/date.transformer";
 import { numericTransformer } from "../../database/numeric.transformer";
 import { timestampColumnType } from "../../database/column-types";
 
@@ -33,7 +34,7 @@ export class ExpenseEntity {
   @Column({ type: "text" })
   description!: string;
 
-  @Column({ type: "date" })
+  @Column({ type: "date", transformer: dateTransformer })
   date!: Date;
 
   @Column({ name: "receipt_url", type: "text", nullable: true })
@@ -45,4 +46,3 @@ export class ExpenseEntity {
   @UpdateDateColumn({ name: "updated_at", type: timestampColumnType as any })
   updatedAt!: Date;
 }
-

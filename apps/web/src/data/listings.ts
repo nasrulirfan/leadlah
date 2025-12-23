@@ -22,11 +22,15 @@ export async function insertListing(payload: ListingFormPayload): Promise<Listin
   return toListing(created);
 }
 
-export async function updateListingStatus(id: string, status: ListingInput["status"]): Promise<ListingInput | null> {
+export async function updateListingStatus(
+  id: string,
+  status: ListingInput["status"],
+  actorUserId?: string
+): Promise<ListingInput | null> {
   try {
     const updated = await requestApi<unknown>(`/listings/${id}`, {
       method: "PATCH",
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, actorUserId }),
     });
     return toListing(updated);
   } catch (error) {
@@ -39,12 +43,13 @@ export async function updateListingStatus(id: string, status: ListingInput["stat
 
 export async function updateListingCategory(
   id: string,
-  category: ListingInput["category"]
+  category: ListingInput["category"],
+  actorUserId?: string
 ): Promise<ListingInput | null> {
   try {
     const updated = await requestApi<unknown>(`/listings/${id}`, {
       method: "PATCH",
-      body: JSON.stringify({ category }),
+      body: JSON.stringify({ category, actorUserId }),
     });
     return toListing(updated);
   } catch (error) {
@@ -55,11 +60,15 @@ export async function updateListingCategory(
   }
 }
 
-export async function updateListing(id: string, payload: ListingFormPayload): Promise<ListingInput | null> {
+export async function updateListing(
+  id: string,
+  payload: ListingFormPayload,
+  actorUserId?: string
+): Promise<ListingInput | null> {
   try {
     const updated = await requestApi<unknown>(`/listings/${id}`, {
       method: "PATCH",
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, actorUserId }),
     });
     return toListing(updated);
   } catch (error) {
