@@ -75,7 +75,7 @@ export function StatsCard({
   delay = 0,
 }: StatsCardProps) {
   const colors = colorSchemes[colorScheme];
-  const progressPercent = progress ? Math.min(100, (progress.value / progress.max) * 100) : 0;
+  const progressPercent = progress && progress.max > 0 ? Math.min(100, (progress.value / progress.max) * 100) : 0;
 
   return (
     <motion.div
