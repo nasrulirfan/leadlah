@@ -1,4 +1,5 @@
 import { ExpenseCategory } from "@leadlah/core";
+import { sql } from "drizzle-orm";
 import {
   date,
   integer,
@@ -27,6 +28,9 @@ export const targets = pgTable(
   },
   (table) => ({
     uniqueUserPeriod: uniqueIndex("unique_user_period").on(table.userId, table.year, table.month),
+    uniqueUserAnnualYear: uniqueIndex("unique_user_annual_year")
+      .on(table.userId, table.year)
+      .where(sql`${table.month} is null`),
     userIdx: index("idx_targets_user_id").on(table.userId),
     yearIdx: index("idx_targets_year").on(table.year)
   })

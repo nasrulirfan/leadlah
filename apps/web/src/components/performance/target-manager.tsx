@@ -6,6 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Plus, Edit2, Trash2 } from "lucide-react";
 import { useTargets } from "@/lib/performance/hooks";
 
@@ -83,7 +90,7 @@ export function TargetManager() {
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="font-semibold text-foreground">
-                            {target.month 
+                            {target.month
                               ? `${new Date(target.year, target.month - 1).toLocaleString('default', { month: 'long' })} ${target.year}`
                               : `Year ${target.year}`
                             }
@@ -140,6 +147,7 @@ function TargetForm({
   onSubmit: (data: any) => void;
   onCancel: () => void;
 }) {
+  const isEditing = Boolean(initialData);
   const [formData, setFormData] = useState({
     year: initialData?.year || new Date().getFullYear(),
     month: initialData?.month || new Date().getMonth() + 1,
@@ -153,14 +161,19 @@ function TargetForm({
       <div className="grid gap-4 md:grid-cols-2">
         <div>
           <Label>Period Type</Label>
-          <select
-            className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+          <Select
             value={formData.isAnnual ? "annual" : "monthly"}
-            onChange={(e) => setFormData({ ...formData, isAnnual: e.target.value === "annual" })}
+            onValueChange={(value) => setFormData({ ...formData, isAnnual: value === "annual" })}
+            disabled={isEditing}
           >
-            <option value="monthly">Monthly</option>
-            <option value="annual">Annual</option>
-          </select>
+            <SelectTrigger className="mt-1.5">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="monthly">Monthly</SelectItem>
+              <SelectItem value="annual">Annual</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div>
@@ -170,23 +183,29 @@ function TargetForm({
             value={formData.year}
             onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
             className="mt-1.5"
+            disabled={isEditing}
           />
         </div>
 
         {!formData.isAnnual && (
           <div>
             <Label>Month</Label>
-            <select
-              className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
-              value={formData.month}
-              onChange={(e) => setFormData({ ...formData, month: parseInt(e.target.value) })}
+            <Select
+              value={formData.month.toString()}
+              onValueChange={(value) => setFormData({ ...formData, month: parseInt(value) })}
+              disabled={isEditing}
             >
-              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                <option key={m} value={m}>
-                  {new Date(2024, m - 1).toLocaleString('default', { month: 'long' })}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="mt-1.5">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                  <SelectItem key={m} value={m.toString()}>
+                    {new Date(2024, m - 1).toLocaleString('default', { month: 'long' })}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         )}
 

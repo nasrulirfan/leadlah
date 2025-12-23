@@ -71,6 +71,13 @@
       "when": 1766523600000,
       "tag": "0009_add_lead_dedupe_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1766527200000,
+      "tag": "0010_unique_annual_targets",
+      "breakpoints": true
     }
   ]
 }

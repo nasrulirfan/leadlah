@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import type { Expense, PerformanceMetrics, Target } from "@leadlah/core";
 import { InjectRepository } from "@nestjs/typeorm";
-import { IsNull, Repository } from "typeorm";
+import { FindOptionsWhere, IsNull, Repository } from "typeorm";
 import { TargetEntity } from "./entities/target.entity";
 import { ExpenseEntity } from "./entities/expense.entity";
 import { CommissionEntity } from "./entities/commission.entity";
@@ -76,24 +76,45 @@ export class PerformanceService {
     private readonly commissions: Repository<CommissionEntity>,
   ) {}
 
+  private toTarget(entity: TargetEntity): Target {
+    return {
+      id: entity.id,
+      userId: entity.userId,
+      year: entity.year,
+      month: entity.month ?? undefined,
+      targetUnits: entity.targetUnits,
+      targetIncome: entity.targetIncome,
+      createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
+    };
+  }
+
+  private isUniqueViolation(error: unknown) {
+    return (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error as { code?: unknown }).code === "23505"
+    );
+  }
+
   async listTargets(userId: string, year?: number): Promise<Target[]> {
     const items = await this.targets.find({
       where: year != null ? { userId, year } : { userId },
       order: { year: "DESC" },
     });
 
-    return sortTargets(
-      items.map((item) => ({
-        id: item.id,
-        userId: item.userId,
-        year: item.year,
-        month: item.month ?? undefined,
-        targetUnits: item.targetUnits,
-        targetIncome: item.targetIncome,
-        createdAt: item.createdAt,
-        updatedAt: item.updatedAt,
-      })),
-    );
+    const deduped = new Map<string, Target>();
+    for (const item of items) {
+      const target = this.toTarget(item);
+      const key = `${target.year}:${target.month ?? "annual"}`;
+      const existing = deduped.get(key);
+      if (!existing || target.updatedAt.getTime() > existing.updatedAt.getTime()) {
+        deduped.set(key, target);
+      }
+    }
+
+    return sortTargets([...deduped.values()]);
   }
 
   private normalizeMonth(month: number | null | undefined) {
@@ -109,39 +130,47 @@ export class PerformanceService {
   async upsertTarget(userId: string, payload: CreateTargetDto): Promise<Target> {
     const month = this.normalizeMonth(payload.month);
 
-    await this.targets.upsert(
-      {
+    const where: FindOptionsWhere<TargetEntity> =
+      month === null
+        ? { userId, year: payload.year, month: IsNull() }
+        : { userId, year: payload.year, month };
+
+    const existing = await this.targets.findOne({
+      where,
+      order: { updatedAt: "DESC", createdAt: "DESC" },
+    });
+
+    if (existing) {
+      existing.targetUnits = payload.targetUnits;
+      existing.targetIncome = payload.targetIncome;
+      return this.toTarget(await this.targets.save(existing));
+    }
+
+    try {
+      const created = this.targets.create({
         userId,
         year: payload.year,
         month,
         targetUnits: payload.targetUnits,
         targetIncome: payload.targetIncome,
-      },
-      ["userId", "year", "month"],
-    );
+      });
+      return this.toTarget(await this.targets.save(created));
+    } catch (error) {
+      if (!this.isUniqueViolation(error)) {
+        throw error;
+      }
 
-    const entity = await this.targets.findOne({
-      where: {
-        userId,
-        year: payload.year,
-        ...(month === null ? { month: IsNull() } : { month }),
-      },
-    });
+      await this.targets.update(where, {
+        targetUnits: payload.targetUnits,
+        targetIncome: payload.targetIncome,
+      });
 
-    if (!entity) {
-      throw new NotFoundException("Target not found after upsert");
+      const entity = await this.targets.findOne({ where });
+      if (!entity) {
+        throw new NotFoundException("Target not found after upsert");
+      }
+      return this.toTarget(entity);
     }
-
-    return {
-      id: entity.id,
-      userId: entity.userId,
-      year: entity.year,
-      month: entity.month ?? undefined,
-      targetUnits: entity.targetUnits,
-      targetIncome: entity.targetIncome,
-      createdAt: entity.createdAt,
-      updatedAt: entity.updatedAt,
-    };
   }
 
   async updateTarget(userId: string, id: string, payload: UpdateTargetDto): Promise<Target> {
@@ -401,6 +430,8 @@ export class PerformanceService {
         .select(["target.month AS month", "target.targetUnits AS target_units", "target.targetIncome AS target_income"])
         .where("target.userId = :userId", { userId })
         .andWhere("target.year = :year", { year })
+        .orderBy("target.updatedAt", "DESC")
+        .addOrderBy("target.createdAt", "DESC")
         .getRawMany<NumericRecord>(),
       this.commissions
         .createQueryBuilder("commission")
@@ -449,14 +480,16 @@ export class PerformanceService {
       const monthValue = row.month === null ? null : toNumber(row.month);
 
       if (monthValue === null) {
-        annualTarget = { units, income };
+        annualTarget ??= { units, income };
       } else {
         const month = monthValue;
-        monthlyTargets.set(month, { units, income });
-        monthlyTargetSum = {
-          units: monthlyTargetSum.units + units,
-          income: monthlyTargetSum.income + income,
-        };
+        if (!monthlyTargets.has(month)) {
+          monthlyTargets.set(month, { units, income });
+          monthlyTargetSum = {
+            units: monthlyTargetSum.units + units,
+            income: monthlyTargetSum.income + income,
+          };
+        }
       }
     }
 

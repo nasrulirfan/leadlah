@@ -56,7 +56,7 @@ export function AppSidebar({ userName, onSignOut, subscription }: SidebarProps) 
               className={cn(
                 "flex items-center gap-3 rounded-2xl border px-3 py-3 text-sm transition hover:shadow-md",
                 isActive
-                  ? "border-primary/30 bg-primary text-primary-foreground"
+                  ? "border-red-500/30 bg-gradient-to-r from-red-600 via-red-500 to-rose-500 text-white shadow-lg shadow-red-500/25"
                   : "border-transparent bg-muted/70 text-muted-foreground hover:border-border hover:bg-card"
               )}
             >
@@ -133,7 +133,7 @@ export function AppMobileNav(props: ComponentProps<"div">) {
               href={link.href}
               className={cn(
                 "snap-start rounded-xl px-4 py-2 text-sm font-semibold transition",
-                isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                isActive ? "bg-gradient-to-r from-red-600 via-red-500 to-rose-500 text-white shadow-md shadow-red-500/25" : "text-muted-foreground hover:text-foreground"
               )}
             >
               {link.label}

@@ -102,6 +102,18 @@ const sortTargets = (items: Target[]) => {
   });
 };
 
+const dedupeTargets = (items: Target[]) => {
+  const map = new Map<string, Target>();
+  for (const target of items) {
+    const key = `${target.year}:${target.month ?? "annual"}`;
+    const existing = map.get(key);
+    if (!existing || target.updatedAt.getTime() > existing.updatedAt.getTime()) {
+      map.set(key, target);
+    }
+  }
+  return [...map.values()];
+};
+
 const sortExpenses = (items: Expense[]) =>
   [...items].sort((a, b) => b.date.getTime() - a.date.getTime());
 
@@ -187,7 +199,7 @@ export function useTargets() {
     setIsLoading(true);
     try {
       const response = await request<ApiTarget[]>("/api/performance/targets");
-      setTargets(sortTargets(response.map(deserializeTarget)));
+      setTargets(sortTargets(dedupeTargets(response.map(deserializeTarget))));
       setError(null);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to load targets";
@@ -215,7 +227,7 @@ export function useTargets() {
       });
       const newTarget = deserializeTarget(response);
       setTargets((prev) =>
-        sortTargets([...prev.filter((target) => target.id !== newTarget.id), newTarget])
+        sortTargets(dedupeTargets([...prev.filter((target) => target.id !== newTarget.id), newTarget]))
       );
       setError(null);
       return newTarget;
