@@ -77,6 +77,23 @@ pnpm --filter @leadlah/api db:generate
 
 Both commands read `DATABASE_URL` from `apps/api/.env`.
 
+## Demo Seeding
+
+Populate the Postgres database with demo data across listings, process logs/viewings, leads, reminders, performance, profiles, and subscriptions:
+
+```bash
+pnpm --filter @leadlah/api db:migrate
+pnpm --filter @leadlah/api db:seed -- --reset
+```
+
+By default, the seeder creates (or reuses) a Better-auth email/password user and prints the `userId` it used for seeding.
+
+To seed for an existing auth user id:
+
+```bash
+pnpm --filter @leadlah/api db:seed -- --skipAuthUser --userId <your-auth-user-id> --reset
+```
+
 ## Environment Variables
 
 Create `.env.local` in `apps/web`:
