@@ -275,7 +275,7 @@ export function RemindersTimeline({
             <Select
               value={selectedType}
               onValueChange={(next) => {
-                router.replace(buildTypeHref(next), { scroll: false });
+                router.replace(buildTypeHref(next) as any, { scroll: false });
               }}
             >
               <SelectTrigger className="h-9 w-full sm:w-[240px]">

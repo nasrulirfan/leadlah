@@ -1,14 +1,26 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import Script from "next/script";
-import { Space_Grotesk } from "next/font/google";
+import localFont from "next/font/local";
 
 import { ThemeProvider } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
 
-const font = Space_Grotesk({
-  subsets: ["latin"],
+const font = localFont({
+  src: [
+    {
+      path: "./fonts/InterVariable.woff2",
+      style: "normal",
+      weight: "100 900",
+    },
+    {
+      path: "./fonts/InterVariable-Italic.woff2",
+      style: "italic",
+      weight: "100 900",
+    },
+  ],
   variable: "--font-display",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
