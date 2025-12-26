@@ -1,11 +1,27 @@
 "use client";
 
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { ArrowRight, Clock, CheckCircle2, XCircle, Calendar, Bell } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import {
+  ArrowRight,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  Calendar,
+  Bell,
+} from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { StoredReminder } from "@/lib/reminders/types";
 import { formatDateTime, formatTime, zonedDateKey } from "@/lib/reminders/time";
 
@@ -160,16 +176,64 @@ export function RemindersTimeline({
   onComplete,
   onDismiss,
 }: RemindersTimelineProps) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const allReminders = [
     ...reminders.today.map((r) => ({ ...r, group: "Today" })),
     ...reminders.tomorrow.map((r) => ({ ...r, group: "Tomorrow" })),
     ...reminders.thisWeek.map((r) => ({ ...r, group: "This Week" })),
   ];
 
-  const hasReminders = allReminders.length > 0;
-  const appointmentCount = allReminders.filter(
-    (reminder) => reminder.metadata?.kind === "EVENT" || reminder.metadata?.kind === "VIEWING"
+  const availableTypes = useMemo(() => {
+    const unique = new Set<string>();
+    for (const reminder of allReminders) {
+      if (typeof reminder.type === "string" && reminder.type.trim().length) {
+        unique.add(reminder.type);
+      }
+    }
+    return [...unique].sort((a, b) => a.localeCompare(b));
+  }, [allReminders]);
+
+  const rawType = searchParams.get("reminderType");
+  const selectedType =
+    rawType && availableTypes.includes(rawType) ? rawType : "ALL";
+
+  const filteredReminders = useMemo(() => {
+    if (selectedType === "ALL") {
+      return allReminders;
+    }
+    return allReminders.filter((reminder) => reminder.type === selectedType);
+  }, [allReminders, selectedType]);
+
+  const hasReminders = filteredReminders.length > 0;
+  const appointmentCount = filteredReminders.filter(
+    (reminder) =>
+      reminder.metadata?.kind === "EVENT" || reminder.metadata?.kind === "VIEWING",
   ).length;
+
+  const buildTypeHref = (next: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === "ALL") {
+      params.delete("reminderType");
+    } else {
+      params.set("reminderType", next);
+    }
+    const query = params.toString();
+    return query ? `${pathname}?${query}` : pathname;
+  };
+
+  const formatTypeLabel = (type: string) => type.replace(/_/g, " ");
+  const emptyMessage =
+    selectedType === "ALL"
+      ? "No upcoming reminders"
+      : `No ${formatTypeLabel(selectedType).toLowerCase()} reminders`;
+  const emptyTitle = selectedType === "ALL" ? "All caught up!" : "No reminders found";
+  const emptyDescription =
+    selectedType === "ALL"
+      ? "No reminders scheduled for this week"
+      : "Try selecting a different type";
 
   return (
     <motion.div
@@ -183,8 +247,10 @@ export function RemindersTimeline({
             <h3 className="text-lg font-semibold text-foreground">Upcoming Reminders</h3>
             <p className="text-sm text-muted-foreground">
               {hasReminders
-                ? `${allReminders.length} reminder${allReminders.length > 1 ? "s" : ""} this week`
-                : "No upcoming reminders"}
+                ? `${filteredReminders.length} reminder${
+                    filteredReminders.length > 1 ? "s" : ""
+                  } this week`
+                : emptyMessage}
             </p>
           </div>
           <div className="flex flex-col items-end gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center">
@@ -204,9 +270,32 @@ export function RemindersTimeline({
           </div>
         </div>
 
+        {availableTypes.length ? (
+          <div className="mb-4">
+            <Select
+              value={selectedType}
+              onValueChange={(next) => {
+                router.replace(buildTypeHref(next), { scroll: false });
+              }}
+            >
+              <SelectTrigger className="h-9 w-full sm:w-[240px]">
+                <SelectValue placeholder="All types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All types</SelectItem>
+                {availableTypes.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {formatTypeLabel(type)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : null}
+
         {hasReminders ? (
           <div className="max-h-[400px] overflow-y-auto pr-2">
-            {allReminders.slice(0, 10).map((reminder, index) => (
+            {filteredReminders.slice(0, 10).map((reminder, index) => (
               <ReminderItem
                 key={reminder.id}
                 reminder={reminder}
@@ -222,9 +311,9 @@ export function RemindersTimeline({
             <div className="rounded-full bg-muted p-4">
               <Bell className="h-8 w-8 text-muted-foreground" />
             </div>
-            <p className="mt-4 font-medium text-foreground">All caught up!</p>
+            <p className="mt-4 font-medium text-foreground">{emptyTitle}</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              No reminders scheduled for this week
+              {emptyDescription}
             </p>
           </div>
         )}

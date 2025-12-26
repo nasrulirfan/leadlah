@@ -5,4 +5,3 @@ export class DashboardRemindersQueryDto {
   @IsString()
   timeZone?: string;
 }
-

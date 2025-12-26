@@ -3,10 +3,14 @@ import { describe, beforeEach, expect, it, vi, afterEach } from "vitest";
 import { RemindersService } from "../src/reminders/reminders.service";
 import type { Repository } from "typeorm";
 import type { ReminderEntity } from "../src/reminders/entities/reminder.entity";
+import type { ProcessViewingEntity } from "../src/process/entities/process-viewing.entity";
 
 describe("RemindersService", () => {
   let service: RemindersService;
   let repository: Partial<Record<keyof Repository<ReminderEntity>, ReturnType<typeof vi.fn>>>;
+  let viewingsRepository: Partial<
+    Record<keyof Repository<ProcessViewingEntity>, ReturnType<typeof vi.fn>>
+  >;
   let counter = 1;
 
   beforeEach(() => {
@@ -25,7 +29,14 @@ describe("RemindersService", () => {
       findOne: vi.fn(async () => null)
     };
 
-    service = new RemindersService(repository as unknown as Repository<ReminderEntity>);
+    viewingsRepository = {
+      find: vi.fn(async () => [])
+    };
+
+    service = new RemindersService(
+      repository as unknown as Repository<ReminderEntity>,
+      viewingsRepository as unknown as Repository<ProcessViewingEntity>
+    );
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2025-01-01T00:00:00Z"));
   });
