@@ -10,6 +10,12 @@ import type {
 } from "@leadlah/core";
 import { listingFormSchema, type ListingFormValues } from "@/lib/listings/form";
 import {
+  formatMalaysiaLocation,
+  malaysiaDistrictsForState,
+  MALAYSIA_STATES,
+  type MalaysiaState,
+} from "@/lib/malaysia/locations";
+import {
   createListingAction,
   deleteListingAction,
   updateListingAction,
@@ -87,6 +93,8 @@ const emptyListing: ListingFormValues = {
   bedrooms: 0,
   bathrooms: 0,
   location: "",
+  state: undefined,
+  district: undefined,
   buildingProject: undefined,
   status: ListingStatus.ACTIVE,
   expiresAt: undefined,
@@ -691,6 +699,11 @@ export default function ListingsClient({
       ? [form.type, ...propertyTypeOptions]
       : propertyTypeOptions;
 
+  const districtsForSelectedState = useMemo(
+    () => malaysiaDistrictsForState(form.state),
+    [form.state],
+  );
+
   useEffect(() => {
     setListings(initialListings);
   }, [initialListings]);
@@ -733,7 +746,24 @@ export default function ListingsClient({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    const parsed = listingFormSchema.safeParse(form);
+    const valuesToSave = editingListing
+      ? form
+      : (() => {
+          if (!form.state || !form.district) {
+            setError("Please select a state and district.");
+            return null;
+          }
+          return {
+            ...form,
+            location: formatMalaysiaLocation(form.state, form.district),
+          };
+        })();
+
+    if (!valuesToSave) {
+      return;
+    }
+
+    const parsed = listingFormSchema.safeParse(valuesToSave);
     if (!parsed.success) {
       setError(
         parsed.error.issues[0]?.message ?? "Please review the listing details.",
@@ -742,23 +772,23 @@ export default function ListingsClient({
     }
     startTransition(async () => {
       try {
-        if (editingListing) {
-          const updated = await updateListingAction(
-            editingListing.id,
-            form,
-          );
-          if (updated) {
-            setListings((prev) =>
-              prev.map((listing) =>
-                listing.id === updated.id ? updated : listing,
+          if (editingListing) {
+            const updated = await updateListingAction(
+              editingListing.id,
+              valuesToSave,
+            );
+            if (updated) {
+              setListings((prev) =>
+                prev.map((listing) =>
+                  listing.id === updated.id ? updated : listing,
               ),
             );
             setEditingListing(null);
+            }
+          } else {
+            const created = await createListingAction(valuesToSave);
+            setListings((prev) => [created, ...prev]);
           }
-        } else {
-          const created = await createListingAction(form);
-          setListings((prev) => [created, ...prev]);
-        }
         setForm(() => ({ ...emptyListing }));
         setIsFormDialogOpen(false);
       } catch (actionError) {
@@ -1230,18 +1260,75 @@ export default function ListingsClient({
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <FieldLabel required>Location</FieldLabel>
-                  <Input
-                    required
-                    value={form.location}
-                    onChange={(e) =>
-                      setForm({ ...form, location: e.target.value })
-                    }
-                    placeholder="City / State"
-                    className="h-11"
-                  />
-                </div>
+                {editingListing ? (
+                  <div className="space-y-2">
+                    <FieldLabel required>Location</FieldLabel>
+                    <Input
+                      required
+                      value={form.location}
+                      onChange={(e) =>
+                        setForm({ ...form, location: e.target.value })
+                      }
+                      placeholder="City / State"
+                      className="h-11"
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      <FieldLabel required>State</FieldLabel>
+                      <Select
+                        value={form.state ?? undefined}
+                        onValueChange={(value) =>
+                          setForm({
+                            ...form,
+                            state: value as MalaysiaState,
+                            district: undefined,
+                            location: "",
+                          })
+                        }
+                      >
+                        <SelectTrigger className="h-11">
+                          <SelectValue placeholder="Select state" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {MALAYSIA_STATES.map((state) => (
+                            <SelectItem key={state} value={state}>
+                              {state}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <FieldLabel required>District</FieldLabel>
+                      <Select
+                        value={form.district ?? undefined}
+                        onValueChange={(value) =>
+                          setForm({ ...form, district: value, location: "" })
+                        }
+                        disabled={!form.state}
+                      >
+                        <SelectTrigger className="h-11">
+                          <SelectValue
+                            placeholder={
+                              form.state
+                                ? "Select district"
+                                : "Select state first"
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {districtsForSelectedState.map((district) => (
+                            <SelectItem key={district} value={district}>
+                              {district}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                )}
                 <div className="space-y-2">
                   <FieldLabel>Building / Project</FieldLabel>
                   <Input

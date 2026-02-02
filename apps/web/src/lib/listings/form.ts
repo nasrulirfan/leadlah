@@ -1,4 +1,5 @@
 import { listingSchema } from "@leadlah/core";
+import type { MalaysiaState } from "@/lib/malaysia/locations";
 import { z } from "zod";
 
 export const listingFormSchema = listingSchema.omit({
@@ -24,4 +25,6 @@ export type ListingFormValues = Omit<
   expiresAt?: string;
   lastEnquiryAt?: string;
   externalLinks: ListingExternalLinkFormValue[];
+  state?: MalaysiaState;
+  district?: string;
 };
