@@ -28,6 +28,10 @@ export class CreateListingDto {
   @IsNotEmpty()
   propertyName!: string;
 
+  @IsOptional()
+  @IsString()
+  lotUnitNo?: string;
+
   @IsString()
   @IsNotEmpty()
   type!: string;
@@ -39,6 +43,15 @@ export class CreateListingDto {
   @IsNumber()
   @Min(0)
   price!: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  bankValue?: number;
+
+  @IsOptional()
+  @IsString()
+  competitorPriceRange?: string;
 
   @IsNumber()
   @Min(0)

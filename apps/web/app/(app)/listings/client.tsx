@@ -86,9 +86,12 @@ type ListingsClientProps = {
 
 const emptyListing: ListingFormValues = {
   propertyName: "",
+  lotUnitNo: undefined,
   type: "",
   category: ListingCategory.FOR_SALE,
   price: 0,
+  bankValue: undefined,
+  competitorPriceRange: undefined,
   size: 0,
   bedrooms: 0,
   bathrooms: 0,
@@ -180,11 +183,22 @@ const keepSelectionOnMouseUpIfZero = (
   }
 };
 
+const parseOptionalNumber = (value: string) => {
+  if (!value.trim()) {
+    return undefined;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
 const listingToFormValues = (listing: ListingInput): ListingFormValues => ({
   propertyName: listing.propertyName,
+  lotUnitNo: listing.lotUnitNo,
   type: listing.type,
   category: listing.category,
   price: listing.price,
+  bankValue: listing.bankValue,
+  competitorPriceRange: listing.competitorPriceRange,
   size: listing.size,
   bedrooms: listing.bedrooms,
   bathrooms: listing.bathrooms,
@@ -1154,6 +1168,22 @@ export default function ListingsClient({
                   />
                 </div>
                 <div className="space-y-2">
+                  <FieldLabel>Lot / Unit No.</FieldLabel>
+                  <Input
+                    value={form.lotUnitNo ?? ""}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        lotUnitNo: e.target.value.trim()
+                          ? e.target.value
+                          : undefined,
+                      })
+                    }
+                    placeholder="e.g. B-12-3"
+                    className="h-11"
+                  />
+                </div>
+                <div className="space-y-2">
                   <FieldLabel required>Type</FieldLabel>
                   <Select
                     value={form.type || undefined}
@@ -1207,6 +1237,40 @@ export default function ListingsClient({
                     }
                     onFocus={selectAllIfZero}
                     onMouseUp={keepSelectionOnMouseUpIfZero}
+                    className="h-11"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <FieldLabel>Bank Value (RM)</FieldLabel>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={form.bankValue ?? ""}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        bankValue: parseOptionalNumber(e.target.value),
+                      })
+                    }
+                    onFocus={selectAllIfZero}
+                    onMouseUp={keepSelectionOnMouseUpIfZero}
+                    className="h-11"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <FieldLabel>Competitor Price Range (RM)</FieldLabel>
+                  <Input
+                    value={form.competitorPriceRange ?? ""}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        competitorPriceRange: e.target.value.trim()
+                          ? e.target.value
+                          : undefined,
+                      })
+                    }
+                    placeholder="e.g. 520000 - 560000"
                     className="h-11"
                   />
                 </div>

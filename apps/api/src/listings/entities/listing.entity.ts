@@ -12,6 +12,9 @@ export class ListingEntity {
   @Column({ type: "varchar", length: 255 })
   propertyName!: string;
 
+  @Column({ type: "varchar", length: 120, nullable: true })
+  lotUnitNo!: string | null;
+
   @Column({ type: "varchar", length: 100 })
   type!: string;
 
@@ -25,6 +28,18 @@ export class ListingEntity {
     transformer: numericTransformer,
   })
   price!: number;
+
+  @Column({
+    type: "numeric",
+    precision: 15,
+    scale: 2,
+    transformer: numericTransformer,
+    nullable: true,
+  })
+  bankValue!: number | null;
+
+  @Column({ type: "varchar", length: 255, nullable: true })
+  competitorPriceRange!: string | null;
 
   @Column({
     type: "numeric",

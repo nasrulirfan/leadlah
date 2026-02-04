@@ -35,9 +35,12 @@ export class ListingsService {
     return {
       id: entity.id,
       propertyName: entity.propertyName,
+      lotUnitNo: entity.lotUnitNo ?? undefined,
       type: entity.type,
       category: entity.category,
       price: Number(entity.price),
+      bankValue: entity.bankValue == null ? undefined : Number(entity.bankValue),
+      competitorPriceRange: entity.competitorPriceRange ?? undefined,
       size: Number(entity.size),
       bedrooms: entity.bedrooms,
       bathrooms: entity.bathrooms,

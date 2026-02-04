@@ -48,9 +48,12 @@ export type ExternalLink = {
 export type Listing = {
   id: string;
   propertyName: string;
+  lotUnitNo?: string;
   type: string;
   category: ListingCategory;
   price: number;
+  bankValue?: number;
+  competitorPriceRange?: string;
   size: number;
   bedrooms: number;
   bathrooms: number;
