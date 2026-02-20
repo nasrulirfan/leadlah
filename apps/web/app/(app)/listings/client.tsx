@@ -170,6 +170,21 @@ function gradeTone(grade: ListingGradingResult["grade"]) {
   }
 }
 
+function gradeColorClasses(grade: ListingGradingResult["grade"]) {
+  switch (grade) {
+    case "A":
+      return "border-emerald-600 bg-emerald-600 text-white";
+    case "B":
+      return "border-blue-600 bg-blue-600 text-white";
+    case "C":
+      return "border-amber-600 bg-amber-600 text-white";
+    case "D":
+      return "border-red-600 bg-red-600 text-white";
+    default:
+      return "border-slate-600 bg-slate-600 text-white";
+  }
+}
+
 function marketPositionCopy(value: number) {
   if (value <= 30) return "Low (competitive)";
   if (value <= 60) return "Mid-market";
@@ -217,11 +232,15 @@ function ListingGradeBadge({
       <PopoverTrigger asChild>
         <button type="button" className="focus:outline-none">
           <Badge
-            tone={gradeTone(grading.grade)}
-            className="gap-1.5 border-white/20 bg-white/15 text-white hover:bg-white/20 dark:border-slate-800/50 dark:bg-slate-900/40 dark:text-slate-100"
+            className={cn(
+              "gap-1.5 border-2 shadow-lg backdrop-blur-md hover:scale-105 transition-all",
+              grading.grade 
+                ? gradeColorClasses(grading.grade)
+                : "border-slate-600 bg-slate-600 text-white"
+            )}
           >
             <Sparkles className="h-3 w-3" />
-            <span className="tabular-nums">
+            <span className="font-semibold tabular-nums">
               {grading.grade ? `${grading.grade} · ${grading.label}` : "Grade"}
             </span>
           </Badge>
