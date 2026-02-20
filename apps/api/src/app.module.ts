@@ -20,6 +20,7 @@ import { CommissionEntity } from "./performance/entities/commission.entity";
 import { LeadsModule } from "./leads/leads.module";
 import { LeadEntity } from "./leads/entities/lead.entity";
 import { DashboardModule } from "./dashboard/dashboard.module";
+import { MediaModule } from "./media/media.module";
 
 @Module({
   imports: [
@@ -66,7 +67,8 @@ import { DashboardModule } from "./dashboard/dashboard.module";
     ProfilesModule,
     PerformanceModule,
     LeadsModule,
-    DashboardModule
+    DashboardModule,
+    MediaModule
   ]
 })
 export class AppModule {}

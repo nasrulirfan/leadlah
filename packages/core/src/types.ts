@@ -39,6 +39,34 @@ export type MediaAsset = {
   label?: string;
 };
 
+export type ListingPhotoStatus = "READY" | "PROCESSING" | "FAILED";
+
+export type ListingPhotoVariantFormat = "avif" | "webp";
+
+export type ListingPhotoVariantKind = "RESPONSIVE" | "THUMBNAIL" | "DOWNLOAD";
+
+export type ListingPhotoVariant = {
+  key: string;
+  width: number;
+  format: ListingPhotoVariantFormat;
+  kind: ListingPhotoVariantKind;
+  bytes: number;
+};
+
+export type ListingOptimizedPhoto = {
+  id: string;
+  alt?: string;
+  status: ListingPhotoStatus;
+  error?: string;
+  width?: number;
+  height?: number;
+  variants: ListingPhotoVariant[];
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type ListingPhoto = MediaAsset | ListingOptimizedPhoto;
+
 export type ExternalLink = {
   provider: "Mudah" | "PropertyGuru" | "iProperty" | "Other";
   url: string;
@@ -62,7 +90,7 @@ export type Listing = {
   status: ListingStatus;
   expiresAt?: Date;
   lastEnquiryAt?: Date;
-  photos: MediaAsset[];
+  photos: ListingPhoto[];
   videos: MediaAsset[];
   documents: MediaAsset[];
   externalLinks: ExternalLink[];

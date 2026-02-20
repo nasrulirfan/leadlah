@@ -1,5 +1,5 @@
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
-import { ExternalLink, ListingCategory, ListingStatus, MediaAsset } from "@leadlah/core";
+import { ExternalLink, ListingCategory, ListingPhoto, ListingStatus, MediaAsset } from "@leadlah/core";
 import { numericTransformer } from "../../database/numeric.transformer";
 
 const timestampColumnType = process.env.NODE_ENV === "test" ? "datetime" : "timestamptz";
@@ -71,7 +71,7 @@ export class ListingEntity {
   lastEnquiryAt?: Date;
 
   @Column({ type: "simple-json", default: "[]" })
-  photos!: MediaAsset[];
+  photos!: ListingPhoto[];
 
   @Column({ type: "simple-json", default: "[]" })
   videos!: MediaAsset[];

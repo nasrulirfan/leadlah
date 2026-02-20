@@ -6,6 +6,13 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 
 import { insertListing, removeListing, updateListing, updateListingCategory, updateListingStatus } from "@/data/listings";
+import {
+  createListingPhotoUploadUrls,
+  deleteListingPhoto,
+  ingestListingPhotos,
+  reorderListingPhotos,
+  replaceListingPhoto,
+} from "@/data/listing-photos";
 import { syncPlatformExpiryReminders } from "@/data/reminders";
 import { createReminder } from "@/data/reminders";
 import { listingFormSchema, type ListingFormValues } from "@/lib/listings/form";
@@ -17,7 +24,8 @@ const LISTINGS_PATH = "/listings";
 export async function createListingAction(values: ListingFormValues) {
   const session = await requireSession();
   const payload = listingFormSchema.parse(values);
-  const listing = await insertListing(payload);
+  const { photos: _photos, ...payloadWithoutPhotos } = payload;
+  const listing = await insertListing(payloadWithoutPhotos as any);
   await syncPlatformExpiryReminders({
     userId: session.user.id,
     listingId: listing.id,
@@ -57,7 +65,8 @@ export async function updateListingAction(id: string, values: ListingFormValues)
   const session = await requireSession();
   const parsedId = listingSchema.shape.id.parse(id);
   const payload = listingFormSchema.parse(values);
-  const listing = await updateListing(parsedId, payload, session.user.id);
+  const { photos: _photos, ...payloadWithoutPhotos } = payload;
+  const listing = await updateListing(parsedId, payloadWithoutPhotos as any, session.user.id);
   if (listing) {
     await syncPlatformExpiryReminders({
       userId: session.user.id,
@@ -65,6 +74,54 @@ export async function updateListingAction(id: string, values: ListingFormValues)
       externalLinks: listing.externalLinks ?? []
     });
   }
+  revalidatePath(LISTINGS_PATH);
+  return listing;
+}
+
+export async function createListingPhotoUploadUrlsAction(params: {
+  listingId: string;
+  files: { filename: string; contentType: string; bytes: number }[];
+}) {
+  await requireSession();
+  const id = listingSchema.shape.id.parse(params.listingId);
+  return createListingPhotoUploadUrls({ listingId: id, files: params.files ?? [] });
+}
+
+export async function ingestListingPhotosAction(params: { listingId: string; stagedKeys: string[] }) {
+  await requireSession();
+  const id = listingSchema.shape.id.parse(params.listingId);
+  const listing = await ingestListingPhotos({ listingId: id, stagedKeys: params.stagedKeys ?? [] });
+  revalidatePath(LISTINGS_PATH);
+  return listing;
+}
+
+export async function reorderListingPhotosAction(params: { listingId: string; photoIds: string[] }) {
+  await requireSession();
+  const id = listingSchema.shape.id.parse(params.listingId);
+  const listing = await reorderListingPhotos({ listingId: id, photoIds: params.photoIds ?? [] });
+  revalidatePath(LISTINGS_PATH);
+  return listing;
+}
+
+export async function deleteListingPhotoAction(params: { listingId: string; photoId: string }) {
+  await requireSession();
+  const listingId = listingSchema.shape.id.parse(params.listingId);
+  const photoId = z.string().uuid().parse(params.photoId);
+  const listing = await deleteListingPhoto({ listingId, photoId });
+  revalidatePath(LISTINGS_PATH);
+  return listing;
+}
+
+export async function replaceListingPhotoAction(params: {
+  listingId: string;
+  photoId: string;
+  stagedKey: string;
+}) {
+  await requireSession();
+  const listingId = listingSchema.shape.id.parse(params.listingId);
+  const photoId = z.string().uuid().parse(params.photoId);
+  const stagedKey = z.string().min(1).parse(params.stagedKey);
+  const listing = await replaceListingPhoto({ listingId, photoId, stagedKey });
   revalidatePath(LISTINGS_PATH);
   return listing;
 }

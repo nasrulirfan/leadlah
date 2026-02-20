@@ -1,7 +1,7 @@
 /* eslint-disable jsx-a11y/label-has-associated-control */
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { forwardRef, useEffect, useMemo, useState, useTransition } from "react";
 import { ListingCategory, ListingStatus, ProcessStage } from "@leadlah/core";
 import type {
   ListingInput,
@@ -18,10 +18,13 @@ import {
 import {
   createListingAction,
   deleteListingAction,
+  ingestListingPhotosAction,
   updateListingAction,
   updateListingCategoryAction,
   updateListingStatusAction,
 } from "./actions";
+import { ListingPhotosField } from "./ListingPhotosField";
+import { stageListingPhotos } from "./photo-upload";
 import { ListingReminderDialog } from "./ListingReminderDialog";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -150,16 +153,66 @@ const fallbackPropertyImages = [
   "https://images.unsplash.com/photo-1430285561322-7808604715df?auto=format&fit=crop&w=600&q=80",
 ];
 
-const coverImageFor = (listingId: string, photos: ListingInput["photos"]) => {
-  if (photos[0]?.url) {
-    return photos[0].url;
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+
+const keyToUrl = (key: string) =>
+  `${API_BASE_URL.replace(/\/$/, "")}/media/r2?key=${encodeURIComponent(key)}`;
+
+const coverSourcesFor = (listingId: string, photos: ListingInput["photos"]) => {
+  const first = photos?.[0];
+  if (first) {
+    if (
+      "variants" in first &&
+      "status" in first &&
+      (first as any).status === "READY" &&
+      Array.isArray((first as any).variants)
+    ) {
+      const variants = (first as any).variants as {
+        kind: string;
+        format: string;
+        width: number;
+        key: string;
+      }[];
+
+      const responsiveAvif = variants
+        .filter((v) => v.kind === "RESPONSIVE" && v.format === "avif")
+        .sort((a, b) => a.width - b.width)
+        .map((v) => `${keyToUrl(v.key)} ${v.width}w`)
+        .join(", ");
+
+      const responsiveWebp = variants
+        .filter((v) => v.kind === "RESPONSIVE" && v.format === "webp")
+        .sort((a, b) => a.width - b.width)
+        .map((v) => `${keyToUrl(v.key)} ${v.width}w`)
+        .join(", ");
+
+      const fallback =
+        variants
+          .filter((v) => v.kind === "RESPONSIVE" && v.format === "webp")
+          .sort((a, b) => b.width - a.width)[0]?.key ??
+        variants
+          .filter((v) => v.kind === "RESPONSIVE" && v.format === "avif")
+          .sort((a, b) => b.width - a.width)[0]?.key ??
+        null;
+
+      if (fallback) {
+        return {
+          fallbackUrl: keyToUrl(fallback),
+          avifSrcSet: responsiveAvif || undefined,
+          webpSrcSet: responsiveWebp || undefined,
+        };
+      }
+    }
+    if ("url" in first && typeof (first as any).url === "string") {
+      return { fallbackUrl: (first as any).url as string };
+    }
   }
   const index =
     listingId
       .split("")
       .map((char) => char.charCodeAt(0))
       .reduce((acc, code) => acc + code, 0) % fallbackPropertyImages.length;
-  return fallbackPropertyImages[index];
+  return { fallbackUrl: fallbackPropertyImages[index]! };
 };
 
 const dateToInputValue = (value?: Date) => {
@@ -432,7 +485,10 @@ type ListingCardProps = {
   onProcessLogUpdate: (entry: ProcessLogEntry) => void;
 };
 
-function ListingCard(props: ListingCardProps) {
+const ListingCard = forwardRef<HTMLDivElement, ListingCardProps>(function ListingCard(
+  props,
+  ref,
+) {
   const {
     userId,
     listing,
@@ -445,7 +501,7 @@ function ListingCard(props: ListingCardProps) {
     onProcessLogUpdate,
   } = props;
   const [showActions, setShowActions] = useState(false);
-  const coverImage = coverImageFor(listing.id, listing.photos);
+  const cover = coverSourcesFor(listing.id, listing.photos);
   const completedStages = logEntries.filter((e) => e.completedAt).length;
   const progress = (completedStages / stageOrder.length) * 100;
   const statusStyle = statusConfig[listing.status];
@@ -453,17 +509,44 @@ function ListingCard(props: ListingCardProps) {
 
   return (
     <motion.div
+      ref={ref}
       variants={cardVariants}
       layout
       className="group relative overflow-hidden rounded-3xl border border-border/40 bg-card shadow-sm transition-all duration-300 hover:border-border hover:shadow-xl hover:shadow-slate-200/50 dark:hover:shadow-slate-900/50"
     >
       {/* Image Section */}
       <div className="relative aspect-[16/10] overflow-hidden">
-        <img
-          src={coverImage}
-          alt={listing.propertyName}
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
+        {cover.avifSrcSet || cover.webpSrcSet ? (
+          <picture>
+            {cover.avifSrcSet ? (
+              <source
+                type="image/avif"
+                srcSet={cover.avifSrcSet}
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              />
+            ) : null}
+            {cover.webpSrcSet ? (
+              <source
+                type="image/webp"
+                srcSet={cover.webpSrcSet}
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              />
+            ) : null}
+            <img
+              src={cover.fallbackUrl}
+              alt={listing.propertyName}
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              loading="lazy"
+            />
+          </picture>
+        ) : (
+          <img
+            src={cover.fallbackUrl}
+            alt={listing.propertyName}
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            loading="lazy"
+          />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
 
         {/* Top badges */}
@@ -637,7 +720,9 @@ function ListingCard(props: ListingCardProps) {
       </div>
     </motion.div>
   );
-}
+});
+
+ListingCard.displayName = "ListingCard";
 
 // Empty State Component
 function EmptyState({
@@ -688,6 +773,7 @@ export default function ListingsClient({
   const [editingListing, setEditingListing] = useState<ListingInput | null>(
     null,
   );
+  const [pendingCreatePhotos, setPendingCreatePhotos] = useState<File[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
@@ -786,23 +872,39 @@ export default function ListingsClient({
     }
     startTransition(async () => {
       try {
-          if (editingListing) {
-            const updated = await updateListingAction(
-              editingListing.id,
-              valuesToSave,
+        if (editingListing) {
+          const updated = await updateListingAction(
+            editingListing.id,
+            { ...valuesToSave, photos: [] },
+          );
+          if (updated) {
+            setListings((prev) =>
+              prev.map((listing) => (listing.id === updated.id ? updated : listing)),
             );
-            if (updated) {
-              setListings((prev) =>
-                prev.map((listing) =>
-                  listing.id === updated.id ? updated : listing,
-              ),
-            );
-            setEditingListing(null);
-            }
-          } else {
-            const created = await createListingAction(valuesToSave);
-            setListings((prev) => [created, ...prev]);
           }
+          setEditingListing(null);
+        } else {
+          const created = await createListingAction({
+            ...valuesToSave,
+            photos: [],
+          });
+          setListings((prev) => [created, ...prev]);
+
+          if (pendingCreatePhotos.length) {
+            const stagedKeys = await stageListingPhotos({
+              listingId: created.id,
+              files: pendingCreatePhotos,
+            });
+            const withPhotos = await ingestListingPhotosAction({
+              listingId: created.id,
+              stagedKeys,
+            });
+            setListings((prev) =>
+              prev.map((listing) => (listing.id === withPhotos.id ? withPhotos : listing)),
+            );
+            setPendingCreatePhotos([]);
+          }
+        }
         setForm(() => ({ ...emptyListing }));
         setIsFormDialogOpen(false);
       } catch (actionError) {
@@ -1080,6 +1182,7 @@ export default function ListingsClient({
       setForm({ ...emptyListing });
       setEditingListing(null);
     }
+    setPendingCreatePhotos([]);
     setError(null);
     setIsFormDialogOpen(true);
   };
@@ -1410,26 +1513,24 @@ export default function ListingsClient({
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <FieldLabel>Cover Photo URL</FieldLabel>
-                  <Input
-                    type="url"
-                    value={form.photos?.[0]?.url ?? ""}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        photos: e.target.value
-                          ? [{ url: e.target.value, label: "Cover photo" }]
-                          : [],
-                      })
+                <div className="space-y-2 md:col-span-2">
+                  <ListingPhotosField
+                    listingId={editingListing?.id ?? undefined}
+                    photos={form.photos ?? []}
+                    pendingFiles={editingListing ? undefined : pendingCreatePhotos}
+                    onPendingFilesChange={
+                      editingListing ? undefined : setPendingCreatePhotos
                     }
-                    placeholder="https://images.unsplash.com/..."
-                    className="h-11"
+                    onListingUpdated={(updated) => {
+                      setForm((prev) => ({ ...prev, photos: updated.photos ?? [] }));
+                      setListings((prev) =>
+                        prev.map((listing) =>
+                          listing.id === updated.id ? updated : listing,
+                        ),
+                      );
+                      setEditingListing(updated);
+                    }}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Upload to your preferred storage and drop the public URL
-                    here.
-                  </p>
                 </div>
                 <div className="space-y-2">
                   <FieldLabel required>Status</FieldLabel>

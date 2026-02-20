@@ -12,3 +12,4 @@ auth.sqlite
 *.tsbuildinfo
 .env
 .env.local
+local_temp

@@ -1,13 +1,14 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { DeepPartial, Like, Repository } from "typeorm";
-import type { ExternalLink, Listing } from "@leadlah/core";
+import type { Listing } from "@leadlah/core";
 import { ListingCategory, ListingStatus } from "@leadlah/core";
 import { ListingEntity } from "./entities/listing.entity";
 import { CreateListingDto } from "./dto/create-listing.dto";
 import { UpdateListingDto } from "./dto/update-listing.dto";
 import { ListListingsQueryDto } from "./dto/list-listings.query";
 import { CommissionEntity } from "../performance/entities/commission.entity";
+import { listingEntityToListing } from "./listings.mapper";
 
 const DEFAULT_SALE_COMMISSION_RATE = 0.03;
 const DEFAULT_RENT_COMMISSION_MULTIPLIER = 1;
@@ -24,38 +25,8 @@ export class ListingsService {
     private readonly commissions: Repository<CommissionEntity>,
   ) {}
 
-  private normalizeExternalLinks(links: ExternalLink[] | null | undefined) {
-    return (links ?? []).map((link) => ({
-      ...link,
-      expiresAt: link.expiresAt ?? undefined,
-    }));
-  }
-
   private toListing(entity: ListingEntity): Listing {
-    return {
-      id: entity.id,
-      propertyName: entity.propertyName,
-      lotUnitNo: entity.lotUnitNo ?? undefined,
-      type: entity.type,
-      category: entity.category,
-      price: Number(entity.price),
-      bankValue: entity.bankValue == null ? undefined : Number(entity.bankValue),
-      competitorPriceRange: entity.competitorPriceRange ?? undefined,
-      size: Number(entity.size),
-      bedrooms: entity.bedrooms,
-      bathrooms: entity.bathrooms,
-      location: entity.location,
-      buildingProject: entity.buildingProject ?? undefined,
-      status: entity.status,
-      expiresAt: entity.expiresAt ?? undefined,
-      lastEnquiryAt: entity.lastEnquiryAt ?? undefined,
-      photos: entity.photos ?? [],
-      videos: entity.videos ?? [],
-      documents: entity.documents ?? [],
-      externalLinks: this.normalizeExternalLinks(entity.externalLinks),
-      createdAt: entity.createdAt,
-      updatedAt: entity.updatedAt,
-    };
+    return listingEntityToListing(entity);
   }
 
   private resolveCategory(payload: {

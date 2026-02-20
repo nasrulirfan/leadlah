@@ -37,6 +37,28 @@ export const mediaAssetSchema = z.object({
   label: z.string().optional()
 });
 
+export const listingPhotoVariantSchema = z.object({
+  key: z.string().min(1),
+  width: z.number().int().nonnegative(),
+  format: z.enum(["avif", "webp"]),
+  kind: z.enum(["RESPONSIVE", "THUMBNAIL", "DOWNLOAD"]),
+  bytes: z.number().int().nonnegative()
+});
+
+export const listingOptimizedPhotoSchema = z.object({
+  id: z.string().uuid(),
+  alt: z.string().max(280).optional(),
+  status: z.enum(["READY", "PROCESSING", "FAILED"]),
+  error: z.string().max(400).optional(),
+  width: z.number().int().positive().optional(),
+  height: z.number().int().positive().optional(),
+  variants: z.array(listingPhotoVariantSchema).default([]),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date()
+});
+
+export const listingPhotoSchema = z.union([mediaAssetSchema, listingOptimizedPhotoSchema]);
+
 export const externalLinkSchema = z.object({
   provider: z.enum(["Mudah", "PropertyGuru", "iProperty", "Other"]),
   url: z.string().url(),
@@ -94,7 +116,7 @@ export const listingSchema = z.object({
   status: z.nativeEnum(ListingStatus),
   expiresAt: z.coerce.date().optional(),
   lastEnquiryAt: z.coerce.date().optional(),
-  photos: z.array(mediaAssetSchema).default([]),
+  photos: z.array(listingPhotoSchema).default([]),
   videos: z.array(mediaAssetSchema).default([]),
   documents: z.array(mediaAssetSchema).default([]),
   externalLinks: z.array(validatedExternalLinkSchema).default([]),
