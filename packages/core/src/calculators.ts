@@ -160,6 +160,180 @@ export function calculateSellability(
   return { score, grade, commentary };
 }
 
+export type ListingGradingGrade = "A" | "B" | "C" | "D";
+
+export type ListingGradingLabel = "Hot" | "Good" | "Hard Sell" | "Overpriced";
+
+export type ListingGradingInput = {
+  askingPrice: number;
+  bankValue?: number | null;
+  competitorMinPrice?: number | null;
+  competitorMaxPrice?: number | null;
+  competitorPriceRangeText?: string | null;
+};
+
+export type ListingGradingResult = {
+  grade?: ListingGradingGrade;
+  label?: ListingGradingLabel;
+  marketPositionPct?: number;
+  bankValueGapPct?: number;
+  competitorMinPrice?: number;
+  competitorMaxPrice?: number;
+  missingInputs: Array<"bankValue" | "competitorMinPrice" | "competitorMaxPrice">;
+  notes: string[];
+};
+
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, value));
+
+const normalizeNumericToken = (raw: string) => raw.replace(/,/g, "").trim();
+
+function parseCompactNumber(raw: string): number | null {
+  const match = raw
+    .trim()
+    .match(/^(\d[\d,]*(?:\.\d+)?)(?:\s*([kKmM]))?$/);
+  if (!match) {
+    return null;
+  }
+
+  const base = Number.parseFloat(normalizeNumericToken(match[1]));
+  if (!Number.isFinite(base)) {
+    return null;
+  }
+
+  const suffix = (match[2] ?? "").toLowerCase();
+  const multiplier = suffix === "k" ? 1_000 : suffix === "m" ? 1_000_000 : 1;
+  return base * multiplier;
+}
+
+export function parseCompetitorPriceRangeText(
+  value: string | null | undefined
+): { min?: number; max?: number; values: number[] } {
+  const text = value?.trim();
+  if (!text) {
+    return { values: [] };
+  }
+
+  const values: number[] = [];
+  const tokenRegex = /(\d[\d,]*(?:\.\d+)?\s*[kKmM]?)/g;
+  for (const match of text.matchAll(tokenRegex)) {
+    const parsed = parseCompactNumber(match[1]);
+    if (parsed == null || !Number.isFinite(parsed) || parsed < 0) {
+      continue;
+    }
+    values.push(parsed);
+  }
+
+  if (values.length === 0) {
+    return { values };
+  }
+
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  return { min, max, values };
+}
+
+function gradeLabelFor(grade: ListingGradingGrade): ListingGradingLabel {
+  switch (grade) {
+    case "A":
+      return "Hot";
+    case "B":
+      return "Good";
+    case "C":
+      return "Hard Sell";
+    case "D":
+      return "Overpriced";
+  }
+}
+
+function gradeForTier(tier: 1 | 2 | 3 | 4): ListingGradingGrade {
+  return tier === 1 ? "A" : tier === 2 ? "B" : tier === 3 ? "C" : "D";
+}
+
+function tierFromMarketPosition(marketPositionPct: number): 1 | 2 | 3 | 4 {
+  if (marketPositionPct <= 30) return 1;
+  if (marketPositionPct <= 60) return 2;
+  if (marketPositionPct <= 85) return 3;
+  return 4;
+}
+
+function tierFromBankValueGap(bankValueGapPct: number): 1 | 2 | 3 | 4 {
+  if (bankValueGapPct <= 5) return 1;
+  if (bankValueGapPct <= 10) return 2;
+  if (bankValueGapPct <= 20) return 3;
+  return 4;
+}
+
+export function calculateListingGrading(
+  input: ListingGradingInput
+): ListingGradingResult {
+  const notes: string[] = [];
+  const missingInputs: ListingGradingResult["missingInputs"] = [];
+
+  const parsedRange = parseCompetitorPriceRangeText(input.competitorPriceRangeText);
+  const competitorMin =
+    input.competitorMinPrice ?? parsedRange.min ?? undefined;
+  const competitorMax =
+    input.competitorMaxPrice ?? parsedRange.max ?? undefined;
+
+  if (input.bankValue == null) missingInputs.push("bankValue");
+  if (competitorMin == null) missingInputs.push("competitorMinPrice");
+  if (competitorMax == null) missingInputs.push("competitorMaxPrice");
+
+  let marketPositionPct: number | undefined;
+  if (competitorMin != null && competitorMax != null) {
+    if (competitorMax <= competitorMin) {
+      notes.push("Competitor price range must have a larger max than min.");
+    } else {
+      const raw =
+        ((input.askingPrice - competitorMin) / (competitorMax - competitorMin)) *
+        100;
+      if (raw < 0) {
+        notes.push("Asking price is below the competitor minimum.");
+      } else if (raw > 100) {
+        notes.push("Asking price is above the competitor maximum.");
+      }
+      marketPositionPct = clamp(raw, 0, 100);
+    }
+  }
+
+  let bankValueGapPct: number | undefined;
+  if (input.bankValue != null) {
+    if (input.bankValue <= 0) {
+      notes.push("Bank/market value must be greater than 0.");
+    } else {
+      bankValueGapPct = ((input.askingPrice - input.bankValue) / input.bankValue) * 100;
+    }
+  }
+
+  if (marketPositionPct == null || bankValueGapPct == null) {
+    return {
+      marketPositionPct,
+      bankValueGapPct,
+      competitorMinPrice: competitorMin,
+      competitorMaxPrice: competitorMax,
+      missingInputs,
+      notes
+    };
+  }
+
+  const marketTier = tierFromMarketPosition(marketPositionPct);
+  const bankTier = tierFromBankValueGap(bankValueGapPct);
+  const worstTier = (Math.max(marketTier, bankTier) as 1 | 2 | 3 | 4);
+  const grade = gradeForTier(worstTier);
+
+  return {
+    grade,
+    label: gradeLabelFor(grade),
+    marketPositionPct,
+    bankValueGapPct,
+    competitorMinPrice: competitorMin,
+    competitorMaxPrice: competitorMax,
+    missingInputs,
+    notes
+  };
+}
+
 export type LandFeasibilityInput = {
   gdv: number;
   landCost: number;

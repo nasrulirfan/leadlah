@@ -2,7 +2,13 @@
 "use client";
 
 import { forwardRef, useEffect, useMemo, useState, useTransition } from "react";
-import { ListingCategory, ListingStatus, ProcessStage } from "@leadlah/core";
+import {
+  calculateListingGrading,
+  ListingCategory,
+  ListingStatus,
+  ProcessStage,
+  type ListingGradingResult,
+} from "@leadlah/core";
 import type {
   ListingInput,
   ProcessLogEntry,
@@ -40,6 +46,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { DatePicker } from "@/components/ui/date-picker";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Dialog,
   DialogContent,
@@ -139,6 +146,187 @@ const FieldLabel = ({
     {required ? <span className="ml-0.5 text-red-500">*</span> : null}
   </label>
 );
+
+const formatRinggit = (value: number) => `RM ${Math.round(value).toLocaleString()}`;
+
+const formatSignedPct = (value: number) => {
+  const rounded = Math.round(value * 10) / 10;
+  const sign = rounded > 0 ? "+" : "";
+  return `${sign}${rounded}%`;
+};
+
+function gradeTone(grade: ListingGradingResult["grade"]) {
+  switch (grade) {
+    case "A":
+      return "success";
+    case "B":
+      return "primary";
+    case "C":
+      return "warning";
+    case "D":
+      return "danger";
+    default:
+      return "neutral";
+  }
+}
+
+function marketPositionCopy(value: number) {
+  if (value <= 30) return "Low (competitive)";
+  if (value <= 60) return "Mid-market";
+  if (value <= 85) return "High";
+  return "Very high";
+}
+
+function bankGapCopy(value: number) {
+  if (value < 0) return "Discount vs bank value";
+  if (value <= 5) return "Aligned to bank value";
+  if (value <= 10) return "Slight premium";
+  if (value <= 20) return "High premium";
+  return "Very high premium";
+}
+
+function ListingGradeBadge({
+  askingPrice,
+  grading,
+}: {
+  askingPrice: number;
+  grading: ListingGradingResult;
+}) {
+  const title = grading.grade
+    ? `${grading.grade} · ${grading.label}`
+    : grading.missingInputs.length > 0
+      ? "Grade · Needs data"
+      : "Grade · Unavailable";
+
+  const missingCopy =
+    grading.missingInputs.length === 0
+      ? null
+      : grading.missingInputs
+          .map((key) =>
+            key === "bankValue"
+              ? "Bank value"
+              : key === "competitorMinPrice" || key === "competitorMaxPrice"
+                ? "Competitor range"
+                : key,
+          )
+          .filter((v, i, arr) => arr.indexOf(v) === i)
+          .join(", ");
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button type="button" className="focus:outline-none">
+          <Badge
+            tone={gradeTone(grading.grade)}
+            className="gap-1.5 border-white/20 bg-white/15 text-white hover:bg-white/20 dark:border-slate-800/50 dark:bg-slate-900/40 dark:text-slate-100"
+          >
+            <Sparkles className="h-3 w-3" />
+            <span className="tabular-nums">
+              {grading.grade ? `${grading.grade} · ${grading.label}` : "Grade"}
+            </span>
+          </Badge>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-80 p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-foreground">{title}</p>
+            <p className="text-xs text-muted-foreground">
+              Asking price: <span className="font-medium">{formatRinggit(askingPrice)}</span>
+            </p>
+          </div>
+          {grading.grade ? (
+            <Badge tone={gradeTone(grading.grade)} className="px-2 py-1">
+              {grading.grade}
+            </Badge>
+          ) : null}
+        </div>
+
+        {missingCopy ? (
+          <div className="mt-3 rounded-lg border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+            Add <span className="font-medium text-foreground">{missingCopy}</span> to score this
+            listing.
+          </div>
+        ) : null}
+
+        <div className="mt-4 space-y-3">
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">Market position</span>
+              <span className="font-medium text-foreground tabular-nums">
+                {grading.marketPositionPct == null
+                  ? "—"
+                  : `${Math.round(grading.marketPositionPct)}%`}
+              </span>
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-amber-500 to-red-500"
+                style={{
+                  width:
+                    grading.marketPositionPct == null
+                      ? "0%"
+                      : `${Math.round(grading.marketPositionPct)}%`,
+                }}
+              />
+            </div>
+            {grading.marketPositionPct != null ? (
+              <p className="text-[11px] text-muted-foreground">
+                {marketPositionCopy(grading.marketPositionPct)}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">Bank value gap</span>
+              <span className="font-medium text-foreground tabular-nums">
+                {grading.bankValueGapPct == null ? "—" : formatSignedPct(grading.bankValueGapPct)}
+              </span>
+            </div>
+            {grading.bankValueGapPct != null ? (
+              <p className="text-[11px] text-muted-foreground">{bankGapCopy(grading.bankValueGapPct)}</p>
+            ) : null}
+          </div>
+
+          {(grading.competitorMinPrice != null || grading.competitorMaxPrice != null) && (
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="rounded-lg border bg-muted/30 px-3 py-2">
+                <p className="text-[11px] text-muted-foreground">Competitor min</p>
+                <p className="font-medium text-foreground tabular-nums">
+                  {grading.competitorMinPrice == null
+                    ? "—"
+                    : formatRinggit(grading.competitorMinPrice)}
+                </p>
+              </div>
+              <div className="rounded-lg border bg-muted/30 px-3 py-2">
+                <p className="text-[11px] text-muted-foreground">Competitor max</p>
+                <p className="font-medium text-foreground tabular-nums">
+                  {grading.competitorMaxPrice == null
+                    ? "—"
+                    : formatRinggit(grading.competitorMaxPrice)}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {grading.notes.length > 0 ? (
+          <div className="mt-3 space-y-1 text-[11px] text-muted-foreground">
+            {grading.notes.slice(0, 2).map((note, idx) => (
+              <p key={idx}>• {note}</p>
+            ))}
+          </div>
+        ) : null}
+
+        <div className="mt-3 border-t pt-3 text-[11px] text-muted-foreground">
+          Higher grades favor <span className="font-medium text-foreground">lower market position</span>{" "}
+          and <span className="font-medium text-foreground">close bank value alignment</span>.
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 const stageOrder = Object.values(ProcessStage);
 const sortProcessEntries = (entries: ProcessLogEntry[]) =>
@@ -506,6 +694,15 @@ const ListingCard = forwardRef<HTMLDivElement, ListingCardProps>(function Listin
   const progress = (completedStages / stageOrder.length) * 100;
   const statusStyle = statusConfig[listing.status];
   const categoryStyle = categoryConfig[listing.category];
+  const grading = useMemo(
+    () =>
+      calculateListingGrading({
+        askingPrice: listing.price,
+        bankValue: listing.bankValue,
+        competitorPriceRangeText: listing.competitorPriceRange,
+      }),
+    [listing.price, listing.bankValue, listing.competitorPriceRange],
+  );
 
   return (
     <motion.div
@@ -570,6 +767,7 @@ const ListingCard = forwardRef<HTMLDivElement, ListingCardProps>(function Listin
             {statusStyle.icon}
             {listing.status}
           </span>
+          <ListingGradeBadge askingPrice={listing.price} grading={grading} />
         </div>
 
         {/* Quick actions overlay */}
@@ -802,6 +1000,16 @@ export default function ListingsClient({
   const districtsForSelectedState = useMemo(
     () => malaysiaDistrictsForState(form.state),
     [form.state],
+  );
+
+  const formGrading = useMemo(
+    () =>
+      calculateListingGrading({
+        askingPrice: form.price,
+        bankValue: form.bankValue,
+        competitorPriceRangeText: form.competitorPriceRange,
+      }),
+    [form.price, form.bankValue, form.competitorPriceRange],
   );
 
   useEffect(() => {
@@ -1376,6 +1584,95 @@ export default function ListingsClient({
                     placeholder="e.g. 520000 - 560000"
                     className="h-11"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Tip: formats like <span className="font-medium">520000 - 560000</span> or{" "}
+                    <span className="font-medium">520k-560k</span> work.
+                  </p>
+                </div>
+                <div className="md:col-span-2 rounded-2xl border bg-muted/20 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">
+                        LeadLah listing grade
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Auto-calculated from asking price, competitor range, and bank value.
+                      </p>
+                    </div>
+                    <Badge tone={gradeTone(formGrading.grade)} className="px-3 py-1">
+                      {formGrading.grade
+                        ? `${formGrading.grade} · ${formGrading.label}`
+                        : "Needs data"}
+                    </Badge>
+                  </div>
+
+                  {formGrading.missingInputs.length > 0 ? (
+                    <div className="mt-3 rounded-xl border bg-background/60 px-3 py-2 text-xs text-muted-foreground">
+                      Add{" "}
+                      <span className="font-medium text-foreground">
+                        {formGrading.missingInputs
+                          .map((key) =>
+                            key === "bankValue"
+                              ? "Bank value"
+                              : key === "competitorMinPrice" || key === "competitorMaxPrice"
+                                ? "Competitor range"
+                                : key,
+                          )
+                          .filter((v, i, arr) => arr.indexOf(v) === i)
+                          .join(", ")}
+                      </span>{" "}
+                      to get a grade.
+                    </div>
+                  ) : null}
+
+                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-xl border bg-background/60 p-3">
+                      <p className="text-[11px] text-muted-foreground">Market position</p>
+                      <p className="mt-1 text-sm font-semibold text-foreground tabular-nums">
+                        {formGrading.marketPositionPct == null
+                          ? "—"
+                          : `${Math.round(formGrading.marketPositionPct)}%`}
+                      </p>
+                      {formGrading.marketPositionPct != null ? (
+                        <p className="mt-1 text-[11px] text-muted-foreground">
+                          {marketPositionCopy(formGrading.marketPositionPct)}
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="rounded-xl border bg-background/60 p-3">
+                      <p className="text-[11px] text-muted-foreground">Bank value gap</p>
+                      <p className="mt-1 text-sm font-semibold text-foreground tabular-nums">
+                        {formGrading.bankValueGapPct == null
+                          ? "—"
+                          : formatSignedPct(formGrading.bankValueGapPct)}
+                      </p>
+                      {formGrading.bankValueGapPct != null ? (
+                        <p className="mt-1 text-[11px] text-muted-foreground">
+                          {bankGapCopy(formGrading.bankValueGapPct)}
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="rounded-xl border bg-background/60 p-3">
+                      <p className="text-[11px] text-muted-foreground">Competitor range</p>
+                      <p className="mt-1 text-sm font-semibold text-foreground tabular-nums">
+                        {formGrading.competitorMinPrice == null ||
+                        formGrading.competitorMaxPrice == null
+                          ? "—"
+                          : `${formatRinggit(formGrading.competitorMinPrice)} – ${formatRinggit(formGrading.competitorMaxPrice)}`}
+                      </p>
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        Parsed from your input
+                      </p>
+                    </div>
+                  </div>
+
+                  {formGrading.notes.length > 0 ? (
+                    <div className="mt-3 space-y-1 text-[11px] text-muted-foreground">
+                      {formGrading.notes.slice(0, 2).map((note, idx) => (
+                        <p key={idx}>• {note}</p>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
                 <div className="space-y-2">
                   <FieldLabel required>Size (sqft)</FieldLabel>
