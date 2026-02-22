@@ -7,7 +7,7 @@ import {
   uuid,
   varchar
 } from "drizzle-orm/pg-core";
-import { ListingCategory, ListingStatus } from "@leadlah/core";
+import { ListingCategory, ListingStatus, ListingTenure } from "@leadlah/core";
 
 export const listings = pgTable("listings", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -15,6 +15,7 @@ export const listings = pgTable("listings", {
   lotUnitNo: varchar("lotUnitNo", { length: 120 }),
   type: varchar("type", { length: 100 }).notNull(),
   category: varchar("category", { length: 32 }).notNull().default(ListingCategory.FOR_SALE),
+  tenure: varchar("tenure", { length: 32 }).notNull().default(ListingTenure.FREEHOLD),
   price: numeric("price", { precision: 15, scale: 2 }).notNull(),
   bankValue: numeric("bankValue", { precision: 15, scale: 2 }),
   competitorPriceRange: varchar("competitorPriceRange", { length: 255 }),

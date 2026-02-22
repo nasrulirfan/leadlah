@@ -17,12 +17,20 @@ export enum ListingCategory {
   OFF_MARKET = "Off-Market"
 }
 
+export enum ListingTenure {
+  FREEHOLD = "Freehold",
+  LEASEHOLD = "Leasehold",
+}
+
 export enum ProcessStage {
   OWNER_APPOINTMENT = "Owner Appointment",
   MARKETING_ACTIVATION = "Marketing Activation",
   VIEWING_RECORD = "Viewing Record",
   OFFER_STAGE = "Offer Stage",
   LEGAL_STAGE = "Legal Stage",
+  LOAN_APPLICATION = "Loan Application",
+  CONSENT_APPLICATION = "Consent Application",
+  BALANCE_PURCHASE_PRICE_DISBURSEMENT = "Balance Purchase Price (BPP) Disbursement",
   LOAN_CONSENT = "Loan/Consent Processing",
   KEY_HANDOVER = "Key Handover"
 }
@@ -79,6 +87,7 @@ export type Listing = {
   lotUnitNo?: string;
   type: string;
   category: ListingCategory;
+  tenure: ListingTenure;
   price: number;
   bankValue?: number;
   competitorPriceRange?: string;

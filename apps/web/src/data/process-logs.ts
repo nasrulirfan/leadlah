@@ -1,4 +1,4 @@
-import { ProcessStage, type ProcessLogEntry, type ViewingCustomer } from "@leadlah/core";
+import type { ProcessLogEntry, ViewingCustomer } from "@leadlah/core";
 import { requestApi } from "@/lib/api";
 
 const toViewingCustomer = (viewing: ViewingCustomer): ViewingCustomer => ({
@@ -12,13 +12,6 @@ const toEntry = (entry: ProcessLogEntry): ProcessLogEntry => ({
   viewings: entry.viewings?.map(toViewingCustomer),
 });
 
-const stageOrder = Object.values(ProcessStage);
-const sortByStage = (entries: ProcessLogEntry[]) => {
-  return [...entries].sort(
-    (a, b) => stageOrder.indexOf(a.stage) - stageOrder.indexOf(b.stage),
-  );
-};
-
 export async function fetchProcessLogs(
   listingIds: string[],
 ): Promise<Record<string, ProcessLogEntry[]>> {
@@ -29,7 +22,7 @@ export async function fetchProcessLogs(
   const pairs = await Promise.all(
     listingIds.map(async (listingId) => {
       const entries = await requestApi<ProcessLogEntry[]>(`/process/${listingId}`);
-      return [listingId, sortByStage(entries.map(toEntry))] as const;
+      return [listingId, entries.map(toEntry)] as const;
     }),
   );
 
@@ -46,5 +39,5 @@ export async function fetchProcessLogForListing(
     return [];
   }
   const entries = await requestApi<ProcessLogEntry[]>(`/process/${listingId}`);
-  return sortByStage(entries.map(toEntry));
+  return entries.map(toEntry);
 }

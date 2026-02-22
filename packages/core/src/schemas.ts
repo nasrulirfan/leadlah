@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { ListingCategory, ListingStatus, ProcessStage, SubscriptionStatus } from "./types";
+import {
+  ListingCategory,
+  ListingStatus,
+  ListingTenure,
+  ProcessStage,
+  SubscriptionStatus,
+} from "./types";
 
 const urlLikeSchema = z
   .string()
@@ -105,6 +111,7 @@ export const listingSchema = z.object({
   lotUnitNo: z.string().min(1).max(120).optional(),
   type: z.string().min(2),
   category: z.nativeEnum(ListingCategory).default(ListingCategory.FOR_SALE),
+  tenure: z.nativeEnum(ListingTenure).default(ListingTenure.FREEHOLD),
   price: z.number().nonnegative(),
   bankValue: z.number().nonnegative().optional(),
   competitorPriceRange: z.string().min(1).max(255).optional(),

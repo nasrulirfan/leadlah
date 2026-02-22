@@ -1,4 +1,13 @@
-import { Listing, ListingCategory, ListingStatus, ProcessLogEntry, ProcessStage, Reminder, generateOwnerViewToken } from "@leadlah/core";
+import {
+  generateOwnerViewToken,
+  Listing,
+  ListingCategory,
+  ListingStatus,
+  ListingTenure,
+  ProcessLogEntry,
+  ProcessStage,
+  Reminder,
+} from "@leadlah/core";
 import { addDays } from "date-fns";
 
 export const listings: Listing[] = [
@@ -7,6 +16,7 @@ export const listings: Listing[] = [
     propertyName: "Seri Maya Condo",
     type: "Condominium",
     category: ListingCategory.FOR_SALE,
+    tenure: ListingTenure.FREEHOLD,
     price: 950000,
     bankValue: 960000,
     competitorPriceRange: "900k - 1.0m",
@@ -32,6 +42,7 @@ export const listings: Listing[] = [
     propertyName: "Damansara Heights Bungalow",
     type: "Landed",
     category: ListingCategory.FOR_RENT,
+    tenure: ListingTenure.FREEHOLD,
     price: 3200000,
     bankValue: 2900000,
     competitorPriceRange: "2.7m - 3.0m",

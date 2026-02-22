@@ -85,6 +85,20 @@
       "when": 1766530800000,
       "tag": "0011_add_listing_market_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1766534400000,
+      "tag": "0012_add_listing_tenure",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1766538000000,
+      "tag": "0013_listing_tenure_freehold_default",
+      "breakpoints": true
     }
   ]
 }

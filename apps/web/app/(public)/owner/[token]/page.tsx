@@ -1,5 +1,11 @@
 import { notFound } from "next/navigation";
-import { ProcessStage, verifyOwnerViewToken } from "@leadlah/core";
+import {
+  getProcessStageAliasStages,
+  getProcessStageDisplayLabel,
+  getProcessTimelineStages,
+  ProcessStage,
+  verifyOwnerViewToken,
+} from "@leadlah/core";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { decodeOwnerViewToken } from "@/lib/owner-link";
@@ -32,7 +38,36 @@ export default async function OwnerViewPage({ params }: { params: Params }) {
   }
 
   const timeline = await fetchProcessLogForListing(listing.id);
-  const steps = Object.values(ProcessStage);
+  const steps = getProcessTimelineStages({
+    category: listing.category,
+    tenure: listing.tenure,
+  }).map((item) => item.stage);
+
+  const findEntryForStage = (stage: ProcessStage) => {
+    const direct = timeline.find((entry) => entry.stage === stage);
+    if (direct) {
+      return direct;
+    }
+    const aliases = getProcessStageAliasStages(stage);
+    for (const aliasStage of aliases) {
+      const aliasEntry = timeline.find((entry) => entry.stage === aliasStage);
+      if (aliasEntry) {
+        return aliasEntry;
+      }
+    }
+    return undefined;
+  };
+
+  const offerStageIndex = steps.indexOf(ProcessStage.OFFER_STAGE);
+  const viewingEntry = findEntryForStage(ProcessStage.VIEWING_RECORD);
+  const buyerDisplay = (() => {
+    const selectedId = viewingEntry?.successfulBuyerId;
+    if (!selectedId) {
+      return null;
+    }
+    const selected = viewingEntry?.viewings?.find((viewing) => viewing.id === selectedId);
+    return selected?.name ?? null;
+  })();
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -76,11 +111,12 @@ export default async function OwnerViewPage({ params }: { params: Params }) {
           {/* Timeline Steps */}
           <div className="mt-8 space-y-1">
             {steps.map((stage, index) => {
-              const log = timeline.find((entry) => entry.stage === stage);
+              const log = findEntryForStage(stage);
               const statusLabel = log?.completedAt ? `Completed ${formatDate(log.completedAt)}` : "Pending";
               const isLast = index === steps.length - 1;
               const isCompleted = Boolean(log?.completedAt);
               const animationDelay = `${0.3 + index * 0.1}s`;
+              const showBuyer = buyerDisplay && offerStageIndex >= 0 && index >= offerStageIndex;
 
               return (
                 <div
@@ -114,21 +150,27 @@ export default async function OwnerViewPage({ params }: { params: Params }) {
                   </div>
 
                   {/* Timeline Content Card */}
-                  <div className={`timeline-step-card mb-6 rounded-xl border px-5 py-4 transition-all duration-300 ${isCompleted
+                  <div
+                    className={`timeline-step-card mb-6 rounded-xl border px-5 py-4 transition-all duration-300 ${isCompleted
                       ? "border-primary/20 bg-gradient-to-br from-primary/5 to-transparent dark:from-primary/10"
                       : "border-slate-100 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-900/40"
-                    }`}>
+                      }`}
+                  >
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <p className={`text-sm font-semibold ${isCompleted ? "text-foreground" : "text-muted-foreground"}`}>
-                          {stage}
+                        <p
+                          className={`text-sm font-semibold ${isCompleted ? "text-foreground" : "text-muted-foreground"}`}
+                        >
+                          {getProcessStageDisplayLabel(stage)}
                         </p>
-                        <p className="mt-0.5 text-xs text-muted-foreground">{log?.notes ?? "In progress"}</p>
-                        {log?.actor && (
-                          <p className="mt-1 text-[11px] text-muted-foreground/70">
-                            Handled by <span className="font-medium">{log.actor}</span>
+                        {showBuyer ? (
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            Buyer: <span className="font-medium text-foreground">{buyerDisplay}</span>
                           </p>
-                        )}
+                        ) : null}
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          {log?.notes ?? "In progress"}
+                        </p>
                       </div>
                       <Badge
                         tone={log?.completedAt ? "success" : "neutral"}
@@ -165,4 +207,3 @@ export default async function OwnerViewPage({ params }: { params: Params }) {
     </div>
   );
 }
-

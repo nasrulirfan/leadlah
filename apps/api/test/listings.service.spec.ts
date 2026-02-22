@@ -1,5 +1,5 @@
 import { NotFoundException } from "@nestjs/common";
-import { ListingCategory, ListingStatus } from "@leadlah/core";
+import { ListingCategory, ListingStatus, ListingTenure } from "@leadlah/core";
 import { Repository } from "typeorm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ListingsService } from "../src/listings/listings.service";
@@ -59,9 +59,8 @@ describe("ListingsService", () => {
 
   it("creates a listing with defaults", async () => {
     const payload = createPayload();
-    const created = { id: "1", ...payload };
-    repository.create!.mockReturnValue(created);
-    repository.save!.mockResolvedValue(created);
+    repository.create!.mockImplementation((data) => ({ id: "1", ...(data as any) }));
+    repository.save!.mockImplementation(async (entity) => entity as any);
 
     const listing = await service.create(payload);
 
@@ -74,8 +73,34 @@ describe("ListingsService", () => {
       status: ListingStatus.ACTIVE,
       videos: []
     });
-    expect(repository.save).toHaveBeenCalledWith(created);
-    expect(listing).toEqual(created);
+    expect(repository.save).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "1", category: ListingCategory.FOR_SALE })
+    );
+    expect(listing).toEqual({
+      id: "1",
+      propertyName: payload.propertyName,
+      lotUnitNo: undefined,
+      type: payload.type,
+      category: ListingCategory.FOR_SALE,
+      tenure: ListingTenure.FREEHOLD,
+      price: payload.price,
+      bankValue: undefined,
+      competitorPriceRange: undefined,
+      size: payload.size,
+      bedrooms: payload.bedrooms,
+      bathrooms: payload.bathrooms,
+      location: payload.location,
+      buildingProject: undefined,
+      status: payload.status,
+      expiresAt: undefined,
+      lastEnquiryAt: undefined,
+      photos: payload.photos,
+      videos: payload.videos,
+      documents: payload.documents,
+      externalLinks: payload.externalLinks,
+      createdAt: undefined,
+      updatedAt: undefined,
+    });
   });
 
   it("retrieves all listings", async () => {

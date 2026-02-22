@@ -4,8 +4,12 @@
 import { forwardRef, useEffect, useMemo, useState, useTransition } from "react";
 import {
   calculateListingGrading,
+  getProcessStageAliasStages,
+  getProcessStageDisplayLabel,
+  getProcessTimelineStages,
   ListingCategory,
   ListingStatus,
+  ListingTenure,
   ProcessStage,
   type ListingGradingResult,
 } from "@leadlah/core";
@@ -99,6 +103,7 @@ const emptyListing: ListingFormValues = {
   lotUnitNo: undefined,
   type: "",
   category: ListingCategory.FOR_SALE,
+  tenure: ListingTenure.FREEHOLD,
   price: 0,
   bankValue: undefined,
   competitorPriceRange: undefined,
@@ -347,11 +352,32 @@ function ListingGradeBadge({
   );
 }
 
-const stageOrder = Object.values(ProcessStage);
-const sortProcessEntries = (entries: ProcessLogEntry[]) =>
-  [...entries].sort(
-    (a, b) => stageOrder.indexOf(a.stage) - stageOrder.indexOf(b.stage),
-  );
+const timelineForListing = (listing: ListingInput) =>
+  getProcessTimelineStages({ category: listing.category, tenure: listing.tenure });
+
+const stageOrderForListing = (listing: ListingInput) =>
+  timelineForListing(listing).map((item) => item.stage);
+
+const requiredStageCountForListing = (listing: ListingInput) =>
+  timelineForListing(listing).filter((item) => !item.optional).length;
+
+const isStageOptionalForListing = (listing: ListingInput, stage: ProcessStage) =>
+  Boolean(timelineForListing(listing).find((item) => item.stage === stage)?.optional);
+
+const findEntryForStage = (entries: ProcessLogEntry[], stage: ProcessStage) => {
+  const direct = entries.find((entry) => entry.stage === stage);
+  if (direct) {
+    return direct;
+  }
+  const aliases = getProcessStageAliasStages(stage);
+  for (const aliasStage of aliases) {
+    const aliasEntry = entries.find((entry) => entry.stage === aliasStage);
+    if (aliasEntry) {
+      return aliasEntry;
+    }
+  }
+  return undefined;
+};
 
 const fallbackPropertyImages = [
   "https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=600&q=80",
@@ -456,6 +482,7 @@ const listingToFormValues = (listing: ListingInput): ListingFormValues => ({
   lotUnitNo: listing.lotUnitNo,
   type: listing.type,
   category: listing.category,
+  tenure: listing.tenure,
   price: listing.price,
   bankValue: listing.bankValue,
   competitorPriceRange: listing.competitorPriceRange,
@@ -709,8 +736,17 @@ const ListingCard = forwardRef<HTMLDivElement, ListingCardProps>(function Listin
   } = props;
   const [showActions, setShowActions] = useState(false);
   const cover = coverSourcesFor(listing.id, listing.photos);
-  const completedStages = logEntries.filter((e) => e.completedAt).length;
-  const progress = (completedStages / stageOrder.length) * 100;
+  const stageOrder = stageOrderForListing(listing);
+  const requiredStageTotal = requiredStageCountForListing(listing);
+  const completedRequiredStages = stageOrder.filter((stage) => {
+    if (isStageOptionalForListing(listing, stage)) {
+      return false;
+    }
+    return Boolean(findEntryForStage(logEntries, stage)?.completedAt);
+  }).length;
+  const progress = requiredStageTotal
+    ? (completedRequiredStages / requiredStageTotal) * 100
+    : 0;
   const statusStyle = statusConfig[listing.status];
   const categoryStyle = categoryConfig[listing.category];
   const grading = useMemo(
@@ -871,7 +907,7 @@ const ListingCard = forwardRef<HTMLDivElement, ListingCardProps>(function Listin
           <div className="flex items-center justify-between text-xs mb-1.5">
             <span className="text-muted-foreground">Process Progress</span>
             <span className="font-medium text-foreground">
-              {completedStages}/{stageOrder.length}
+              {completedRequiredStages}/{requiredStageTotal}
             </span>
           </div>
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
@@ -1396,7 +1432,7 @@ export default function ListingsClient({
       }
       return {
         ...prev,
-        [listingId]: sortProcessEntries(current),
+        [listingId]: current,
       };
     });
   };
@@ -1551,6 +1587,27 @@ export default function ListingsClient({
                           {category}
                         </SelectItem>
                       ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <FieldLabel>Tenure</FieldLabel>
+                  <Select
+                    value={form.tenure ?? ListingTenure.FREEHOLD}
+                    onValueChange={(value) =>
+                      setForm({ ...form, tenure: value as ListingTenure })
+                    }
+                  >
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="Tenure" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={ListingTenure.FREEHOLD}>
+                        {ListingTenure.FREEHOLD}
+                      </SelectItem>
+                      <SelectItem value={ListingTenure.LEASEHOLD}>
+                        {ListingTenure.LEASEHOLD}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -2305,10 +2362,9 @@ function ProcessLogDialog({
 }: ProcessLogDialogProps) {
   const [open, setOpen] = useState(false);
   const [selectedStage, setSelectedStage] = useState<ProcessStage>(
-    stageOrder[0],
+    ProcessStage.OWNER_APPOINTMENT,
   );
   const [notes, setNotes] = useState("");
-  const [actor, setActor] = useState("");
   const [status, setStatus] = useState<"done" | "pending">("pending");
   const [message, setMessage] = useState<{
     tone: "success" | "error";
@@ -2349,11 +2405,55 @@ function ProcessLogDialog({
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
-  const completedCount = entries.filter((entry) => entry.completedAt).length;
-  const pendingStage = useMemo(
-    () => entries.find((entry) => !entry.completedAt)?.stage ?? stageOrder[0],
+  const timelineStages = useMemo(() => timelineForListing(listing), [listing]);
+  const stageOrder = useMemo(
+    () => timelineStages.map((item) => item.stage),
+    [timelineStages],
+  );
+  const offerStageIndex = useMemo(
+    () => stageOrder.indexOf(ProcessStage.OFFER_STAGE),
+    [stageOrder],
+  );
+  const viewingEntry = useMemo(
+    () => findEntryForStage(entries, ProcessStage.VIEWING_RECORD),
     [entries],
   );
+  const selectedBuyerName = useMemo(() => {
+    const selectedId = viewingEntry?.successfulBuyerId;
+    if (!selectedId) {
+      return null;
+    }
+    const selected = viewingEntry?.viewings?.find((viewing) => viewing.id === selectedId);
+    return selected?.name ?? null;
+  }, [viewingEntry]);
+  const requiredStageTotal = useMemo(
+    () => timelineStages.filter((item) => !item.optional).length,
+    [timelineStages],
+  );
+  const completedCount = useMemo(
+    () =>
+      timelineStages.filter((item) => {
+        if (item.optional) {
+          return false;
+        }
+        return Boolean(findEntryForStage(entries, item.stage)?.completedAt);
+      }).length,
+    [entries, timelineStages],
+  );
+  const pendingStage = useMemo(() => {
+    const requiredPending = timelineStages.find(
+      (item) =>
+        !item.optional &&
+        !Boolean(findEntryForStage(entries, item.stage)?.completedAt),
+    );
+    if (requiredPending) {
+      return requiredPending.stage;
+    }
+    const anyPending = timelineStages.find(
+      (item) => !Boolean(findEntryForStage(entries, item.stage)?.completedAt),
+    );
+    return anyPending?.stage ?? stageOrder[0] ?? ProcessStage.OWNER_APPOINTMENT;
+  }, [entries, stageOrder, timelineStages]);
   const isViewingStage = selectedStage === ProcessStage.VIEWING_RECORD;
 
   const handleViewingInputChange = (
@@ -2508,9 +2608,8 @@ function ProcessLogDialog({
     if (!open) {
       return;
     }
-    const current = entries.find((entry) => entry.stage === selectedStage);
+    const current = findEntryForStage(entries, selectedStage);
     setNotes(current?.notes ?? "");
-    setActor(current?.actor ?? "");
     setStatus(current?.completedAt ? "done" : "pending");
     if (selectedStage === ProcessStage.VIEWING_RECORD) {
       setViewings(current?.viewings ?? []);
@@ -2548,7 +2647,6 @@ function ProcessLogDialog({
         userId,
         stage: selectedStage,
         notes: notes.trim() || undefined,
-        actor: actor.trim() || undefined,
         completed: status === "done",
         viewings: isViewingStage ? viewings : undefined,
         successfulBuyerId: isViewingStage
@@ -2557,7 +2655,10 @@ function ProcessLogDialog({
       };
       const updated = await updateProcessStage(listing.id, payload);
       onUpdated(updated);
-      setMessage({ tone: "success", text: `${selectedStage} updated.` });
+      setMessage({
+        tone: "success",
+        text: `${getProcessStageDisplayLabel(selectedStage)} updated.`,
+      });
       if (!isViewingStage) {
         setViewingError(null);
       }
@@ -2599,7 +2700,7 @@ function ProcessLogDialog({
           <Eye className="h-3.5 w-3.5" />
           Process
           <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-            {completedCount}/{stageOrder.length}
+            {completedCount}/{requiredStageTotal}
           </span>
         </Button>
       </DialogTrigger>
@@ -2664,9 +2765,14 @@ function ProcessLogDialog({
             {/* Timeline stages */}
             <div className="space-y-2">
               {stageOrder.map((stage, index) => {
-                const entry = entries.find((item) => item.stage === stage);
+                const entry = findEntryForStage(entries, stage);
                 const isComplete = Boolean(entry?.completedAt);
                 const isActive = selectedStage === stage;
+                const isOptional = Boolean(
+                  timelineStages.find((item) => item.stage === stage)?.optional,
+                );
+                const showBuyer =
+                  selectedBuyerName && offerStageIndex >= 0 && index >= offerStageIndex;
                 return (
                   <button
                     key={stage}
@@ -2701,13 +2807,25 @@ function ProcessLogDialog({
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-medium text-foreground truncate">
-                          {stage}
-                        </span>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-sm font-medium text-foreground truncate">
+                            {getProcessStageDisplayLabel(stage)}
+                          </span>
+                          {isOptional ? (
+                            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                              Optional
+                            </span>
+                          ) : null}
+                        </div>
                         {isComplete && (
                           <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
                         )}
                       </div>
+                      {showBuyer ? (
+                        <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">
+                          Buyer: {selectedBuyerName}
+                        </p>
+                      ) : null}
                       <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">
                         {entry?.notes || "No notes"}
                       </p>
@@ -2722,11 +2840,19 @@ function ProcessLogDialog({
           <div className="p-6 overflow-y-auto max-h-[85vh]">
             <div className="mb-6">
               <h3 className="text-xl font-semibold text-foreground">
-                {selectedStage}
+                {getProcessStageDisplayLabel(selectedStage)}
               </h3>
               <p className="text-sm text-muted-foreground mt-1">
                 Update the status and add notes for this stage
               </p>
+              {selectedBuyerName &&
+              offerStageIndex >= 0 &&
+              stageOrder.indexOf(selectedStage) >= offerStageIndex ? (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Buyer:{" "}
+                  <span className="font-medium text-foreground">{selectedBuyerName}</span>
+                </p>
+              ) : null}
             </div>
 
             <div className="space-y-5">
@@ -2759,19 +2885,6 @@ function ProcessLogDialog({
                     Completed
                   </button>
                 </div>
-              </div>
-
-              {/* Actor field */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">
-                  Handled by
-                </label>
-                <Input
-                  value={actor}
-                  onChange={(e) => setActor(e.target.value)}
-                  placeholder="Agent name or team member"
-                  className="h-11"
-                />
               </div>
 
               {/* Notes field */}

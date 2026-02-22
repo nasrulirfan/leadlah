@@ -1,6 +1,6 @@
 import { IsDate, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, IsUrl, Min, ValidateNested, IsIn, IsISO8601 } from "class-validator";
 import { Type } from "class-transformer";
-import { ListingCategory, ListingStatus } from "@leadlah/core";
+import { ListingCategory, ListingStatus, ListingTenure } from "@leadlah/core";
 
 class MediaAssetDto {
   @IsUrl()
@@ -39,6 +39,10 @@ export class CreateListingDto {
   @IsOptional()
   @IsEnum(ListingCategory)
   category?: ListingCategory;
+
+  @IsOptional()
+  @IsEnum(ListingTenure)
+  tenure?: ListingTenure;
 
   @IsNumber()
   @Min(0)

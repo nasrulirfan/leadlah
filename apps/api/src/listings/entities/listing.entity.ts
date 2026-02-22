@@ -1,5 +1,12 @@
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
-import { ExternalLink, ListingCategory, ListingPhoto, ListingStatus, MediaAsset } from "@leadlah/core";
+import {
+  ExternalLink,
+  ListingCategory,
+  ListingPhoto,
+  ListingStatus,
+  ListingTenure,
+  MediaAsset,
+} from "@leadlah/core";
 import { numericTransformer } from "../../database/numeric.transformer";
 
 const timestampColumnType = process.env.NODE_ENV === "test" ? "datetime" : "timestamptz";
@@ -20,6 +27,9 @@ export class ListingEntity {
 
   @Column({ type: "varchar", length: 32, default: ListingCategory.FOR_SALE })
   category!: ListingCategory;
+
+  @Column({ type: "varchar", length: 32, default: ListingTenure.FREEHOLD })
+  tenure!: ListingTenure;
 
   @Column({
     type: "numeric",

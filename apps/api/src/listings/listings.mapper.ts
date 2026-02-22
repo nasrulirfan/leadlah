@@ -1,4 +1,5 @@
 import type { ExternalLink, Listing } from "@leadlah/core";
+import { ListingTenure } from "@leadlah/core";
 import type { ListingEntity } from "./entities/listing.entity";
 
 export function normalizeExternalLinks(links: ExternalLink[] | null | undefined) {
@@ -9,12 +10,17 @@ export function normalizeExternalLinks(links: ExternalLink[] | null | undefined)
 }
 
 export function listingEntityToListing(entity: ListingEntity): Listing {
+  const tenure =
+    entity.tenure === ListingTenure.FREEHOLD || entity.tenure === ListingTenure.LEASEHOLD
+      ? entity.tenure
+      : ListingTenure.FREEHOLD;
   return {
     id: entity.id,
     propertyName: entity.propertyName,
     lotUnitNo: entity.lotUnitNo ?? undefined,
     type: entity.type,
     category: entity.category,
+    tenure,
     price: Number(entity.price),
     bankValue: entity.bankValue == null ? undefined : Number(entity.bankValue),
     competitorPriceRange: entity.competitorPriceRange ?? undefined,
@@ -34,4 +40,3 @@ export function listingEntityToListing(entity: ListingEntity): Listing {
     updatedAt: entity.updatedAt,
   };
 }
-
