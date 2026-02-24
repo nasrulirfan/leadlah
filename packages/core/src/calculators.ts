@@ -1,6 +1,10 @@
 import { addMonths } from "date-fns";
 import { CalculatorReceipt } from "./types";
 
+export type BuyerParty = "purchaser" | "vendor";
+
+export type PropertyCategory = "residential" | "nonResidential";
+
 export type LoanEligibilityInput = {
   income: number;
   commitments: number;
@@ -39,7 +43,10 @@ export type LegalFeeInput = {
   propertyPrice: number;
   isForeigner: boolean;
   requiresConsent: boolean;
-  contractDate: Date;
+  contractDate?: Date;
+  partyRole?: BuyerParty;
+  propertyCategory?: PropertyCategory;
+  isFirstHomeBuyer?: boolean;
 };
 
 export type LegalFeeResult = {
@@ -50,41 +57,147 @@ export type LegalFeeResult = {
   foreignerRateApplied: number;
 };
 
+export type StampDutyTier = {
+  upTo: number;
+  rate: number;
+};
+
+export type SpaStampDutyConfig = {
+  malaysianTiers: StampDutyTier[];
+  foreigner: {
+    cutoffDate: Date;
+    beforeCutoffRate: number;
+    onOrAfterCutoffRate: number;
+  };
+  firstHomeBuyer: {
+    residentialOnly: boolean;
+    maxPropertyPrice: number;
+    stampDutyRate: number;
+  };
+};
+
+export const DEFAULT_SPA_STAMP_DUTY_CONFIG: SpaStampDutyConfig = {
+  malaysianTiers: [
+    { upTo: 100_000, rate: 0.01 },
+    { upTo: 500_000, rate: 0.02 },
+    { upTo: 1_000_000, rate: 0.03 },
+    { upTo: Number.POSITIVE_INFINITY, rate: 0.04 },
+  ],
+  foreigner: {
+    cutoffDate: new Date("2026-01-01T00:00:00.000Z"),
+    beforeCutoffRate: 0.04,
+    onOrAfterCutoffRate: 0.08,
+  },
+  firstHomeBuyer: {
+    residentialOnly: true,
+    maxPropertyPrice: 500_000,
+    stampDutyRate: 0,
+  },
+};
+
+function resolveSpaStampDutyConfig(
+  override?: Partial<SpaStampDutyConfig>,
+): SpaStampDutyConfig {
+  return {
+    ...DEFAULT_SPA_STAMP_DUTY_CONFIG,
+    ...override,
+    foreigner: {
+      ...DEFAULT_SPA_STAMP_DUTY_CONFIG.foreigner,
+      ...override?.foreigner,
+    },
+    firstHomeBuyer: {
+      ...DEFAULT_SPA_STAMP_DUTY_CONFIG.firstHomeBuyer,
+      ...override?.firstHomeBuyer,
+    },
+    malaysianTiers: override?.malaysianTiers ?? DEFAULT_SPA_STAMP_DUTY_CONFIG.malaysianTiers,
+  };
+}
+
 function calculateTieredLegalFee(amount: number): number {
   const firstTier = Math.min(amount, 500_000) * 0.0125;
   const remaining = Math.max(amount - 500_000, 0) * 0.01;
   return Math.min(firstTier + remaining, 70_000);
 }
 
-function calculateStandardStampDuty(propertyPrice: number): number {
-  const first100k = Math.min(propertyPrice, 100_000) * 0.01;
-  const next400k = Math.min(Math.max(propertyPrice - 100_000, 0), 400_000) * 0.02;
-  const next500k = Math.min(Math.max(propertyPrice - 500_000, 0), 500_000) * 0.03;
-  const remaining = Math.max(propertyPrice - 1_000_000, 0) * 0.04;
-  return first100k + next400k + next500k + remaining;
+function calculateTieredStampDuty(
+  amount: number,
+  tiers: StampDutyTier[],
+): number {
+  if (!Number.isFinite(amount) || amount <= 0) return 0;
+  if (tiers.length === 0) return 0;
+
+  let previousUpper = 0;
+  let total = 0;
+
+  for (const tier of tiers) {
+    const tierUpper = tier.upTo;
+    const tierSpan = tierUpper - previousUpper;
+    if (tierSpan <= 0) continue;
+
+    const applicable = Math.min(Math.max(amount - previousUpper, 0), tierSpan);
+    if (applicable <= 0) break;
+
+    total += applicable * tier.rate;
+    previousUpper = tierUpper;
+
+    if (amount <= tierUpper) break;
+  }
+
+  return total;
 }
 
-export function calculateSpaMot(input: LegalFeeInput): LegalFeeResult {
+export function calculateSpaMot(
+  input: LegalFeeInput,
+  options?: { stampDutyConfig?: Partial<SpaStampDutyConfig> },
+): LegalFeeResult {
   const legalFee = calculateTieredLegalFee(input.propertyPrice);
   const disbursement = input.requiresConsent ? 4000 : 2500;
-  const cutoff = new Date("2026-01-01T00:00:00.000Z");
-  const foreignerRate =
-    input.contractDate >= cutoff ? 0.08 : input.isForeigner ? 0.04 : 0;
-  const stampDuty = input.isForeigner
-    ? input.propertyPrice * foreignerRate
-    : calculateStandardStampDuty(input.propertyPrice);
+  const stampDutyConfig = resolveSpaStampDutyConfig(options?.stampDutyConfig);
+  const partyRole: BuyerParty = input.partyRole ?? "purchaser";
+  const propertyCategory: PropertyCategory = input.propertyCategory ?? "residential";
+  const contractDate = input.contractDate ?? new Date();
+
+  let foreignerRateApplied = 0;
+  let stampDuty = 0;
+
+  if (partyRole === "purchaser") {
+    const firstHomeBuyerEligible =
+      input.isFirstHomeBuyer === true &&
+      !input.isForeigner &&
+      input.propertyPrice < stampDutyConfig.firstHomeBuyer.maxPropertyPrice &&
+      (!stampDutyConfig.firstHomeBuyer.residentialOnly ||
+        propertyCategory === "residential");
+
+    if (firstHomeBuyerEligible) {
+      stampDuty = input.propertyPrice * stampDutyConfig.firstHomeBuyer.stampDutyRate;
+    } else if (input.isForeigner) {
+      foreignerRateApplied =
+        contractDate >= stampDutyConfig.foreigner.cutoffDate
+          ? stampDutyConfig.foreigner.onOrAfterCutoffRate
+          : stampDutyConfig.foreigner.beforeCutoffRate;
+      stampDuty = input.propertyPrice * foreignerRateApplied;
+    } else {
+      stampDuty = calculateTieredStampDuty(
+        input.propertyPrice,
+        stampDutyConfig.malaysianTiers,
+      );
+    }
+  }
 
   return {
     legalFee,
     disbursement,
     stampDuty,
     total: legalFee + disbursement + stampDuty,
-    foreignerRateApplied: foreignerRate || 0
+    foreignerRateApplied
   };
 }
 
 export type LoanAgreementInput = {
   loanAmount: number;
+  propertyPrice?: number;
+  propertyCategory?: PropertyCategory;
+  isFirstHomeBuyer?: boolean;
 };
 
 export type LoanAgreementResult = {
@@ -93,11 +206,57 @@ export type LoanAgreementResult = {
   total: number;
 };
 
+export type LoanAgreementStampDutyConfig = {
+  baseRate: number;
+  firstHomeBuyer: {
+    residentialOnly: boolean;
+    maxPropertyPrice: number;
+    stampDutyRate: number;
+  };
+};
+
+export const DEFAULT_LOAN_AGREEMENT_STAMP_DUTY_CONFIG: LoanAgreementStampDutyConfig = {
+  baseRate: 0.005,
+  firstHomeBuyer: {
+    residentialOnly: true,
+    maxPropertyPrice: 500_000,
+    stampDutyRate: 0,
+  },
+};
+
+function resolveLoanAgreementStampDutyConfig(
+  override?: Partial<LoanAgreementStampDutyConfig>,
+): LoanAgreementStampDutyConfig {
+  return {
+    ...DEFAULT_LOAN_AGREEMENT_STAMP_DUTY_CONFIG,
+    ...override,
+    firstHomeBuyer: {
+      ...DEFAULT_LOAN_AGREEMENT_STAMP_DUTY_CONFIG.firstHomeBuyer,
+      ...override?.firstHomeBuyer,
+    },
+  };
+}
+
 export function calculateLoanAgreement(
-  input: LoanAgreementInput
+  input: LoanAgreementInput,
+  options?: { stampDutyConfig?: Partial<LoanAgreementStampDutyConfig> },
 ): LoanAgreementResult {
   const legalFee = calculateTieredLegalFee(input.loanAmount);
-  const stampDuty = input.loanAmount * 0.005;
+  const stampDutyConfig = resolveLoanAgreementStampDutyConfig(
+    options?.stampDutyConfig,
+  );
+  const propertyCategory: PropertyCategory = input.propertyCategory ?? "residential";
+
+  const firstHomeBuyerEligible =
+    input.isFirstHomeBuyer === true &&
+    typeof input.propertyPrice === "number" &&
+    input.propertyPrice < stampDutyConfig.firstHomeBuyer.maxPropertyPrice &&
+    (!stampDutyConfig.firstHomeBuyer.residentialOnly ||
+      propertyCategory === "residential");
+
+  const stampDuty = firstHomeBuyerEligible
+    ? input.loanAmount * stampDutyConfig.firstHomeBuyer.stampDutyRate
+    : input.loanAmount * stampDutyConfig.baseRate;
   return {
     legalFee,
     stampDuty,

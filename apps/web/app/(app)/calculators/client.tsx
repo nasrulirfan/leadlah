@@ -26,12 +26,12 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { DatePicker } from "@/components/ui/date-picker";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Switch } from "@/components/ui/switch";
 import type { CalculatorReceipt } from "@leadlah/core";
 import { PageHero } from "@/components/app/PageHero";
 import {
@@ -104,11 +104,16 @@ export default function CalculatorsClient({
     tenureYears: 30,
   });
 
-  const [spaInput, setSpaInput] = useState({
+  const [transactionInput, setTransactionInput] = useState({
     propertyPrice: 900000,
+    propertyCategory: "residential" as "residential" | "nonResidential",
+    partyRole: "purchaser" as "purchaser" | "vendor",
+    isFirstHomeBuyer: false,
+  });
+
+  const [spaInput, setSpaInput] = useState({
     isForeigner: false,
     requiresConsent: false,
-    contractDate: new Date().toISOString().slice(0, 10),
   });
 
   const [roiInput, setRoiInput] = useState({
@@ -153,17 +158,47 @@ export default function CalculatorsClient({
     if (loanInput.income <= 0) return 0;
     return (loanInput.commitments / loanInput.income) * 100;
   }, [loanInput.commitments, loanInput.income]);
+
+  const isFirstHomeBuyerEligible = useMemo(() => {
+    return (
+      !spaInput.isForeigner &&
+      transactionInput.propertyCategory === "residential" &&
+      transactionInput.propertyPrice > 0 &&
+      transactionInput.propertyPrice < 500000
+    );
+  }, [
+    spaInput.isForeigner,
+    transactionInput.propertyCategory,
+    transactionInput.propertyPrice,
+  ]);
+
+  useEffect(() => {
+    if (transactionInput.isFirstHomeBuyer && !isFirstHomeBuyerEligible) {
+      setTransactionInput((prev) => ({ ...prev, isFirstHomeBuyer: false }));
+    }
+  }, [isFirstHomeBuyerEligible, transactionInput.isFirstHomeBuyer]);
+
   const spa = useMemo(
     () =>
       calculateSpaMot({
-        ...spaInput,
-        contractDate: new Date(spaInput.contractDate),
+        propertyPrice: transactionInput.propertyPrice,
+        propertyCategory: transactionInput.propertyCategory,
+        partyRole: transactionInput.partyRole,
+        isFirstHomeBuyer: transactionInput.isFirstHomeBuyer,
+        isForeigner: spaInput.isForeigner,
+        requiresConsent: spaInput.requiresConsent,
       }),
-    [spaInput],
+    [spaInput.isForeigner, spaInput.requiresConsent, transactionInput],
   );
   const loanAgreement = useMemo(
-    () => calculateLoanAgreement({ loanAmount: loan.maxLoanAmount || 500000 }),
-    [loan],
+    () =>
+      calculateLoanAgreement({
+        loanAmount: loan.maxLoanAmount || 500000,
+        propertyPrice: transactionInput.propertyPrice,
+        propertyCategory: transactionInput.propertyCategory,
+        isFirstHomeBuyer: transactionInput.isFirstHomeBuyer,
+      }),
+    [loan, transactionInput],
   );
   const roi = useMemo(() => calculateRoi(roiInput), [roiInput]);
   const sell = useMemo(() => calculateSellability(sellInput), [sellInput]);
@@ -274,24 +309,51 @@ export default function CalculatorsClient({
       case "spa":
         return {
           inputs: {
-            "Property Price (RM)": spaInput.propertyPrice,
-            "Buyer Profile": spaInput.isForeigner ? "Foreigner" : "Malaysian",
+            "Property Price (RM)": transactionInput.propertyPrice,
+            "Property Type":
+              transactionInput.propertyCategory === "residential"
+                ? "Residential House"
+                : "Other",
+            Party:
+              transactionInput.partyRole === "purchaser" ? "Purchaser" : "Vendor",
+            ...(transactionInput.partyRole === "purchaser"
+              ? {
+                  "Buyer Profile": spaInput.isForeigner
+                    ? "Foreigner"
+                    : "Malaysian",
+                  "First Home Buyer": transactionInput.isFirstHomeBuyer,
+                }
+              : {}),
             "State Consent Required": spaInput.requiresConsent,
-            "Contract Date": spaInput.contractDate,
           },
           outputs: {
             "Legal Fee (RM)": spa.legalFee,
             "Disbursement (RM)": spa.disbursement,
-            "Stamp Duty (RM)": spa.stampDuty,
-            "Foreigner Rate Applied (%)": spa.foreignerRateApplied * 100,
-            "Total Legal & Duty (RM)": spa.total,
+            ...(transactionInput.partyRole === "purchaser"
+              ? {
+                  "Stamp Duty (RM)": spa.stampDuty,
+                  "Foreigner Rate Applied (%)": spa.foreignerRateApplied * 100,
+                  "Total Legal & Duty (RM)": spa.total,
+                }
+              : {
+                  "Total Legal Cost (RM)": spa.total,
+                }),
           },
         };
       case "loanAgreement":
         return {
           inputs: {
             "Loan Amount (RM)": loan.maxLoanAmount,
-            "Stamp Duty Rate (%)": 0.5,
+            "Stamp Duty Rate (%)":
+              loan.maxLoanAmount > 0
+                ? (loanAgreement.stampDuty / loan.maxLoanAmount) * 100
+                : 0,
+            "Property Price (RM)": transactionInput.propertyPrice,
+            "Property Type":
+              transactionInput.propertyCategory === "residential"
+                ? "Residential House"
+                : "Other",
+            "First Home Buyer": transactionInput.isFirstHomeBuyer,
           },
           outputs: {
             "Legal Fee (RM)": loanAgreement.legalFee,
@@ -643,6 +705,31 @@ export default function CalculatorsClient({
             <p className="text-xs text-muted-foreground">
               Appears on the PDF as the recipient.
             </p>
+            {selectedCalculator === "spa" ? (
+              <div className="mt-4 space-y-2">
+                <Label htmlFor="partyRole">Vendor / Purchaser</Label>
+                <Select
+                  value={transactionInput.partyRole}
+                  onValueChange={(value) =>
+                    setTransactionInput({
+                      ...transactionInput,
+                      partyRole: value as "purchaser" | "vendor",
+                    })
+                  }
+                >
+                  <SelectTrigger id="partyRole">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="purchaser">Purchaser</SelectItem>
+                    <SelectItem value="vendor">Vendor</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Stamp duty applies to purchaser only.
+                </p>
+              </div>
+            ) : null}
           </div>
         </div>
       </Card>
@@ -655,7 +742,41 @@ export default function CalculatorsClient({
             </h3>
             <div className="mt-6 grid gap-6 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="income">Monthly Income (RM)</Label>
+                <Label htmlFor="income" className="flex items-center gap-2">
+                  Monthly Income (RM)
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        className="inline-flex items-center rounded-sm text-muted-foreground hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        aria-label="How to fill monthly income"
+                      >
+                        <Info className="h-4 w-4" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent align="start" className="w-80 p-4">
+                      <div className="space-y-3 text-sm text-muted-foreground">
+                        <p className="font-semibold text-foreground">
+                          Monthly income guide
+                        </p>
+                        <ol className="list-decimal space-y-2 pl-5">
+                          <li>
+                            If your monthly salary is fixed (Employee), key it
+                            in directly.
+                          </li>
+                          <li>
+                            If your salary is not fixed (Business
+                            owner/Commission-based), use:{" "}
+                            <span className="font-medium text-foreground">
+                              (sum of last 6 months ÷ 6) × 70%
+                            </span>
+                            .
+                          </li>
+                        </ol>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </Label>
                 <Input
                   id="income"
                   type="number"
@@ -834,15 +955,37 @@ export default function CalculatorsClient({
                 <Input
                   id="propertyPrice"
                   type="number"
-                  value={spaInput.propertyPrice}
+                  value={transactionInput.propertyPrice}
                   onChange={(e) =>
-                    setSpaInput({
-                      ...spaInput,
+                    setTransactionInput({
+                      ...transactionInput,
                       propertyPrice: Number(e.target.value),
                     })
                   }
                   className="text-lg"
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="propertyCategory">Property Type</Label>
+                <Select
+                  value={transactionInput.propertyCategory}
+                  onValueChange={(value) =>
+                    setTransactionInput({
+                      ...transactionInput,
+                      propertyCategory: value as "residential" | "nonResidential",
+                    })
+                  }
+                >
+                  <SelectTrigger id="propertyCategory">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="residential">
+                      Residential House
+                    </SelectItem>
+                    <SelectItem value="nonResidential">Other</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="nationality">Buyer Nationality</Label>
@@ -851,6 +994,7 @@ export default function CalculatorsClient({
                   onValueChange={(value) =>
                     setSpaInput({ ...spaInput, isForeigner: value === "yes" })
                   }
+                  disabled={transactionInput.partyRole === "vendor"}
                 >
                   <SelectTrigger id="nationality">
                     <SelectValue />
@@ -860,6 +1004,11 @@ export default function CalculatorsClient({
                     <SelectItem value="yes">Foreigner</SelectItem>
                   </SelectContent>
                 </Select>
+                {transactionInput.partyRole === "vendor" ? (
+                  <p className="text-xs text-muted-foreground">
+                    Not required for vendor calculations.
+                  </p>
+                ) : null}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="consent">State Consent Required</Label>
@@ -881,23 +1030,37 @@ export default function CalculatorsClient({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="contractDate">Contract Date</Label>
-                <DatePicker
-                  value={spaInput.contractDate}
-                  onChange={(val) =>
-                    setSpaInput({ ...spaInput, contractDate: val })
-                  }
-                  placeholder="Select contract date"
-                />
-                {spaInput.isForeigner && (
-                  <p className="text-xs text-amber-600">
-                    {new Date(spaInput.contractDate) >= new Date("2026-01-01")
-                      ? "⚠️ 8% flat rate applies (after Jan 1, 2026)"
-                      : "4% flat rate applies (before Jan 1, 2026)"}
-                  </p>
-                )}
-              </div>
+              {transactionInput.partyRole === "purchaser" ? (
+                <div className="space-y-2 sm:col-span-2">
+                  <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-muted/20 p-3">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-foreground">
+                        First home buyer
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Available for residential properties below RM500,000.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={transactionInput.isFirstHomeBuyer}
+                      onChange={(event) =>
+                        setTransactionInput({
+                          ...transactionInput,
+                          isFirstHomeBuyer: event.target.checked,
+                        })
+                      }
+                      disabled={!isFirstHomeBuyerEligible}
+                      aria-label="First home buyer"
+                    />
+                  </div>
+                  {!isFirstHomeBuyerEligible ? (
+                    <p className="text-xs text-muted-foreground">
+                      Set property type to Residential House and price below
+                      RM500,000 (Malaysian only).
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           </Card>
 
@@ -926,17 +1089,19 @@ export default function CalculatorsClient({
                   })}
                 </span>
               </div>
-              <div className="flex items-center justify-between rounded-lg bg-card p-3 shadow-sm border border-border">
-                <span className="text-sm text-muted-foreground">
-                  Stamp Duty
-                </span>
-                <span className="font-semibold text-foreground">
-                  RM{" "}
-                  {spa.stampDuty.toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                  })}
-                </span>
-              </div>
+              {transactionInput.partyRole === "purchaser" ? (
+                <div className="flex items-center justify-between rounded-lg bg-card p-3 shadow-sm border border-border">
+                  <span className="text-sm text-muted-foreground">
+                    Stamp Duty
+                  </span>
+                  <span className="font-semibold text-foreground">
+                    RM{" "}
+                    {spa.stampDuty.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                    })}
+                  </span>
+                </div>
+              ) : null}
               <div className="mt-4 rounded-lg bg-primary p-4 text-white shadow-md">
                 <p className="text-sm opacity-90">Total Cost</p>
                 <p className="mt-1 text-3xl font-bold">
@@ -972,6 +1137,79 @@ export default function CalculatorsClient({
                   Eligibility calculator to adjust.
                 </p>
               </div>
+              <div className="mt-6 grid gap-6 sm:grid-cols-2">
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="loanPropertyPrice">Property Price (RM)</Label>
+                  <Input
+                    id="loanPropertyPrice"
+                    type="number"
+                    value={transactionInput.propertyPrice}
+                    onChange={(e) =>
+                      setTransactionInput({
+                        ...transactionInput,
+                        propertyPrice: Number(e.target.value),
+                      })
+                    }
+                    className="text-lg"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Used only to determine first-home buyer stamp duty relief.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="loanPropertyCategory">Property Type</Label>
+                  <Select
+                    value={transactionInput.propertyCategory}
+                    onValueChange={(value) =>
+                      setTransactionInput({
+                        ...transactionInput,
+                        propertyCategory: value as
+                          | "residential"
+                          | "nonResidential",
+                      })
+                    }
+                  >
+                    <SelectTrigger id="loanPropertyCategory">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="residential">
+                        Residential House
+                      </SelectItem>
+                      <SelectItem value="nonResidential">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-muted/20 p-3">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-foreground">
+                        First home buyer
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Available for residential properties below RM500,000.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={transactionInput.isFirstHomeBuyer}
+                      onChange={(event) =>
+                        setTransactionInput({
+                          ...transactionInput,
+                          isFirstHomeBuyer: event.target.checked,
+                        })
+                      }
+                      disabled={!isFirstHomeBuyerEligible}
+                      aria-label="First home buyer"
+                    />
+                  </div>
+                  {!isFirstHomeBuyerEligible ? (
+                    <p className="text-xs text-muted-foreground">
+                      Set property type to Residential House and price below
+                      RM500,000 (Malaysian only).
+                    </p>
+                  ) : null}
+                </div>
+              </div>
             </div>
           </Card>
 
@@ -991,7 +1229,7 @@ export default function CalculatorsClient({
               </div>
               <div className="flex items-center justify-between rounded-lg bg-card p-3 shadow-sm border border-border">
                 <span className="text-sm text-muted-foreground">
-                  Stamp Duty (0.5%)
+                  Stamp Duty
                 </span>
                 <span className="font-semibold text-foreground">
                   RM{" "}
