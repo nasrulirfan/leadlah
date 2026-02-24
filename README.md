@@ -88,6 +88,12 @@ pnpm --filter @leadlah/api db:seed -- --reset
 
 By default, the seeder creates (or reuses) a Better-auth email/password user and prints the `userId` it used for seeding.
 
+Default demo credentials:
+- Email: `demo@leadlah.com`
+- Password: `Demo12345!`
+
+If `OWNER_LINK_SECRET` is set (in `apps/api/.env` and `apps/web/.env.local`), the seeder also prints a 30-day owner-view link you can open directly.
+
 To seed for an existing auth user id:
 
 ```bash
