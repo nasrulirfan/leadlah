@@ -530,10 +530,16 @@ export function calculateTenancyStampDuty(
   input: TenancyStampDutyInput
 ): TenancyStampDutyResult {
   const annualRent = input.monthlyRent * 12;
-  const roundedAnnualRent = Math.round(annualRent / 250) * 250;
-  const blocks = roundedAnnualRent / 250;
-  const rate = input.years <= 1 ? 1.0 : input.years <= 3 ? 2.0 : 4.0;
-  const stampDuty = blocks * rate + 10; // RM10 agreement fee
+
+  if (!Number.isFinite(annualRent) || annualRent <= 0 || input.years <= 0) {
+    return { roundedAnnualRent: 0, blocks: 0, rate: 0, stampDuty: 0 };
+  }
+
+  const blocks = Math.ceil(annualRent / 250);
+  const roundedAnnualRent = blocks * 250;
+  const rate =
+    input.years <= 1 ? 1 : input.years <= 3 ? 3 : input.years <= 5 ? 5 : 7;
+  const stampDuty = blocks * rate + 10; // RM10 (landlord's copy)
   return { roundedAnnualRent, blocks, rate, stampDuty };
 }
 

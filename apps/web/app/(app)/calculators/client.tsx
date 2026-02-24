@@ -1597,8 +1597,8 @@ export default function CalculatorsClient({
                   Calculation Method
                 </p>
                 <p className="mt-1 text-xs text-teal-700">
-                  Annual rent is rounded to nearest RM 250, then divided into
-                  blocks for rate calculation
+                  Annual rent is rounded up to the nearest RM250, then divided
+                  into blocks for rate calculation.
                 </p>
               </div>
             </div>
@@ -1636,7 +1636,7 @@ export default function CalculatorsClient({
                   Rate Applied
                 </span>
                 <span className="font-semibold text-foreground">
-                  {tenancy.rate}%
+                  RM {tenancy.rate}
                 </span>
               </div>
               <div className="mt-4 rounded-lg bg-primary p-4 text-white shadow-md">
