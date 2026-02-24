@@ -112,6 +112,9 @@ Create `.env` in `apps/api` (examples):
 ```
 PORT=3001
 DATABASE_URL=postgres://user:pass@host:5432/leadlah
+# Feature flags (comma-separated keys).
+# Example: LEADLAH_FEATURE_FLAGS=performance.reports
+LEADLAH_FEATURE_FLAGS=
 HITPAY_API_KEY=your_hitpay_business_api_key
 HITPAY_SIGNATURE_KEY=your_hitpay_webhook_signature
 HITPAY_MODE=sandbox
@@ -129,6 +132,15 @@ SUBSCRIPTION_PLAN_INTERVAL=monthly
 SUBSCRIPTION_TRIAL_DAYS=7
 SUBSCRIPTION_GRACE_DAYS=3
 ```
+
+### Feature Flags
+
+Feature flags are controlled via `LEADLAH_FEATURE_FLAGS` (comma-separated list of keys). Set this in both `apps/api/.env` and `apps/web/.env.local` when you want a flag to apply end-to-end.
+
+Supported keys:
+- `performance.reports`
+
+Source of truth: `packages/core/src/feature-flags.ts`.
 
 ### HitPay Sandbox Set-Up
 
