@@ -4,7 +4,6 @@ import { Repository } from "typeorm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ListingsService } from "../src/listings/listings.service";
 import { ListingEntity } from "../src/listings/entities/listing.entity";
-import { CommissionEntity } from "../src/performance/entities/commission.entity";
 import { CreateListingDto } from "../src/listings/dto/create-listing.dto";
 
 const createPayload = (): CreateListingDto => ({
@@ -23,9 +22,6 @@ const createPayload = (): CreateListingDto => ({
 });
 
 type RepositoryMock = Partial<Record<keyof Repository<ListingEntity>, ReturnType<typeof vi.fn>>>;
-type CommissionRepositoryMock = Partial<
-  Record<keyof Repository<CommissionEntity>, ReturnType<typeof vi.fn>>
->;
 
 const createRepositoryMock = (): RepositoryMock => ({
   create: vi.fn(),
@@ -36,24 +32,14 @@ const createRepositoryMock = (): RepositoryMock => ({
   remove: vi.fn()
 });
 
-const createCommissionRepositoryMock = (): CommissionRepositoryMock => ({
-  create: vi.fn(),
-  delete: vi.fn(),
-  save: vi.fn(),
-  findOne: vi.fn()
-});
-
 describe("ListingsService", () => {
   let service: ListingsService;
   let repository: RepositoryMock;
-  let commissions: CommissionRepositoryMock;
 
   beforeEach(() => {
     repository = createRepositoryMock();
-    commissions = createCommissionRepositoryMock();
     service = new ListingsService(
       repository as unknown as Repository<ListingEntity>,
-      commissions as unknown as Repository<CommissionEntity>
     );
   });
 
@@ -136,106 +122,7 @@ describe("ListingsService", () => {
 
     expect(repository.findOne).toHaveBeenCalledWith({ where: { id: "1" } });
     expect(repository.save).toHaveBeenCalledWith(expect.objectContaining({ id: "1", price: 1500 }));
-    expect(commissions.findOne).not.toHaveBeenCalled();
     expect(updated.price).toBe(1500);
-  });
-
-  it("creates a commission when listing is marked sold", async () => {
-    const existing = { id: "1", price: 100000, status: ListingStatus.ACTIVE } as ListingEntity;
-    repository.findOne!.mockResolvedValue(existing);
-    repository.save!.mockResolvedValue({ ...existing, status: ListingStatus.SOLD } as ListingEntity);
-
-    commissions.findOne!.mockResolvedValue(null);
-    commissions.create!.mockImplementation((payload) => payload as any);
-    commissions.save!.mockImplementation(async (entity) => entity as any);
-
-    await service.update("1", { status: ListingStatus.SOLD, actorUserId: "user-1" } as any);
-
-    expect(commissions.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        userId: "user-1",
-        listingId: "1",
-        amount: 3000,
-        closedDate: expect.any(Date),
-        notes: expect.stringContaining("Sold")
-      })
-    );
-    expect(commissions.save).toHaveBeenCalled();
-  });
-
-  it("updates the auto-commission when listing status changes between sold and rented", async () => {
-    const existing = { id: "1", price: 2500, status: ListingStatus.SOLD } as ListingEntity;
-    repository.findOne!.mockResolvedValue(existing);
-    repository.save!.mockResolvedValue({ ...existing, status: ListingStatus.RENTED } as ListingEntity);
-
-    const autoCommission = {
-      id: "c1",
-      userId: "user-1",
-      listingId: "1",
-      amount: 75,
-      closedDate: new Date("2024-01-01"),
-      notes: "Auto-created when listing marked Sold."
-    };
-    commissions.findOne!.mockResolvedValue(autoCommission as any);
-    commissions.save!.mockImplementation(async (entity) => entity as any);
-
-    await service.update("1", { status: ListingStatus.RENTED, actorUserId: "user-1" } as any);
-
-    expect(commissions.create).not.toHaveBeenCalled();
-    expect(commissions.save).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: "c1",
-        amount: 2500,
-        notes: expect.stringContaining("Rented")
-      })
-    );
-  });
-
-  it("creates a commission when listing is marked rented", async () => {
-    const existing = { id: "1", price: 2500, status: ListingStatus.ACTIVE } as ListingEntity;
-    repository.findOne!.mockResolvedValue(existing);
-    repository.save!.mockResolvedValue({ ...existing, status: ListingStatus.RENTED } as ListingEntity);
-
-    commissions.findOne!.mockResolvedValue(null);
-    commissions.create!.mockImplementation((payload) => payload as any);
-    commissions.save!.mockImplementation(async (entity) => entity as any);
-
-    await service.update("1", { status: ListingStatus.RENTED, actorUserId: "user-1" } as any);
-
-    expect(commissions.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        userId: "user-1",
-        listingId: "1",
-        amount: 2500
-      })
-    );
-    expect(commissions.save).toHaveBeenCalled();
-  });
-
-  it("removes the auto-commission when listing is reverted from sold/rented", async () => {
-    const existing = { id: "1", price: 100000, status: ListingStatus.SOLD } as ListingEntity;
-    repository.findOne!.mockResolvedValue(existing);
-    repository.save!.mockResolvedValue({ ...existing, status: ListingStatus.ACTIVE } as ListingEntity);
-
-    await service.update("1", { status: ListingStatus.ACTIVE, actorUserId: "user-1" } as any);
-
-    expect(commissions.delete).toHaveBeenCalledWith(
-      expect.objectContaining({
-        userId: "user-1",
-        listingId: "1"
-      })
-    );
-  });
-
-  it("does not create a commission without an actor user id", async () => {
-    const existing = { id: "1", price: 100000, status: ListingStatus.ACTIVE } as ListingEntity;
-    repository.findOne!.mockResolvedValue(existing);
-    repository.save!.mockResolvedValue({ ...existing, status: ListingStatus.SOLD } as ListingEntity);
-
-    await service.update("1", { status: ListingStatus.SOLD } as any);
-
-    expect(commissions.create).not.toHaveBeenCalled();
-    expect(commissions.save).not.toHaveBeenCalled();
   });
 
   it("removes a listing", async () => {

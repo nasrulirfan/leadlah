@@ -10,7 +10,7 @@ type ApiTarget = {
   year: number;
   month: number | null;
   targetUnits: number;
-  targetIncome: number;
+  targetCommission: number;
   createdAt: string | null;
   updatedAt: string | null;
 };
@@ -25,6 +25,30 @@ type ApiExpense = {
   receiptUrl: string | null;
   createdAt: string | null;
   updatedAt: string | null;
+};
+
+export type CommissionEntry = {
+  id: string;
+  userId: string;
+  listingId?: string;
+  amount: number;
+  closedDate: Date;
+  notes?: string;
+  createdAt: Date;
+};
+
+export type CommissionMutation = Partial<Omit<CommissionEntry, "closedDate">> & {
+  closedDate?: Date | string;
+};
+
+type ApiCommission = {
+  id: string;
+  userId: string;
+  listingId: string | null;
+  amount: number;
+  closedDate: string | null;
+  notes: string | null;
+  createdAt: string | null;
 };
 
 type PerformanceReportsResponse = {
@@ -78,7 +102,7 @@ const deserializeTarget = (target: ApiTarget): Target => ({
   year: target.year,
   month: typeof target.month === "number" ? target.month : undefined,
   targetUnits: target.targetUnits,
-  targetIncome: target.targetIncome,
+  targetCommission: target.targetCommission,
   createdAt: target.createdAt ? new Date(target.createdAt) : new Date(),
   updatedAt: target.updatedAt ? new Date(target.updatedAt) : new Date()
 });
@@ -93,6 +117,16 @@ const deserializeExpense = (expense: ApiExpense): Expense => ({
   receiptUrl: expense.receiptUrl ?? undefined,
   createdAt: expense.createdAt ? new Date(expense.createdAt) : new Date(),
   updatedAt: expense.updatedAt ? new Date(expense.updatedAt) : new Date()
+});
+
+const deserializeCommission = (commission: ApiCommission): CommissionEntry => ({
+  id: commission.id,
+  userId: commission.userId,
+  listingId: commission.listingId ?? undefined,
+  amount: commission.amount,
+  closedDate: commission.closedDate ? new Date(commission.closedDate) : new Date(),
+  notes: commission.notes ?? undefined,
+  createdAt: commission.createdAt ? new Date(commission.createdAt) : new Date()
 });
 
 const sortTargets = (items: Target[]) => {
@@ -122,6 +156,9 @@ const dedupeTargets = (items: Target[]) => {
 const sortExpenses = (items: Expense[]) =>
   [...items].sort((a, b) => b.date.getTime() - a.date.getTime());
 
+const sortCommissions = (items: CommissionEntry[]) =>
+  [...items].sort((a, b) => b.closedDate.getTime() - a.closedDate.getTime());
+
 const formatDatePayload = (date?: Date | string) => {
   if (!date) {
     return undefined;
@@ -136,7 +173,7 @@ const formatDatePayload = (date?: Date | string) => {
 
 const buildEmptyMetrics = (year: number, month?: number): PerformanceMetrics => ({
   period: typeof month === "number" ? { year, month } : { year },
-  target: { units: 0, income: 0 },
+  target: { units: 0, commission: 0 },
   actual: {
     units: 0,
     commission: 0,
@@ -145,7 +182,7 @@ const buildEmptyMetrics = (year: number, month?: number): PerformanceMetrics => 
   },
   progress: {
     unitsPercent: 0,
-    incomePercent: 0
+    commissionPercent: 0
   }
 });
 
@@ -221,7 +258,7 @@ export function useTargets() {
           year: data.year,
           month: typeof data.month === "number" ? data.month : null,
           targetUnits: data.targetUnits,
-          targetIncome: data.targetIncome
+          targetCommission: data.targetCommission
         })
       });
       const newTarget = deserializeTarget(response);
@@ -244,7 +281,7 @@ export function useTargets() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           targetUnits: data.targetUnits,
-          targetIncome: data.targetIncome
+          targetCommission: data.targetCommission
         })
       });
       const updatedTarget = deserializeTarget(response);
@@ -391,6 +428,102 @@ export function useExpenses() {
     updateExpense,
     deleteExpense,
     refresh: loadExpenses
+  };
+}
+
+export function useCommissions() {
+  const [commissions, setCommissions] = useState<CommissionEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadCommissions = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await request<ApiCommission[]>("/api/performance/commissions");
+      setCommissions(sortCommissions(response.map(deserializeCommission)));
+      setError(null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to load commissions";
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadCommissions();
+  }, [loadCommissions]);
+
+  const createCommission = useCallback(async (data: CommissionMutation) => {
+    try {
+      const response = await request<ApiCommission>("/api/performance/commissions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          listingId: data.listingId ?? null,
+          amount: data.amount,
+          closedDate: formatDatePayload(data.closedDate),
+          notes: data.notes ?? null
+        })
+      });
+      const newCommission = deserializeCommission(response);
+      setCommissions((prev) => sortCommissions([...prev, newCommission]));
+      setError(null);
+      return newCommission;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to create commission";
+      setError(message);
+      throw err instanceof Error ? err : new Error(message);
+    }
+  }, []);
+
+  const updateCommission = useCallback(async (id: string, data: CommissionMutation) => {
+    try {
+      const response = await request<ApiCommission>(`/api/performance/commissions/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          listingId: data.listingId ?? null,
+          amount: data.amount,
+          closedDate: data.closedDate ? formatDatePayload(data.closedDate) : undefined,
+          notes: data.notes ?? null
+        })
+      });
+      const updatedCommission = deserializeCommission(response);
+      setCommissions((prev) =>
+        sortCommissions(prev.map((commission) => (commission.id === id ? updatedCommission : commission)))
+      );
+      setError(null);
+      return updatedCommission;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to update commission";
+      setError(message);
+      throw err instanceof Error ? err : new Error(message);
+    }
+  }, []);
+
+  const deleteCommission = useCallback(async (id: string) => {
+    try {
+      await request(`/api/performance/commissions/${id}`, {
+        method: "DELETE"
+      });
+      setCommissions((prev) => prev.filter((commission) => commission.id !== id));
+      setError(null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to delete commission";
+      setError(message);
+      throw err instanceof Error ? err : new Error(message);
+    }
+  }, []);
+
+  return {
+    commissions,
+    isLoading,
+    error,
+    createCommission,
+    updateCommission,
+    deleteCommission,
+    refresh: loadCommissions
   };
 }
 

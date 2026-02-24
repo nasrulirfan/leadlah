@@ -7,10 +7,13 @@ import { PageHero } from "@/components/app/PageHero";
 import { PerformanceOverview } from "@/components/performance/performance-overview";
 import { TargetManager } from "@/components/performance/target-manager";
 import { ExpenseTracker } from "@/components/performance/expense-tracker";
+import { CommissionManager } from "@/components/performance/commission-manager";
 import { PerformanceReports } from "@/components/performance/performance-reports";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export function PerformanceClient({ reportsEnabled }: { reportsEnabled: boolean }) {
+  const tabCols = reportsEnabled ? "grid-cols-4" : "grid-cols-3";
+
   return (
     <div className="space-y-6">
       <PageHero
@@ -34,7 +37,7 @@ export function PerformanceClient({ reportsEnabled }: { reportsEnabled: boolean 
           <TabsList
             className={[
               "grid h-auto w-full rounded-2xl bg-muted/50 p-1",
-              reportsEnabled ? "grid-cols-3" : "grid-cols-2",
+              tabCols,
             ].join(" ")}
           >
             <TabsTrigger value="targets" className="py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm">
@@ -42,6 +45,9 @@ export function PerformanceClient({ reportsEnabled }: { reportsEnabled: boolean 
             </TabsTrigger>
             <TabsTrigger value="expenses" className="py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm">
               Expenses
+            </TabsTrigger>
+            <TabsTrigger value="commissions" className="py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              Commissions
             </TabsTrigger>
             {reportsEnabled && (
               <TabsTrigger value="reports" className="py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm">
@@ -56,6 +62,10 @@ export function PerformanceClient({ reportsEnabled }: { reportsEnabled: boolean 
 
           <TabsContent value="expenses" className="mt-6">
             <ExpenseTracker />
+          </TabsContent>
+
+          <TabsContent value="commissions" className="mt-6">
+            <CommissionManager />
           </TabsContent>
 
           {reportsEnabled && (

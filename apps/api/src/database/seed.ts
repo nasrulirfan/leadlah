@@ -841,7 +841,7 @@ async function seed(options: SeedOptions) {
       year,
       month: null,
       targetUnits: 18,
-      targetIncome: 220000
+      targetCommission: 220000
     } satisfies Partial<TargetEntity>;
 
     await targetsRepo.save(targetsRepo.create(annualTarget));
@@ -853,7 +853,7 @@ async function seed(options: SeedOptions) {
         year,
         month,
         targetUnits: 2,
-        targetIncome: 28000
+        targetCommission: 28000
       },
       {
         id: uuidFor(seedKey, "target", year, month - 1),
@@ -861,7 +861,7 @@ async function seed(options: SeedOptions) {
         year,
         month: month - 1,
         targetUnits: 2,
-        targetIncome: 26000
+        targetCommission: 26000
       }
     ];
 

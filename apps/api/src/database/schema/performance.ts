@@ -22,7 +22,7 @@ export const targets = pgTable(
     year: integer("year").notNull(),
     month: integer("month"),
     targetUnits: integer("target_units").notNull().default(0),
-    targetIncome: numeric("target_income", { precision: 12, scale: 2 }).notNull().default("0"),
+    targetCommission: numeric("target_income", { precision: 12, scale: 2 }).notNull().default("0"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
   },

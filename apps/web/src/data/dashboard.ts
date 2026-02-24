@@ -84,13 +84,13 @@ export async function fetchDashboardPerformance(userId: string) {
     monthlyReports.find((report) => report.period.month === month) ??
     ({
       period: { year, month },
-      target: { units: 0, income: 0 },
+      target: { units: 0, commission: 0 },
       actual: { units: 0, commission: 0, expenses: 0, netIncome: 0 },
-      progress: { unitsPercent: 0, incomePercent: 0 },
+      progress: { unitsPercent: 0, commissionPercent: 0 },
     } satisfies PerformanceMetrics);
 
   const performanceData = {
-    target: currentMonth.target.income,
+    target: currentMonth.target.commission,
     commission: currentMonth.actual.commission,
     expenses: currentMonth.actual.expenses,
     netIncome: currentMonth.actual.netIncome,
@@ -119,7 +119,7 @@ export async function fetchDashboardPerformance(userId: string) {
       month: label,
       commission: report?.actual.commission ?? 0,
       expenses: report?.actual.expenses ?? 0,
-      target: report?.target.income ?? 0,
+      target: report?.target.commission ?? 0,
     };
   });
 

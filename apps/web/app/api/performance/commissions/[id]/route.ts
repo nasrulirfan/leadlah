@@ -4,28 +4,26 @@ import { requireSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
-type ApiTarget = {
+type ApiCommission = {
   id: string;
   userId: string;
-  year: number;
-  month: number | null;
-  targetUnits: number;
-  targetCommission: number;
+  listingId: string | null;
+  amount: number;
+  closedDate: string | null;
+  notes: string | null;
   createdAt: string | null;
-  updatedAt: string | null;
 };
 
 type ApiError = Error & { status?: number };
 
-const toApiTarget = (payload: any): ApiTarget => ({
+const toApiCommission = (payload: any): ApiCommission => ({
   id: String(payload.id),
   userId: String(payload.userId),
-  year: Number(payload.year ?? 0),
-  month: typeof payload.month === "number" ? payload.month : null,
-  targetUnits: Number(payload.targetUnits ?? 0),
-  targetCommission: Number(payload.targetCommission ?? 0),
+  listingId: payload.listingId ? String(payload.listingId) : null,
+  amount: Number(payload.amount ?? 0),
+  closedDate: payload.closedDate ? String(payload.closedDate) : null,
+  notes: payload.notes ? String(payload.notes) : null,
   createdAt: payload.createdAt ? String(payload.createdAt) : null,
-  updatedAt: payload.updatedAt ? String(payload.updatedAt) : null,
 });
 
 export async function PATCH(
@@ -38,20 +36,25 @@ export async function PATCH(
     const body = await request.json();
     const { id } = params;
 
-    const updated = await requestApi<any>(`/performance/${userId}/targets/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify({
-        targetUnits: body.targetUnits,
-        targetCommission: body.targetCommission,
-      }),
-    });
+    const updated = await requestApi<any>(
+      `/performance/${userId}/commissions/${id}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          listingId: body.listingId ?? null,
+          amount: body.amount,
+          closedDate: body.closedDate,
+          notes: body.notes ?? null,
+        }),
+      },
+    );
 
-    return NextResponse.json(toApiTarget(updated));
+    return NextResponse.json(toApiCommission(updated));
   } catch (error) {
-    console.error("Error updating target:", error);
+    console.error("Error updating commission:", error);
     const status = (error as ApiError)?.status;
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to update target" },
+      { error: error instanceof Error ? error.message : "Failed to update commission" },
       { status: status === 404 ? 404 : 500 },
     );
   }
@@ -66,17 +69,18 @@ export async function DELETE(
     const userId = session.user.id;
     const { id } = params;
 
-    await requestApi(`/performance/${userId}/targets/${id}`, {
+    await requestApi(`/performance/${userId}/commissions/${id}`, {
       method: "DELETE",
     });
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting target:", error);
+    console.error("Error deleting commission:", error);
     const status = (error as ApiError)?.status;
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to delete target" },
+      { error: error instanceof Error ? error.message : "Failed to delete commission" },
       { status: status === 404 ? 404 : 500 },
     );
   }
 }
+

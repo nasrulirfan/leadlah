@@ -27,7 +27,7 @@ export const serializeTargetRow = (row: PgRow) => ({
   year: row.year,
   month: row.month ?? null,
   targetUnits: toNumber(row.target_units),
-  targetIncome: toNumber(row.target_income),
+  targetCommission: toNumber(row.target_income),
   createdAt: toIsoString(row.created_at),
   updatedAt: toIsoString(row.updated_at)
 });

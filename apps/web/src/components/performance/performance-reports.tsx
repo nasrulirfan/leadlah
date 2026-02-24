@@ -68,7 +68,7 @@ export function PerformanceReports() {
                 RM {((yearlyReport?.actual.commission || 0) / 1000).toFixed(0)}k
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Target: RM {((yearlyReport?.target.income || 0) / 1000).toFixed(0)}k
+                Target: RM {((yearlyReport?.target.commission || 0) / 1000).toFixed(0)}k
               </p>
             </div>
 
@@ -88,15 +88,15 @@ export function PerformanceReports() {
                 RM {((yearlyReport?.actual.netIncome || 0) / 1000).toFixed(1)}k
               </p>
               <div className="mt-2">
-                {(yearlyReport?.actual.netIncome || 0) >= (yearlyReport?.target.income || 0) ? (
+                {(yearlyReport?.actual.netIncome || 0) >= 0 ? (
                   <Badge variant="success" className="text-xs">
                     <TrendingUp className="mr-1 h-3 w-3" />
-                    Target Achieved
+                    Profitable
                   </Badge>
                 ) : (
                   <Badge variant="warning" className="text-xs">
                     <TrendingDown className="mr-1 h-3 w-3" />
-                    Below Target
+                    Loss
                   </Badge>
                 )}
               </div>
@@ -129,8 +129,8 @@ export function PerformanceReports() {
                     (report.period.month || 1) - 1
                   ).toLocaleString("default", { month: "long" });
                   const rawProgress =
-                    report.target.income > 0
-                      ? report.progress.incomePercent
+                    report.target.commission > 0
+                      ? report.progress.commissionPercent
                       : report.target.units > 0
                         ? report.progress.unitsPercent
                         : 0;

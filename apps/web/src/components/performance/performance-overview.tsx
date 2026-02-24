@@ -13,13 +13,13 @@ export function PerformanceOverview() {
   }
 
   const metrics = data?.currentMonth || {
-    target: { units: 0, income: 0 },
+    target: { units: 0, commission: 0 },
     actual: { units: 0, commission: 0, expenses: 0, netIncome: 0 },
-    progress: { unitsPercent: 0, incomePercent: 0 }
+    progress: { unitsPercent: 0, commissionPercent: 0 }
   };
 
   const unitsProgress = Math.min(100, metrics.progress.unitsPercent);
-  const incomeProgress = Math.min(100, metrics.progress.incomePercent);
+  const commissionProgress = Math.min(100, metrics.progress.commissionPercent);
 
   return (
     <div className="space-y-4">
@@ -70,14 +70,14 @@ export function PerformanceOverview() {
           <div className="mt-4">
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground">
-                Target: RM {(metrics.target.income / 1000).toFixed(0)}k
+                Target: RM {(metrics.target.commission / 1000).toFixed(0)}k
               </span>
-              <span className="font-semibold text-foreground">{incomeProgress.toFixed(0)}%</span>
+              <span className="font-semibold text-foreground">{commissionProgress.toFixed(0)}%</span>
             </div>
             <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
               <div
                 className="h-full bg-emerald-500 transition-all duration-500"
-                style={{ width: `${incomeProgress}%` }}
+                style={{ width: `${commissionProgress}%` }}
               />
             </div>
           </div>
@@ -123,10 +123,10 @@ export function PerformanceOverview() {
           </div>
           <div className="mt-4">
             <Badge
-              variant={metrics.actual.netIncome >= metrics.target.income ? "success" : "default"}
+              variant={metrics.actual.netIncome >= 0 ? "success" : "warning"}
               className="text-xs"
             >
-              {metrics.actual.netIncome >= metrics.target.income ? "Target Achieved!" : "Keep Going!"}
+              {metrics.actual.netIncome >= 0 ? "Profitable" : "Loss"}
             </Badge>
           </div>
         </Card>

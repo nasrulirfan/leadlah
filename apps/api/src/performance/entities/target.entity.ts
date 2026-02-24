@@ -35,7 +35,7 @@ export class TargetEntity {
     default: 0,
     transformer: numericTransformer,
   })
-  targetIncome!: number;
+  targetCommission!: number;
 
   @CreateDateColumn({ name: "created_at", type: timestampColumnType as any })
   createdAt!: Date;
@@ -43,4 +43,3 @@ export class TargetEntity {
   @UpdateDateColumn({ name: "updated_at", type: timestampColumnType as any })
   updatedAt!: Date;
 }
-

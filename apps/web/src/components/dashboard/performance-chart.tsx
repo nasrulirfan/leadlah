@@ -48,7 +48,7 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
         <div className="mb-6">
           <h3 className="text-lg font-semibold text-foreground">Performance Overview</h3>
           <p className="text-sm text-muted-foreground">
-            Monthly commission vs expenses trend
+            Monthly commission vs target vs expenses trend
           </p>
         </div>
 
@@ -63,7 +63,7 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
           </div>
           <div className="flex items-center gap-2">
             <div className="h-3 w-3 rounded-full bg-blue-500" />
-            <span className="text-sm text-muted-foreground">Target</span>
+            <span className="text-sm text-muted-foreground">Commission Target</span>
           </div>
         </div>
 
@@ -105,7 +105,7 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
                 strokeWidth={2}
                 strokeDasharray="5 5"
                 fill="url(#colorTarget)"
-                name="Target"
+                name="Commission Target"
               />
               <Area
                 type="monotone"

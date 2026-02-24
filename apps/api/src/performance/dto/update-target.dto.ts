@@ -9,6 +9,5 @@ export class UpdateTargetDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
-  targetIncome?: number;
+  targetCommission?: number;
 }
-

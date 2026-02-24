@@ -150,7 +150,7 @@ export class DashboardService {
           id: row.id,
           type: "target",
           title: "Target set",
-          description: `${monthLabel} • ${row.targetUnits} units • RM ${row.targetIncome.toLocaleString()}`,
+          description: `${monthLabel} • ${row.targetUnits} units • RM ${row.targetCommission.toLocaleString()}`,
           occurredAt: row.createdAt,
         } satisfies DashboardActivity;
       }),

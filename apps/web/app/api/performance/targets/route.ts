@@ -10,7 +10,7 @@ type ApiTarget = {
   year: number;
   month: number | null;
   targetUnits: number;
-  targetIncome: number;
+  targetCommission: number;
   createdAt: string | null;
   updatedAt: string | null;
 };
@@ -23,7 +23,7 @@ const toApiTarget = (payload: any): ApiTarget => ({
   year: Number(payload.year ?? 0),
   month: typeof payload.month === "number" ? payload.month : null,
   targetUnits: Number(payload.targetUnits ?? 0),
-  targetIncome: Number(payload.targetIncome ?? 0),
+  targetCommission: Number(payload.targetCommission ?? 0),
   createdAt: payload.createdAt ? String(payload.createdAt) : null,
   updatedAt: payload.updatedAt ? String(payload.updatedAt) : null,
 });
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
         year: body.year,
         month: body.month,
         targetUnits: body.targetUnits,
-        targetIncome: body.targetIncome,
+        targetCommission: body.targetCommission,
       }),
     });
 

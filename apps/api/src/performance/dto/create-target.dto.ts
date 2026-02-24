@@ -17,6 +17,5 @@ export class CreateTargetDto {
 
   @IsNumber()
   @Min(0)
-  targetIncome!: number;
+  targetCommission!: number;
 }
-

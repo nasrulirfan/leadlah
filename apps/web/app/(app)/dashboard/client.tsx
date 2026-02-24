@@ -76,16 +76,6 @@ export function DashboardClient({
   const pending = listingCounts["Pending"] ?? 0;
   const expired = listingCounts["Expired"] ?? 0;
 
-  const progress =
-    performanceData.target > 0
-      ? Math.min(
-          100,
-          Math.round(
-            (performanceData.netIncome / performanceData.target) * 100,
-          ),
-        )
-      : 0;
-
   const totalReminders =
     reminders.today.length +
     reminders.tomorrow.length +
@@ -144,7 +134,7 @@ export function DashboardClient({
         <StatsCard
           title="Commission Earned"
           value={`RM ${(performanceData.commission / 1000).toFixed(0)}k`}
-          subtitle={`Target: RM ${(performanceData.target / 1000).toFixed(0)}k`}
+          subtitle={`Commission target: RM ${(performanceData.target / 1000).toFixed(0)}k`}
           icon={DollarSign}
           colorScheme="emerald"
           progress={{

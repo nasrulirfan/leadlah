@@ -35,18 +35,18 @@ export async function GET(request: NextRequest) {
       monthlyReports.find((report) => report.period.month === month) ??
       ({
         period: { year: resolvedYear, month },
-        target: { units: 0, income: 0 },
+        target: { units: 0, commission: 0 },
         actual: { units: 0, commission: 0, expenses: 0, netIncome: 0 },
-        progress: { unitsPercent: 0, incomePercent: 0 },
+        progress: { unitsPercent: 0, commissionPercent: 0 },
       } satisfies PerformanceMetrics);
 
     const currentYear =
       response.yearlyReport ??
       ({
         period: { year: resolvedYear },
-        target: { units: 0, income: 0 },
+        target: { units: 0, commission: 0 },
         actual: { units: 0, commission: 0, expenses: 0, netIncome: 0 },
-        progress: { unitsPercent: 0, incomePercent: 0 },
+        progress: { unitsPercent: 0, commissionPercent: 0 },
       } satisfies PerformanceMetrics);
 
     return NextResponse.json({ currentMonth, currentYear });
@@ -62,4 +62,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-

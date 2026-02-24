@@ -101,7 +101,7 @@ export function TargetManager() {
                         </div>
                         <div className="mt-1 flex gap-4 text-sm text-muted-foreground">
                           <span>{target.targetUnits} units</span>
-                          <span>RM {target.targetIncome.toLocaleString()}</span>
+                          <span>RM {target.targetCommission.toLocaleString()}</span>
                         </div>
                       </div>
                     </div>
@@ -152,7 +152,7 @@ function TargetForm({
     year: initialData?.year || new Date().getFullYear(),
     month: initialData?.month || new Date().getMonth() + 1,
     targetUnits: initialData?.targetUnits || 0,
-    targetIncome: initialData?.targetIncome || 0,
+    targetCommission: initialData?.targetCommission || 0,
     isAnnual: !initialData?.month
   });
 
@@ -221,11 +221,13 @@ function TargetForm({
         </div>
 
         <div>
-          <Label>Target Income (RM)</Label>
+          <Label>Target Commission (RM)</Label>
           <Input
             type="number"
-            value={formData.targetIncome}
-            onChange={(e) => setFormData({ ...formData, targetIncome: parseFloat(e.target.value) })}
+            value={formData.targetCommission}
+            onChange={(e) =>
+              setFormData({ ...formData, targetCommission: parseFloat(e.target.value) })
+            }
             className="mt-1.5"
             placeholder="e.g., 50000"
           />
@@ -243,7 +245,7 @@ function TargetForm({
               year: formData.year,
               month: formData.isAnnual ? undefined : formData.month,
               targetUnits: formData.targetUnits,
-              targetIncome: formData.targetIncome
+              targetCommission: formData.targetCommission
             });
           }}
         >

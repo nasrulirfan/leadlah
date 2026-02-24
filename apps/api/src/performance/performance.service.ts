@@ -24,7 +24,7 @@ const toNumber = (value: string | number | null | undefined) => {
 
 const buildEmptyMetrics = (year: number, month?: number): PerformanceMetrics => ({
   period: typeof month === "number" ? { year, month } : { year },
-  target: { units: 0, income: 0 },
+  target: { units: 0, commission: 0 },
   actual: {
     units: 0,
     commission: 0,
@@ -33,7 +33,7 @@ const buildEmptyMetrics = (year: number, month?: number): PerformanceMetrics => 
   },
   progress: {
     unitsPercent: 0,
-    incomePercent: 0,
+    commissionPercent: 0,
   },
 });
 
@@ -83,7 +83,7 @@ export class PerformanceService {
       year: entity.year,
       month: entity.month ?? undefined,
       targetUnits: entity.targetUnits,
-      targetIncome: entity.targetIncome,
+      targetCommission: entity.targetCommission,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
     };
@@ -142,7 +142,7 @@ export class PerformanceService {
 
     if (existing) {
       existing.targetUnits = payload.targetUnits;
-      existing.targetIncome = payload.targetIncome;
+      existing.targetCommission = payload.targetCommission;
       return this.toTarget(await this.targets.save(existing));
     }
 
@@ -152,7 +152,7 @@ export class PerformanceService {
         year: payload.year,
         month,
         targetUnits: payload.targetUnits,
-        targetIncome: payload.targetIncome,
+        targetCommission: payload.targetCommission,
       });
       return this.toTarget(await this.targets.save(created));
     } catch (error) {
@@ -162,7 +162,7 @@ export class PerformanceService {
 
       await this.targets.update(where, {
         targetUnits: payload.targetUnits,
-        targetIncome: payload.targetIncome,
+        targetCommission: payload.targetCommission,
       });
 
       const entity = await this.targets.findOne({ where });
@@ -182,8 +182,8 @@ export class PerformanceService {
     if (payload.targetUnits != null) {
       entity.targetUnits = payload.targetUnits;
     }
-    if (payload.targetIncome != null) {
-      entity.targetIncome = payload.targetIncome;
+    if (payload.targetCommission != null) {
+      entity.targetCommission = payload.targetCommission;
     }
 
     const saved = await this.targets.save(entity);
@@ -193,7 +193,7 @@ export class PerformanceService {
       year: saved.year,
       month: saved.month ?? undefined,
       targetUnits: saved.targetUnits,
-      targetIncome: saved.targetIncome,
+      targetCommission: saved.targetCommission,
       createdAt: saved.createdAt,
       updatedAt: saved.updatedAt,
     };
@@ -427,7 +427,11 @@ export class PerformanceService {
     const [targetResult, commissionResult, expenseResult] = await Promise.all([
       this.targets
         .createQueryBuilder("target")
-        .select(["target.month AS month", "target.targetUnits AS target_units", "target.targetIncome AS target_income"])
+        .select([
+          "target.month AS month",
+          "target.targetUnits AS target_units",
+          "target.targetCommission AS target_commission",
+        ])
         .where("target.userId = :userId", { userId })
         .andWhere("target.year = :year", { year })
         .orderBy("target.updatedAt", "DESC")
@@ -470,24 +474,24 @@ export class PerformanceService {
         .getRawMany<NumericRecord>(),
     ]);
 
-    const monthlyTargets = new Map<number, { units: number; income: number }>();
-    let annualTarget: { units: number; income: number } | null = null;
-    let monthlyTargetSum = { units: 0, income: 0 };
+    const monthlyTargets = new Map<number, { units: number; commission: number }>();
+    let annualTarget: { units: number; commission: number } | null = null;
+    let monthlyTargetSum = { units: 0, commission: 0 };
 
     for (const row of targetResult) {
       const units = toNumber(row.target_units);
-      const income = toNumber(row.target_income);
+      const commission = toNumber(row.target_commission);
       const monthValue = row.month === null ? null : toNumber(row.month);
 
       if (monthValue === null) {
-        annualTarget ??= { units, income };
+        annualTarget ??= { units, commission };
       } else {
         const month = monthValue;
         if (!monthlyTargets.has(month)) {
-          monthlyTargets.set(month, { units, income });
+          monthlyTargets.set(month, { units, commission });
           monthlyTargetSum = {
             units: monthlyTargetSum.units + units,
-            income: monthlyTargetSum.income + income,
+            commission: monthlyTargetSum.commission + commission,
           };
         }
       }
@@ -510,7 +514,7 @@ export class PerformanceService {
 
     const monthlyReports = Array.from({ length: 12 }, (_, index) => {
       const month = index + 1;
-      const target = monthlyTargets.get(month) ?? { units: 0, income: 0 };
+      const target = monthlyTargets.get(month) ?? { units: 0, commission: 0 };
       const commission = monthlyCommissions.get(month) ?? { units: 0, total: 0 };
       const expenses = monthlyExpenses.get(month) ?? 0;
       const netIncome = commission.total - expenses;
@@ -526,7 +530,8 @@ export class PerformanceService {
         },
         progress: {
           unitsPercent: target.units > 0 ? (commission.units / target.units) * 100 : 0,
-          incomePercent: target.income > 0 ? (netIncome / target.income) * 100 : 0,
+          commissionPercent:
+            target.commission > 0 ? (commission.total / target.commission) * 100 : 0,
         },
       } satisfies PerformanceMetrics;
     });
@@ -548,8 +553,10 @@ export class PerformanceService {
       actual: yearlyActual,
       progress: {
         unitsPercent: yearlyTarget.units > 0 ? (yearlyActual.units / yearlyTarget.units) * 100 : 0,
-        incomePercent:
-          yearlyTarget.income > 0 ? (yearlyActual.netIncome / yearlyTarget.income) * 100 : 0,
+        commissionPercent:
+          yearlyTarget.commission > 0
+            ? (yearlyActual.commission / yearlyTarget.commission) * 100
+            : 0,
       },
     };
 

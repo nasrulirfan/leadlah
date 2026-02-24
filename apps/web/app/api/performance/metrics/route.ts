@@ -23,9 +23,9 @@ export async function GET(request: NextRequest) {
 
     const emptyMetrics = {
       period: month ? { year, month } : { year, month: null },
-      target: { units: 0, income: 0 },
+      target: { units: 0, commission: 0 },
       actual: { units: 0, commission: 0, expenses: 0, netIncome: 0 },
-      progress: { unitsPercent: 0, incomePercent: 0 },
+      progress: { unitsPercent: 0, commissionPercent: 0 },
     };
 
     const resolved =

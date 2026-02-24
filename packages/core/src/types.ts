@@ -208,7 +208,7 @@ export type Target = {
   year: number;
   month?: number;
   targetUnits: number;
-  targetIncome: number;
+  targetCommission: number;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -237,7 +237,7 @@ export type Commission = {
 
 export type PerformanceMetrics = {
   period: { year: number; month?: number };
-  target: { units: number; income: number };
+  target: { units: number; commission: number };
   actual: {
     units: number;
     commission: number;
@@ -246,6 +246,6 @@ export type PerformanceMetrics = {
   };
   progress: {
     unitsPercent: number;
-    incomePercent: number;
+    commissionPercent: number;
   };
 };
