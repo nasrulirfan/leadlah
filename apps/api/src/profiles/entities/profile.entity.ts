@@ -1,5 +1,14 @@
-import { Column, CreateDateColumn, Entity, PrimaryColumn, UpdateDateColumn } from "typeorm";
-import { jsonColumnType, timestampColumnType } from "../../database/column-types";
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryColumn,
+  UpdateDateColumn,
+} from "typeorm";
+import {
+  jsonColumnType,
+  timestampColumnType,
+} from "../../database/column-types";
 
 export type NotificationPreferences = {
   reminders: boolean;
@@ -23,6 +32,12 @@ export class ProfileEntity {
 
   @Column({ type: "varchar", length: 80, nullable: true })
   agency!: string | null;
+
+  @Column({ type: "varchar", length: 40, nullable: true })
+  renNumber!: string | null;
+
+  @Column({ type: "text", nullable: true })
+  agencyLogoUrl!: string | null;
 
   @Column({ type: "varchar", length: 80, nullable: true })
   role!: string | null;

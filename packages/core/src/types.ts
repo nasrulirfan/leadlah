@@ -3,7 +3,7 @@ export enum ListingStatus {
   SOLD = "Sold",
   RENTED = "Rented",
   EXPIRED = "Expired",
-  WITHDRAWN = "Withdrawn"
+  WITHDRAWN = "Withdrawn",
 }
 
 export enum ListingCategory {
@@ -14,7 +14,7 @@ export enum ListingCategory {
   RENTED = "Rented",
   HOLD_FOR_SALE = "Hold for Sale",
   BOOKED = "Booked",
-  OFF_MARKET = "Off-Market"
+  OFF_MARKET = "Off-Market",
 }
 
 export enum ListingTenure {
@@ -32,14 +32,14 @@ export enum ProcessStage {
   CONSENT_APPLICATION = "Consent Application",
   BALANCE_PURCHASE_PRICE_DISBURSEMENT = "Balance Purchase Price (BPP) Disbursement",
   LOAN_CONSENT = "Loan/Consent Processing",
-  KEY_HANDOVER = "Key Handover"
+  KEY_HANDOVER = "Key Handover",
 }
 
 export enum SubscriptionStatus {
   TRIALING = "TRIALING",
   ACTIVE = "ACTIVE",
   PAST_DUE = "PAST_DUE",
-  CANCELED = "CANCELED"
+  CANCELED = "CANCELED",
 }
 
 export type MediaAsset = {
@@ -143,6 +143,8 @@ export type UserProfile = {
   email: string;
   phone?: string;
   agency?: string;
+  renNumber?: string;
+  agencyLogoUrl?: string;
   role?: string;
   bio?: string;
   avatarUrl?: string;
@@ -197,7 +199,7 @@ export enum ExpenseCategory {
   TRANSPORTATION = "Transportation",
   OFFICE = "Office Supplies",
   PROFESSIONAL_FEES = "Professional Fees",
-  OTHER = "Other"
+  OTHER = "Other",
 }
 
 export type Target = {

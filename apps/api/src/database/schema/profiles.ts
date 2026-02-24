@@ -6,6 +6,8 @@ export const profiles = pgTable("profiles", {
   email: varchar("email", { length: 255 }).notNull(),
   phone: varchar("phone", { length: 40 }),
   agency: varchar("agency", { length: 80 }),
+  renNumber: varchar("renNumber", { length: 40 }),
+  agencyLogoUrl: text("agencyLogoUrl"),
   role: varchar("role", { length: 80 }),
   bio: text("bio"),
   avatarUrl: text("avatarUrl"),
@@ -14,9 +16,12 @@ export const profiles = pgTable("profiles", {
   language: varchar("language", { length: 64 }).notNull(),
   whatsapp: varchar("whatsapp", { length: 40 }),
   notifications: jsonb("notifications").notNull(),
-  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().notNull()
+  createdAt: timestamp("createdAt", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
 
 export type Profile = typeof profiles.$inferSelect;
-

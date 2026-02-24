@@ -6,6 +6,9 @@ import puppeteer from "puppeteer";
 import type { CalculatorReceipt } from "@leadlah/core";
 
 import { generateCalculatorReceiptHtml } from "@/lib/pdf/generate-calculator-receipt-html";
+import { fetchProfile } from "@/data/profile";
+import { auth, ensureAuthReady } from "@/lib/auth";
+import { headers } from "next/headers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,8 +29,29 @@ const allowedTypes: AllowableType[] = [
 
 export async function POST(req: NextRequest) {
   try {
+    await ensureAuthReady();
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    }
+
     const payload = (await req.json()) as Record<string, unknown>;
-    const receipt = normalizeReceipt(payload);
+    const profile = await fetchProfile(session.user.id, {
+      name: session.user.name ?? undefined,
+      email: session.user.email ?? undefined,
+    });
+    const normalized = normalizeReceipt(payload);
+    const receipt: CalculatorReceipt = {
+      ...normalized,
+      renNumber:
+        extractOptionalString(profile.renNumber) ?? normalized.renNumber,
+      agencyLogoUrl:
+        extractOptionalString(profile.agencyLogoUrl) ??
+        normalized.agencyLogoUrl,
+    };
+
     const leadlahMarkDataUri = await getLeadlahMarkDataUri();
     const html = generateCalculatorReceiptHtml(receipt, { leadlahMarkDataUri });
 
@@ -123,7 +147,7 @@ function normalizeReceipt(payload: Record<string, unknown>): CalculatorReceipt {
   const calculationType = calculationTypeRaw as AllowableType;
 
   const agentName = extractRequiredString(payload.agentName, "Agent name");
-  const renNumber = extractRequiredString(payload.renNumber, "REN number");
+  const renNumber = extractOptionalString(payload.renNumber) ?? "REN 00000";
   const customerName = extractOptionalString(payload.customerName);
   const agencyLogoUrl = extractOptionalString(payload.agencyLogoUrl);
 

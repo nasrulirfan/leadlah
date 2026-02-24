@@ -1,16 +1,37 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode, type RefObject } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { CheckCircle2, Loader2, UploadCloud, XCircle } from "lucide-react";
 import type { UserProfile } from "@leadlah/core";
 
 import { updateProfile, type ProfileFormState } from "@/app/actions/profile";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 type ProfileFormProps = {
@@ -21,13 +42,13 @@ const timezoneOptions = [
   { value: "Asia/Kuala_Lumpur", label: "GMT+8 • Kuala Lumpur" },
   { value: "Asia/Singapore", label: "GMT+8 • Singapore" },
   { value: "Asia/Hong_Kong", label: "GMT+8 • Hong Kong" },
-  { value: "Asia/Bangkok", label: "GMT+7 • Bangkok" }
+  { value: "Asia/Bangkok", label: "GMT+7 • Bangkok" },
 ];
 
 const languageOptions = [
   { value: "English (Malaysia)", label: "English (Malaysia)" },
   { value: "Bahasa Melayu", label: "Bahasa Melayu" },
-  { value: "Chinese", label: "Chinese (Mandarin)" }
+  { value: "Chinese", label: "Chinese (Mandarin)" },
 ];
 
 export function ProfileForm({ profile }: ProfileFormProps) {
@@ -53,12 +74,14 @@ export function ProfileForm({ profile }: ProfileFormProps) {
   }, [state]);
 
   const initials = useMemo(() => {
-    return profile.name
-      .split(" ")
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part.charAt(0).toUpperCase())
-      .join("") || "LL";
+    return (
+      profile.name
+        .split(" ")
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part.charAt(0).toUpperCase())
+        .join("") || "LL"
+    );
   }, [profile.name]);
 
   const handleAvatarUpload = (event: ChangeEvent<HTMLInputElement>) => {
@@ -92,7 +115,10 @@ export function ProfileForm({ profile }: ProfileFormProps) {
       <Card className="shadow-[0_30px_80px_rgba(15,23,42,0.12)]">
         <CardHeader>
           <CardTitle>Profile</CardTitle>
-          <CardDescription>Share who you are with leads and owners. These details power reminders, WhatsApp templates, and branded reports.</CardDescription>
+          <CardDescription>
+            Share who you are with leads and owners. These details power
+            reminders, WhatsApp templates, and branded reports.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <AvatarField
@@ -112,7 +138,12 @@ export function ProfileForm({ profile }: ProfileFormProps) {
 
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="Full name" name="name" state={state} required>
-              <Input name="name" id="name" defaultValue={profile.name} placeholder="e.g. Alicia Rahman" />
+              <Input
+                name="name"
+                id="name"
+                defaultValue={profile.name}
+                placeholder="e.g. Alicia Rahman"
+              />
             </Field>
             <Field label="Work email" name="email" state={state} required>
               <Input
@@ -133,8 +164,21 @@ export function ProfileForm({ profile }: ProfileFormProps) {
                 placeholder="+60 12-555 4455"
               />
             </Field>
+            <Field label="REN number" name="renNumber" state={state}>
+              <Input
+                name="renNumber"
+                id="renNumber"
+                defaultValue={profile.renNumber}
+                placeholder="REN 12345"
+              />
+            </Field>
             <Field label="REN role/title" name="role" state={state}>
-              <Input name="role" id="role" defaultValue={profile.role} placeholder="Senior REN" />
+              <Input
+                name="role"
+                id="role"
+                defaultValue={profile.role}
+                placeholder="Senior REN"
+              />
             </Field>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
@@ -146,6 +190,16 @@ export function ProfileForm({ profile }: ProfileFormProps) {
                 placeholder="Your agency name"
               />
             </Field>
+            <Field label="Agency logo URL" name="agencyLogoUrl" state={state}>
+              <Input
+                name="agencyLogoUrl"
+                id="agencyLogoUrl"
+                defaultValue={profile.agencyLogoUrl}
+                placeholder="https://logo.cdn/brand.png"
+              />
+            </Field>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="timezone">Timezone</Label>
               <Select value={timezone} onValueChange={setTimezone}>
@@ -166,7 +220,8 @@ export function ProfileForm({ profile }: ProfileFormProps) {
         </CardContent>
         <CardFooter className="flex flex-col gap-3 border-t border-border/70 pt-5 md:flex-row md:items-center md:justify-between">
           <div className="text-sm text-muted-foreground">
-            Changes sync instantly to reminder emails, owner reports, and calculators receipts.
+            Changes sync instantly to reminder emails, owner reports, and
+            calculators receipts.
           </div>
           <SubmitButton />
         </CardFooter>
@@ -180,7 +235,7 @@ function AvatarField({
   initials,
   fileInputRef,
   onUpload,
-  onRemove
+  onRemove,
 }: {
   avatarPreview: string;
   initials: string;
@@ -193,7 +248,11 @@ function AvatarField({
       <div className="relative h-20 w-20 overflow-hidden rounded-3xl border border-border bg-background shadow-inner">
         {avatarPreview ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={avatarPreview} alt="Profile avatar" className="h-full w-full object-cover" />
+          <img
+            src={avatarPreview}
+            alt="Profile avatar"
+            className="h-full w-full object-cover"
+          />
         ) : (
           <span className="flex h-full w-full items-center justify-center text-xl font-semibold text-muted-foreground">
             {initials}
@@ -202,7 +261,9 @@ function AvatarField({
       </div>
       <div className="flex-1 min-w-[200px]">
         <p className="text-sm font-medium text-foreground">Profile photo</p>
-        <p className="text-xs text-muted-foreground">JPG or PNG, max 2 MB. Square images look best on owner reports.</p>
+        <p className="text-xs text-muted-foreground">
+          JPG or PNG, max 2 MB. Square images look best on owner reports.
+        </p>
         <div className="mt-3 flex flex-wrap gap-2">
           <input
             ref={fileInputRef}
@@ -212,11 +273,22 @@ function AvatarField({
             aria-label="Upload profile photo"
             onChange={onUpload}
           />
-          <Button type="button" size="sm" variant="secondary" onClick={() => fileInputRef.current?.click()}>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={() => fileInputRef.current?.click()}
+          >
             <UploadCloud className="mr-1.5 h-4 w-4" />
             Upload new
           </Button>
-          <Button type="button" size="sm" variant="ghost" onClick={onRemove} disabled={!avatarPreview}>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={onRemove}
+            disabled={!avatarPreview}
+          >
             Remove
           </Button>
         </div>
@@ -230,7 +302,7 @@ function Field({
   name,
   children,
   state,
-  required
+  required,
 }: {
   label: string;
   name: string;
@@ -252,7 +324,7 @@ function Field({
 
 function FieldError({
   name,
-  state
+  state,
 }: {
   name: string;
   state: ProfileFormState;
@@ -264,7 +336,13 @@ function FieldError({
   return <p className="text-sm text-destructive">{message}</p>;
 }
 
-function FormBanner({ message, tone }: { message: string; tone: "success" | "error" }) {
+function FormBanner({
+  message,
+  tone,
+}: {
+  message: string;
+  tone: "success" | "error";
+}) {
   const isSuccess = tone === "success";
   return (
     <div
@@ -272,10 +350,14 @@ function FormBanner({ message, tone }: { message: string; tone: "success" | "err
         "flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm",
         isSuccess
           ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-          : "border-red-200 bg-red-50 text-red-900"
+          : "border-red-200 bg-red-50 text-red-900",
       )}
     >
-      {isSuccess ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+      {isSuccess ? (
+        <CheckCircle2 className="h-4 w-4" />
+      ) : (
+        <XCircle className="h-4 w-4" />
+      )}
       <span>{message}</span>
     </div>
   );

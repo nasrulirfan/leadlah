@@ -99,6 +99,13 @@
       "when": 1766538000000,
       "tag": "0013_listing_tenure_freehold_default",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1766541600000,
+      "tag": "0014_add_profile_branding",
+      "breakpoints": true
     }
   ]
 }

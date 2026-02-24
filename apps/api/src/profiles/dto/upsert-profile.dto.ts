@@ -19,6 +19,14 @@ export class UpsertProfileDto {
 
   @IsOptional()
   @IsString()
+  renNumber?: string | null;
+
+  @IsOptional()
+  @IsString()
+  agencyLogoUrl?: string | null;
+
+  @IsOptional()
+  @IsString()
   role?: string | null;
 
   @IsOptional()
@@ -48,4 +56,3 @@ export class UpsertProfileDto {
   @Type(() => NotificationPreferencesDto)
   notifications?: NotificationPreferencesDto;
 }
-

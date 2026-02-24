@@ -19,10 +19,11 @@ const asOptionalString = (value: FormDataEntryValue | null) => {
   return trimmed.length ? trimmed : undefined;
 };
 
-const asString = (value: FormDataEntryValue | null) => (typeof value === "string" ? value.trim() : "");
+const asString = (value: FormDataEntryValue | null) =>
+  typeof value === "string" ? value.trim() : "";
 
 const mutationSchema = z.object({
-  userId: z.string().min(1)
+  userId: z.string().min(1),
 });
 
 export type ProfileFormState = {
@@ -32,7 +33,10 @@ export type ProfileFormState = {
   data?: UserProfile;
 };
 
-export async function updateProfile(prevState: ProfileFormState, formData: FormData): Promise<ProfileFormState> {
+export async function updateProfile(
+  prevState: ProfileFormState,
+  formData: FormData,
+): Promise<ProfileFormState> {
   const session = await requireSession();
   const userId = session.user?.id ?? asString(formData.get("userId"));
 
@@ -41,7 +45,7 @@ export async function updateProfile(prevState: ProfileFormState, formData: FormD
     return {
       status: "error",
       message: "Your session expired. Please refresh and try again.",
-      errors: parsedUserId.error.flatten().fieldErrors
+      errors: parsedUserId.error.flatten().fieldErrors,
     };
   }
 
@@ -53,26 +57,28 @@ export async function updateProfile(prevState: ProfileFormState, formData: FormD
     phone: asOptionalString(formData.get("phone")),
     whatsapp: currentProfile.whatsapp,
     agency: asOptionalString(formData.get("agency")),
+    renNumber: asOptionalString(formData.get("renNumber")),
+    agencyLogoUrl: asOptionalString(formData.get("agencyLogoUrl")),
     role: asOptionalString(formData.get("role")),
     bio: currentProfile.bio,
     avatarUrl: asOptionalString(formData.get("avatarUrl")),
     coverUrl: asOptionalString(formData.get("coverUrl")),
     timezone: asString(formData.get("timezone")),
     language: asString(formData.get("language")),
-    notifications: currentProfile.notifications
+    notifications: currentProfile.notifications,
   });
 
   if (!payloadResult.success) {
     return {
       status: "error",
       message: "Please fix the highlighted fields and try again.",
-      errors: payloadResult.error.flatten().fieldErrors
+      errors: payloadResult.error.flatten().fieldErrors,
     };
   }
 
   const nextProfile = await persistProfile({
     ...payloadResult.data,
-    id: parsedUserId.data.userId
+    id: parsedUserId.data.userId,
   });
 
   // Also sync core user fields (name, image) back to Better Auth so the
@@ -81,9 +87,9 @@ export async function updateProfile(prevState: ProfileFormState, formData: FormD
     await auth.api.updateUser({
       body: {
         name: nextProfile.name,
-        image: nextProfile.avatarUrl
+        image: nextProfile.avatarUrl,
       },
-      headers: await headers()
+      headers: await headers(),
     });
   } catch (error) {
     console.error("Failed to sync auth user profile:", error);
@@ -94,6 +100,6 @@ export async function updateProfile(prevState: ProfileFormState, formData: FormD
   return {
     status: "success",
     message: "Profile updated successfully.",
-    data: nextProfile
+    data: nextProfile,
   };
 }

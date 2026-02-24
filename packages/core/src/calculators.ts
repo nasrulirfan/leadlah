@@ -18,8 +18,8 @@ export type LoanEligibilityResult = {
 export function calculateLoanEligibility(
   input: LoanEligibilityInput
 ): LoanEligibilityResult {
-  const netDisposable = Math.max(input.income - input.commitments, 0);
-  const maxInstallment = (netDisposable * input.dsrPercent) / 100;
+  const maxTotalDebtService = (input.income * input.dsrPercent) / 100;
+  const maxInstallment = Math.max(maxTotalDebtService - input.commitments, 0);
   const monthlyRate = input.interestRate / 100 / 12;
   const months = input.tenureYears * 12;
   const discountFactor =

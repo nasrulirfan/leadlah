@@ -21,6 +21,14 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsString()
+  renNumber?: string | null;
+
+  @IsOptional()
+  @IsString()
+  agencyLogoUrl?: string | null;
+
+  @IsOptional()
+  @IsString()
   role?: string | null;
 
   @IsOptional()
@@ -52,4 +60,3 @@ export class UpdateProfileDto {
   @Type(() => NotificationPreferencesDto)
   notifications?: NotificationPreferencesDto;
 }
-

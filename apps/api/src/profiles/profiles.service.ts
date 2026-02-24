@@ -12,6 +12,8 @@ const toProfile = (entity: ProfileEntity): UserProfile => ({
   email: entity.email,
   phone: entity.phone ?? undefined,
   agency: entity.agency ?? undefined,
+  renNumber: entity.renNumber ?? undefined,
+  agencyLogoUrl: entity.agencyLogoUrl ?? undefined,
   role: entity.role ?? undefined,
   bio: entity.bio ?? undefined,
   avatarUrl: entity.avatarUrl ?? undefined,
@@ -41,13 +43,24 @@ export class ProfilesService {
     return toProfile(entity);
   }
 
-  async upsert(userId: string, payload: UpsertProfileDto): Promise<UserProfile> {
+  async upsert(
+    userId: string,
+    payload: UpsertProfileDto,
+  ): Promise<UserProfile> {
     const current = await this.profiles.findOne({ where: { id: userId } });
     const notifications = {
-      reminders: payload.notifications?.reminders ?? current?.notifications?.reminders ?? true,
-      smartDigest: payload.notifications?.smartDigest ?? current?.notifications?.smartDigest ?? true,
+      reminders:
+        payload.notifications?.reminders ??
+        current?.notifications?.reminders ??
+        true,
+      smartDigest:
+        payload.notifications?.smartDigest ??
+        current?.notifications?.smartDigest ??
+        true,
       productUpdates:
-        payload.notifications?.productUpdates ?? current?.notifications?.productUpdates ?? false,
+        payload.notifications?.productUpdates ??
+        current?.notifications?.productUpdates ??
+        false,
     };
 
     const entity = this.profiles.create({
@@ -56,6 +69,8 @@ export class ProfilesService {
       email: payload.email,
       phone: payload.phone ?? null,
       agency: payload.agency ?? null,
+      renNumber: payload.renNumber ?? current?.renNumber ?? null,
+      agencyLogoUrl: payload.agencyLogoUrl ?? current?.agencyLogoUrl ?? null,
       role: payload.role ?? null,
       bio: payload.bio ?? null,
       avatarUrl: payload.avatarUrl ?? null,
@@ -70,7 +85,10 @@ export class ProfilesService {
     return toProfile(saved);
   }
 
-  async update(userId: string, payload: UpdateProfileDto): Promise<UserProfile> {
+  async update(
+    userId: string,
+    payload: UpdateProfileDto,
+  ): Promise<UserProfile> {
     const entity = await this.profiles.findOne({ where: { id: userId } });
     if (!entity) {
       throw new NotFoundException("Profile not found");
@@ -87,6 +105,12 @@ export class ProfilesService {
     }
     if (payload.agency !== undefined) {
       entity.agency = payload.agency ?? null;
+    }
+    if (payload.renNumber !== undefined) {
+      entity.renNumber = payload.renNumber ?? null;
+    }
+    if (payload.agencyLogoUrl !== undefined) {
+      entity.agencyLogoUrl = payload.agencyLogoUrl ?? null;
     }
     if (payload.role !== undefined) {
       entity.role = payload.role ?? null;
@@ -112,9 +136,13 @@ export class ProfilesService {
 
     if (payload.notifications) {
       entity.notifications = {
-        reminders: payload.notifications.reminders ?? entity.notifications.reminders,
-        smartDigest: payload.notifications.smartDigest ?? entity.notifications.smartDigest,
-        productUpdates: payload.notifications.productUpdates ?? entity.notifications.productUpdates,
+        reminders:
+          payload.notifications.reminders ?? entity.notifications.reminders,
+        smartDigest:
+          payload.notifications.smartDigest ?? entity.notifications.smartDigest,
+        productUpdates:
+          payload.notifications.productUpdates ??
+          entity.notifications.productUpdates,
       };
     }
 
@@ -122,4 +150,3 @@ export class ProfilesService {
     return toProfile(saved);
   }
 }
-
