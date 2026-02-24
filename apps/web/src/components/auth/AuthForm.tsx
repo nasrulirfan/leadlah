@@ -5,13 +5,35 @@ import { useState } from "react";
 import { signInWithEmail, signUpWithEmail } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type ActionState = { error?: string };
 
 const initialState: ActionState = {};
 
+const timezoneOptions = [
+  { value: "Asia/Kuala_Lumpur", label: "GMT+8 • Kuala Lumpur" },
+  { value: "Asia/Singapore", label: "GMT+8 • Singapore" },
+  { value: "Asia/Hong_Kong", label: "GMT+8 • Hong Kong" },
+  { value: "Asia/Bangkok", label: "GMT+7 • Bangkok" },
+];
+
+const languageOptions = [
+  { value: "English (Malaysia)", label: "English (Malaysia)" },
+  { value: "Bahasa Melayu", label: "Bahasa Melayu" },
+  { value: "Chinese", label: "Chinese (Mandarin)" },
+];
+
 export function AuthForm() {
   const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
+  const [timezone, setTimezone] = useState("Asia/Kuala_Lumpur");
+  const [language, setLanguage] = useState("English (Malaysia)");
   const [signInState, signInAction] = useFormState<ActionState, FormData>(signInWithEmail, initialState);
   const [signUpState, signUpAction] = useFormState<ActionState, FormData>(signUpWithEmail, initialState);
 
@@ -43,12 +65,62 @@ export function AuthForm() {
 
       <form action={action} className="space-y-4">
         {mode === "sign-up" && (
-          <div className="space-y-2">
-            <label htmlFor="name" className="text-sm font-medium text-foreground">
-              Full name
-            </label>
-            <Input id="name" name="name" placeholder="Alicia Tan" required />
-          </div>
+          <>
+            <input type="hidden" name="timezone" value={timezone} />
+            <input type="hidden" name="language" value={language} />
+            <div className="space-y-2">
+              <label htmlFor="name" className="text-sm font-medium text-foreground">
+                Full name
+              </label>
+              <Input id="name" name="name" placeholder="Alicia Tan" required />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="phone" className="text-sm font-medium text-foreground">
+                Mobile
+              </label>
+              <Input id="phone" name="phone" placeholder="+60 12-555 4455" required />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="agency" className="text-sm font-medium text-foreground">
+                Agency
+              </label>
+              <Input id="agency" name="agency" placeholder="Your agency name" required />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="timezone" className="text-sm font-medium text-foreground">
+                Timezone
+              </label>
+              <Select value={timezone} onValueChange={setTimezone}>
+                <SelectTrigger id="timezone">
+                  <SelectValue placeholder="Select timezone" />
+                </SelectTrigger>
+                <SelectContent>
+                  {timezoneOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="language" className="text-sm font-medium text-foreground">
+                Language
+              </label>
+              <Select value={language} onValueChange={setLanguage}>
+                <SelectTrigger id="language">
+                  <SelectValue placeholder="Select language" />
+                </SelectTrigger>
+                <SelectContent>
+                  {languageOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </>
         )}
         <div className="space-y-2">
           <label htmlFor="email" className="text-sm font-medium text-foreground">

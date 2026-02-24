@@ -3,21 +3,9 @@ import { userProfileSchema, type UserProfile } from "@leadlah/core";
 import { isApiNotFound, requestApi } from "@/lib/api";
 
 const fallbackProfile: UserProfile = {
-  id: "demo-user",
-  name: "Alicia Rahman",
-  email: "alicia@leadlah.com",
-  phone: "+60 12-555 4455",
-  whatsapp: "+60 12-555 4455",
-  agency: "Nova Realty Group",
-  renNumber: "REN 12345",
-  agencyLogoUrl:
-    "https://images.unsplash.com/photo-1526948128573-703ee1aeb6fa?auto=format&fit=crop&w=200&q=80",
-  role: "Senior Real Estate Negotiator",
-  bio: "I close lifestyle properties across KLCC, Mont Kiara, and Damansara with a concierge-style service mindset.",
-  avatarUrl:
-    "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=400&q=80",
-  coverUrl:
-    "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1400&q=80",
+  id: "unknown-user",
+  name: "LeadLah User",
+  email: "user@leadlah.com",
   timezone: "Asia/Kuala_Lumpur",
   language: "English (Malaysia)",
   notifications: {

@@ -9,7 +9,10 @@ import { fetchProfile, persistProfile } from "@/data/profile";
 import { requireSession } from "@/lib/session";
 import { auth } from "@/lib/auth";
 
-const profileMutationSchema = userProfileUpdateSchema;
+const profileMutationSchema = userProfileUpdateSchema.extend({
+  phone: z.string().min(6).max(40),
+  agency: z.string().min(2).max(80),
+});
 
 const asOptionalString = (value: FormDataEntryValue | null) => {
   if (typeof value !== "string") {
@@ -54,9 +57,9 @@ export async function updateProfile(
   const payloadResult = profileMutationSchema.safeParse({
     name: asString(formData.get("name")),
     email: asString(formData.get("email")),
-    phone: asOptionalString(formData.get("phone")),
+    phone: asString(formData.get("phone")),
     whatsapp: currentProfile.whatsapp,
-    agency: asOptionalString(formData.get("agency")),
+    agency: asString(formData.get("agency")),
     renNumber: asOptionalString(formData.get("renNumber")),
     agencyLogoUrl: asOptionalString(formData.get("agencyLogoUrl")),
     role: asOptionalString(formData.get("role")),

@@ -67,8 +67,8 @@ export class ProfilesService {
       ...(current ?? { id: userId }),
       name: payload.name,
       email: payload.email,
-      phone: payload.phone ?? null,
-      agency: payload.agency ?? null,
+      phone: payload.phone,
+      agency: payload.agency,
       renNumber: payload.renNumber ?? current?.renNumber ?? null,
       agencyLogoUrl: payload.agencyLogoUrl ?? current?.agencyLogoUrl ?? null,
       role: payload.role ?? null,
@@ -101,10 +101,10 @@ export class ProfilesService {
       entity.email = payload.email;
     }
     if (payload.phone !== undefined) {
-      entity.phone = payload.phone ?? null;
+      entity.phone = payload.phone;
     }
     if (payload.agency !== undefined) {
-      entity.agency = payload.agency ?? null;
+      entity.agency = payload.agency;
     }
     if (payload.renNumber !== undefined) {
       entity.renNumber = payload.renNumber ?? null;

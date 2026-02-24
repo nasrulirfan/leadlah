@@ -156,12 +156,13 @@ export function ProfileForm({ profile }: ProfileFormProps) {
             </Field>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
-            <Field label="Mobile" name="phone" state={state}>
+            <Field label="Mobile" name="phone" state={state} required>
               <Input
                 name="phone"
                 id="phone"
                 defaultValue={profile.phone}
                 placeholder="+60 12-555 4455"
+                required
               />
             </Field>
             <Field label="REN number" name="renNumber" state={state}>
@@ -182,12 +183,13 @@ export function ProfileForm({ profile }: ProfileFormProps) {
             </Field>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Agency" name="agency" state={state}>
+            <Field label="Agency" name="agency" state={state} required>
               <Input
                 name="agency"
                 id="agency"
                 defaultValue={profile.agency}
                 placeholder="Your agency name"
+                required
               />
             </Field>
             <Field label="Agency logo URL" name="agencyLogoUrl" state={state}>
@@ -201,7 +203,9 @@ export function ProfileForm({ profile }: ProfileFormProps) {
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="timezone">Timezone</Label>
+              <Label htmlFor="timezone">
+                Timezone<span className="ml-1 text-destructive">*</span>
+              </Label>
               <Select value={timezone} onValueChange={setTimezone}>
                 <SelectTrigger id="timezone">
                   <SelectValue placeholder="Select timezone" />

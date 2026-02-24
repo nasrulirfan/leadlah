@@ -1,26 +1,41 @@
 import { Type } from "class-transformer";
-import { IsEmail, IsOptional, IsString, ValidateNested } from "class-validator";
+import {
+  IsEmail,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+  ValidateIf,
+  ValidateNested,
+} from "class-validator";
 import { NotificationPreferencesDto } from "./notification-preferences.dto";
 
 export class UpdateProfileDto {
   @IsOptional()
   @IsString()
+  @MinLength(2)
   name?: string;
 
   @IsOptional()
   @IsEmail()
   email?: string;
 
-  @IsOptional()
+  @ValidateIf((_, value) => value !== undefined)
   @IsString()
-  phone?: string | null;
+  @MinLength(6)
+  @MaxLength(40)
+  phone?: string;
+
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @MinLength(2)
+  @MaxLength(80)
+  agency?: string;
 
   @IsOptional()
   @IsString()
-  agency?: string | null;
-
-  @IsOptional()
-  @IsString()
+  @MinLength(3)
+  @MaxLength(40)
   renNumber?: string | null;
 
   @IsOptional()
@@ -29,6 +44,8 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsString()
+  @MinLength(2)
+  @MaxLength(80)
   role?: string | null;
 
   @IsOptional()
@@ -45,14 +62,18 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsString()
+  @MinLength(2)
   timezone?: string;
 
   @IsOptional()
   @IsString()
+  @MinLength(2)
   language?: string;
 
   @IsOptional()
   @IsString()
+  @MinLength(6)
+  @MaxLength(40)
   whatsapp?: string | null;
 
   @IsOptional()
