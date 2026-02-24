@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const month = searchParams.get("month") ? parseInt(searchParams.get("month")!) : null;
 
     const reports = await requestApi<any>(
-      `/performance/${userId}/reports?year=${year}`,
+      `/performance/${userId}/metrics?year=${year}`,
     );
     const monthlyReports = Array.isArray(reports?.monthlyReports)
       ? reports.monthlyReports

@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requestApi } from "@/lib/api";
 import { requireSession } from "@/lib/session";
+import { isFeatureEnabled } from "@/lib/feature-flags/server";
 
 export const dynamic = "force-dynamic";
 
 type ApiError = Error & { status?: number };
 
 export async function GET(request: NextRequest) {
+  if (!isFeatureEnabled("performance.reports")) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   try {
     const session = await requireSession();
     const userId = session.user.id;

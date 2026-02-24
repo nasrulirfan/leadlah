@@ -32,6 +32,11 @@ type PerformanceReportsResponse = {
   monthlyReports: PerformanceMetrics[];
 };
 
+type PerformanceOverviewResponse = {
+  currentMonth: PerformanceMetrics;
+  currentYear: PerformanceMetrics;
+};
+
 const request = async <T>(url: string, init: RequestInit = {}) => {
   try {
     const response = await fetch(url, {
@@ -159,16 +164,10 @@ export function usePerformanceData() {
     const month = now.getMonth() + 1;
 
     try {
-      const response = await request<PerformanceReportsResponse>(
-        `/api/performance/reports?year=${year}`
-      );
-      const monthly = response.monthlyReports ?? [];
-      const currentMonth =
-        monthly.find((report) => report.period.month === month) ?? buildEmptyMetrics(year, month);
-
       setData({
-        currentMonth,
-        currentYear: response.yearlyReport ?? buildEmptyMetrics(year)
+        ...(await request<PerformanceOverviewResponse>(
+          `/api/performance/overview?year=${year}`
+        ))
       });
       setError(null);
     } catch (err) {

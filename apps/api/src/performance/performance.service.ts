@@ -423,7 +423,7 @@ export class PerformanceService {
     return { id };
   }
 
-  async reports(userId: string, year: number) {
+  async metrics(userId: string, year: number) {
     const [targetResult, commissionResult, expenseResult] = await Promise.all([
       this.targets
         .createQueryBuilder("target")

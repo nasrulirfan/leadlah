@@ -76,7 +76,7 @@ export async function fetchDashboardPerformance(userId: string) {
   const month = now.getMonth() + 1;
 
   const response = await requestApi<PerformanceReportsResponse>(
-    `/performance/${userId}/reports?year=${year}`,
+    `/performance/${userId}/metrics?year=${year}`,
   );
 
   const monthlyReports = response.monthlyReports ?? [];

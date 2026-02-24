@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  NotFoundException,
   Param,
   Patch,
   Post,
@@ -15,10 +16,14 @@ import { CreateExpenseDto } from "./dto/create-expense.dto";
 import { UpdateExpenseDto } from "./dto/update-expense.dto";
 import { CreateCommissionDto } from "./dto/create-commission.dto";
 import { UpdateCommissionDto } from "./dto/update-commission.dto";
+import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
 
 @Controller("performance")
 export class PerformanceController {
-  constructor(private readonly service: PerformanceService) {}
+  constructor(
+    private readonly service: PerformanceService,
+    private readonly featureFlags: FeatureFlagsService,
+  ) {}
 
   @Get(":userId/targets")
   listTargets(@Param("userId") userId: string, @Query("year") year?: string) {
@@ -124,10 +129,22 @@ export class PerformanceController {
 
   @Get(":userId/reports")
   reports(@Param("userId") userId: string, @Query("year") year?: string) {
+    if (!this.featureFlags.isEnabled("performance.reports")) {
+      throw new NotFoundException();
+    }
     const parsedYear = year ? Number(year) : NaN;
     const resolvedYear = Number.isFinite(parsedYear)
       ? parsedYear
       : new Date().getFullYear();
-    return this.service.reports(userId, resolvedYear);
+    return this.service.metrics(userId, resolvedYear);
+  }
+
+  @Get(":userId/metrics")
+  metrics(@Param("userId") userId: string, @Query("year") year?: string) {
+    const parsedYear = year ? Number(year) : NaN;
+    const resolvedYear = Number.isFinite(parsedYear)
+      ? parsedYear
+      : new Date().getFullYear();
+    return this.service.metrics(userId, resolvedYear);
   }
 }

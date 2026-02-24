@@ -10,7 +10,7 @@ import { ExpenseTracker } from "@/components/performance/expense-tracker";
 import { PerformanceReports } from "@/components/performance/performance-reports";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-export function PerformanceClient() {
+export function PerformanceClient({ reportsEnabled }: { reportsEnabled: boolean }) {
   return (
     <div className="space-y-6">
       <PageHero
@@ -31,16 +31,23 @@ export function PerformanceClient() {
 
       <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.05 }}>
         <Tabs defaultValue="targets" className="w-full">
-          <TabsList className="grid h-auto w-full grid-cols-3 rounded-2xl bg-muted/50 p-1">
+          <TabsList
+            className={[
+              "grid h-auto w-full rounded-2xl bg-muted/50 p-1",
+              reportsEnabled ? "grid-cols-3" : "grid-cols-2",
+            ].join(" ")}
+          >
             <TabsTrigger value="targets" className="py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm">
               Targets
             </TabsTrigger>
             <TabsTrigger value="expenses" className="py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm">
               Expenses
             </TabsTrigger>
-            <TabsTrigger value="reports" className="py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              Reports
-            </TabsTrigger>
+            {reportsEnabled && (
+              <TabsTrigger value="reports" className="py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                Reports
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="targets" className="mt-6">
@@ -51,9 +58,11 @@ export function PerformanceClient() {
             <ExpenseTracker />
           </TabsContent>
 
-          <TabsContent value="reports" className="mt-6">
-            <PerformanceReports />
-          </TabsContent>
+          {reportsEnabled && (
+            <TabsContent value="reports" className="mt-6">
+              <PerformanceReports />
+            </TabsContent>
+          )}
         </Tabs>
       </motion.div>
     </div>
