@@ -25,16 +25,16 @@ We utilize a **Monorepo** strategy (Turborepo/Nx) with **TypeScript** across the
 
 | **Service Provider** | **Role** | **Cost (USD)** | **Notes** |
 | --- | --- | --- | --- |
-| **Vercel** | Landing Page & Web Hosting | **$0** | "Hobby" Tier (Free). |
+| **Cloudflare Pages** | Landing Page & Web Hosting | **$0** | Vercel has a 100GB bandwidth limit. Cloudflare Pages has unlimited bandwidth. For a property app with many images, this is crucial. |
 | **Expo (EAS)** | Mobile Builds | **$0** | "Free" Tier (15 builds/mo). |
-| **Render** | Backend API (NestJS) | **$7 / mo** | "Starter" Plan (512MB RAM). |
-| **Render** | Database (Postgres) | **$7 / mo** | "Starter" Managed PostgreSQL. |
+| **Railway** | Backend API (NestJS) | **$5 / mo** | "Free" Plan (512MB RAM). |
+| **Supabase** | Database (Postgres) | **$0 / mo** | "Free" Managed PostgreSQL (500MB RAM). |
 | **Upstash** | Redis (for Job Queue) | **$0** | **Free Tier** (10,000 commands/day). Perfect for MVP job queues. |
 | **Cloudflare R2** | File Storage | **$0** | 10GB/month free. |
 | **Resend** | Email Service | **$0** | Free up to 3,000 emails/mo. |
 | **Sentry** | Error Monitoring | **$0** | Free Developer Tier. |
 | **HitPay** | Payment Gateway | **Fees Only** | **1.2% + RM1.00** (Cards) / **RM1.50** (FPX). |
-| **TOTAL** | **Monthly Fixed** | **~$14 USD** | **(~RM 63 / month)** |
+| **TOTAL** | **Monthly Fixed** | **~$5 USD** | **(~RM 20 / month)** |
 
 # Annual One time Fees
 | **Service** | **Cost** | **Notes** |
