@@ -7,7 +7,7 @@ import { z } from "zod";
 import { auth, ensureAuthReady } from "@/lib/auth";
 import { requestApi } from "@/lib/api";
 
-type ActionState = { error?: string };
+type ActionState = { error?: string; pendingVerificationEmail?: string };
 
 const signUpSchema = z.object({
   name: z.string().min(2),
@@ -33,7 +33,12 @@ export async function signInWithEmail(prevState: ActionState, formData: FormData
       body: { email, password }
     });
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "Unable to sign in. Please try again." };
+    const message = error instanceof Error ? error.message : "Unable to sign in. Please try again.";
+    const needsEmailVerification = /verify|verification|email.*not verified/i.test(message);
+    return {
+      error: needsEmailVerification ? "Please verify your email address to sign in." : message,
+      pendingVerificationEmail: needsEmailVerification ? email : undefined
+    };
   }
 
   redirect("/dashboard");
@@ -85,7 +90,7 @@ export async function signUpWithEmail(prevState: ActionState, formData: FormData
     return { error: error instanceof Error ? error.message : "Unable to create your account. Please try again." };
   }
 
-  redirect("/dashboard");
+  redirect(`/check-email?type=verify&email=${encodeURIComponent(parsed.data.email)}`);
 }
 
 export async function signOut() {

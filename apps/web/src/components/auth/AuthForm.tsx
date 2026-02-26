@@ -2,6 +2,7 @@
 
 import { useFormState } from "react-dom";
 import { useState } from "react";
+import Link from "next/link";
 import { signInWithEmail, signUpWithEmail } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type ActionState = { error?: string };
+type ActionState = { error?: string; pendingVerificationEmail?: string };
 
 const initialState: ActionState = {};
 
@@ -136,10 +137,33 @@ export function AuthForm() {
           <p className="text-xs text-muted-foreground">Minimum 8 characters. Sessions stay encrypted in secure cookies.</p>
         </div>
         {currentState?.error && <p className="text-sm font-medium text-red-600">{currentState.error}</p>}
+        {mode === "sign-in" && currentState?.pendingVerificationEmail && (
+          <p className="text-sm text-muted-foreground">
+            Didn&apos;t get the email?{" "}
+            <Link
+              className="font-semibold text-foreground underline underline-offset-4 hover:text-primary"
+              href={`/check-email?type=verify&email=${encodeURIComponent(currentState.pendingVerificationEmail)}`}
+            >
+              Resend verification link
+            </Link>
+            .
+          </p>
+        )}
         <Button type="submit" className="w-full">
           {mode === "sign-in" ? "Sign in to LeadLah" : "Create my account"}
         </Button>
       </form>
+
+      {mode === "sign-in" && (
+        <div className="flex items-center justify-between text-sm">
+          <Link className="text-muted-foreground hover:text-foreground transition-colors" href="/forgot-password">
+            Forgot password?
+          </Link>
+          <Link className="text-muted-foreground hover:text-foreground transition-colors" href="/check-email?type=verify">
+            Verify email
+          </Link>
+        </div>
+      )}
 
       <p className="text-xs text-muted-foreground">
         By continuing you agree to the billing and owner transparency policies. You can revoke sessions anytime from your

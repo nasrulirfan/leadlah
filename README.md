@@ -112,6 +112,9 @@ BETTER_AUTH_DATABASE_URL=postgres://leadlah:leadlah@localhost:5432/leadlah
 BETTER_AUTH_URL=http://localhost:3000
 NEXT_PUBLIC_API_URL=http://localhost:3001
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+RESEND_API_KEY=re_xxxxxxxxx
+# Must be a verified sender/domain in Resend
+RESEND_FROM_EMAIL="LeadLah <no-reply@leadlah.com>"
 ```
 
 Create `.env` in `apps/api` (examples):

@@ -2,6 +2,8 @@ import { betterAuth } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
 import type { Pool } from "pg";
 
+import { sendEmailVerification, sendPasswordResetEmail } from "./email/auth-emails";
+
 const PgPool: typeof import("pg").Pool = (() => {
   const pgModule = eval("require")("pg") as typeof import("pg");
   return pgModule.Pool;
@@ -36,7 +38,35 @@ export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET,
   database,
   emailAndPassword: {
-    enabled: true
+    enabled: true,
+    autoSignIn: false,
+    requireEmailVerification: true,
+    resetPasswordTokenExpiresIn: 60 * 60,
+    sendResetPassword: async ({ user, url, token }, request) => {
+      void sendPasswordResetEmail({ to: user.email, token, resetUrl: url }).catch((error) => {
+        console.error("Failed to send password reset email:", error);
+      });
+
+      void request;
+    }
+  },
+  emailVerification: {
+    sendOnSignUp: true,
+    sendOnSignIn: true,
+    autoSignInAfterVerification: true,
+    expiresIn: 60 * 60,
+    sendVerificationEmail: async ({ user, url, token }, request) => {
+      void sendEmailVerification({
+        to: user.email,
+        token,
+        authGeneratedUrl: url,
+        userName: user.name
+      }).catch((error) => {
+        console.error("Failed to send email verification email:", error);
+      });
+
+      void request;
+    }
   },
   plugins: [
     // Handles Set-Cookie updates inside server actions (Next.js)
