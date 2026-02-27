@@ -114,14 +114,12 @@ export class ListingsController {
 
         const reader = response.body.getReader();
         try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) {
-              break;
+          let result = await reader.read();
+          while (!result.done) {
+            if (result.value) {
+              yield result.value;
             }
-            if (value) {
-              yield value;
-            }
+            result = await reader.read();
           }
         } finally {
           reader.releaseLock();

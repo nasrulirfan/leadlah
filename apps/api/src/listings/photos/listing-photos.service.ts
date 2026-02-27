@@ -401,7 +401,7 @@ export class ListingPhotosService {
     const url = r2PresignedGetUrl({
       key: best.key,
       expiresSeconds: LISTING_PHOTO_DOWNLOAD_URL_EXPIRES_SECONDS,
-      responseContentDisposition: `attachment; filename=\"${filename}\"`,
+      responseContentDisposition: `attachment; filename="${filename}"`,
     });
 
     return { url, filename, publicUrl: r2ObjectUrl(best.key) };

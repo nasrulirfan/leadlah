@@ -4,7 +4,7 @@ import type { ReminderRecurrence } from "../entities/reminder.entity";
 
 export class CreateReminderDto {
   @IsString()
-  type!: ReminderType | (string & {});
+  type!: ReminderType | (string & NonNullable<unknown>);
 
   @IsOptional()
   @IsUUID()
@@ -29,4 +29,3 @@ export class CreateReminderDto {
   @IsObject()
   metadata?: Record<string, unknown> | null;
 }
-

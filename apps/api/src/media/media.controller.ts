@@ -46,14 +46,12 @@ export class MediaController {
 
     const reader = response.body.getReader();
     try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) {
-          break;
+      let result = await reader.read();
+      while (!result.done) {
+        if (result.value) {
+          res.write(Buffer.from(result.value));
         }
-        if (value) {
-          res.write(Buffer.from(value));
-        }
+        result = await reader.read();
       }
     } finally {
       reader.releaseLock();
