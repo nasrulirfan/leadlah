@@ -2064,13 +2064,13 @@ export default function ListingsClient({
                     >
                       <Plus className="h-4 w-4" />
                       Add portal link
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Add platform URLs + expiry dates to generate "listing
-                    expiring in 1 day" reminders automatically.
-                  </p>
+                  </Button>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Add platform URLs + expiry dates to generate &quot;listing
+                  expiring in 1 day&quot; reminders automatically.
+                </p>
+              </div>
                 <div className="md:col-span-2 flex items-center justify-between pt-4 border-t">
                   <div className="text-sm text-destructive">{error}</div>
                   <div className="flex gap-3">

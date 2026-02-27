@@ -9,9 +9,12 @@ function first(param: string | string[] | undefined) {
   return Array.isArray(param) ? param[0] : param;
 }
 
-export default function VerifyEmailPage(props: { searchParams: SearchParams }) {
-  const token = first(props.searchParams.token);
-  const callbackURL = first(props.searchParams.callbackURL);
+export default async function VerifyEmailPage(props: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const searchParams = await props.searchParams;
+  const token = first(searchParams.token);
+  const callbackURL = first(searchParams.callbackURL);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -22,4 +25,3 @@ export default function VerifyEmailPage(props: { searchParams: SearchParams }) {
     </div>
   );
 }
-

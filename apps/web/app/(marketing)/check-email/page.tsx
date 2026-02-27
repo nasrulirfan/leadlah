@@ -9,9 +9,12 @@ function first(param: string | string[] | undefined) {
   return Array.isArray(param) ? param[0] : param;
 }
 
-export default function CheckEmailPage(props: { searchParams: SearchParams }) {
-  const type = first(props.searchParams.type);
-  const email = first(props.searchParams.email);
+export default async function CheckEmailPage(props: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const searchParams = await props.searchParams;
+  const type = first(searchParams.type);
+  const email = first(searchParams.email);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -22,4 +25,3 @@ export default function CheckEmailPage(props: { searchParams: SearchParams }) {
     </div>
   );
 }
-

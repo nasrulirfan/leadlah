@@ -32,13 +32,13 @@ const toApiExpense = (payload: any): ApiExpense => ({
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await requireSession();
     const userId = session.user.id;
     const body = await request.json();
-    const { id } = params;
+    const { id } = await params;
 
     const updated = await requestApi<any>(`/performance/${userId}/expenses/${id}`, {
       method: "PATCH",
@@ -64,12 +64,12 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await requireSession();
     const userId = session.user.id;
-    const { id } = params;
+    const { id } = await params;
 
     await requestApi(`/performance/${userId}/expenses/${id}`, {
       method: "DELETE",

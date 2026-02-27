@@ -5,12 +5,13 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 export async function GET(
   _request: Request,
-  { params }: { params: { id: string; photoId: string } },
+  { params }: { params: Promise<{ id: string; photoId: string }> },
 ) {
   await requireSession();
+  const { id, photoId } = await params;
 
   const response = await fetch(
-    `${API_BASE_URL}/listings/${params.id}/photos/${params.photoId}/download-url`,
+    `${API_BASE_URL}/listings/${id}/photos/${photoId}/download-url`,
     { cache: "no-store" },
   );
 
@@ -29,4 +30,3 @@ export async function GET(
 
   return NextResponse.redirect(data.url);
 }
-

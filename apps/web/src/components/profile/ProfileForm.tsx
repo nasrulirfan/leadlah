@@ -243,7 +243,7 @@ function AvatarField({
 }: {
   avatarPreview: string;
   initials: string;
-  fileInputRef: RefObject<HTMLInputElement>;
+  fileInputRef: RefObject<HTMLInputElement | null>;
   onUpload: (event: ChangeEvent<HTMLInputElement>) => void;
   onRemove: () => void;
 }) {

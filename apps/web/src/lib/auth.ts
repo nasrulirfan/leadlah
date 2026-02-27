@@ -74,19 +74,19 @@ export const auth = betterAuth({
   ]
 });
 
-const migrationsPromise =
-  globalThis.__authMigrationsPromise ??
-  (globalThis.__authMigrationsPromise = (async () => {
-    if (auth.$context) {
-      const ctx = await auth.$context;
-      if (typeof ctx.runMigrations === "function") {
-        await ctx.runMigrations();
-      }
-    }
-  })());
-
 export async function ensureAuthReady() {
-  await migrationsPromise;
+  const promise =
+    globalThis.__authMigrationsPromise ??
+    (globalThis.__authMigrationsPromise = (async () => {
+      if (auth.$context) {
+        const ctx = await auth.$context;
+        if (typeof ctx.runMigrations === "function") {
+          await ctx.runMigrations();
+        }
+      }
+    })());
+
+  await promise;
 }
 
 export type Session = typeof auth.$Infer.Session;

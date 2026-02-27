@@ -22,8 +22,9 @@ const formatDate = (value?: Date) => {
   return value.toLocaleDateString("en-MY", { dateStyle: "medium" });
 };
 
-export default async function OwnerViewPage({ params }: { params: Params }) {
-  const ownerToken = decodeOwnerViewToken(params.token);
+export default async function OwnerViewPage({ params }: { params: Promise<Params> }) {
+  const { token } = await params;
+  const ownerToken = decodeOwnerViewToken(token);
   if (!ownerToken) {
     notFound();
   }

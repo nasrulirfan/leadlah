@@ -16,9 +16,9 @@ type PageHeroProps = {
 
 export function PageHero({ title, description, icon, badges, actions, className }: PageHeroProps) {
   const renderedIcon = icon
-    ? isValidElement(icon)
+    ? isValidElement<{ className?: string }>(icon)
       ? cloneElement(icon, {
-          className: cn("h-6 w-6 text-amber-400", (icon.props as { className?: string }).className)
+          className: cn("h-6 w-6 text-amber-400", icon.props.className)
         })
       : icon
     : null;

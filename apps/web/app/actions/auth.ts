@@ -1,5 +1,6 @@
 "use server";
 
+import type { Route } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -90,7 +91,9 @@ export async function signUpWithEmail(prevState: ActionState, formData: FormData
     return { error: error instanceof Error ? error.message : "Unable to create your account. Please try again." };
   }
 
-  redirect(`/check-email?type=verify&email=${encodeURIComponent(parsed.data.email)}`);
+  redirect(
+    `/check-email?type=verify&email=${encodeURIComponent(parsed.data.email)}` as Route,
+  );
 }
 
 export async function signOut() {

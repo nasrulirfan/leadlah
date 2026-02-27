@@ -17,10 +17,11 @@ const ALLOWED_TYPES = new Set([
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   await requireSession();
-  const listingId = listingSchema.shape.id.parse(params.id);
+  const { id } = await params;
+  const listingId = listingSchema.shape.id.parse(id);
 
   const form = await request.formData();
   const files = form.getAll("files").filter((item): item is File => item instanceof File);
@@ -101,4 +102,3 @@ export async function POST(
     { headers: { "Cache-Control": "no-store" } },
   );
 }
-

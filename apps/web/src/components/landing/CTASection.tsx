@@ -47,7 +47,7 @@ export function CTASection() {
                 </h2>
                 
                 <p className="text-xl text-muted-foreground">
-                  Join 320+ REN professionals who've already made the switch to LeadLah.
+                  Join 320+ REN professionals who&apos;ve already made the switch to LeadLah.
                 </p>
               </div>
 

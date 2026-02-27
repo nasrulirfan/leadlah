@@ -94,7 +94,7 @@ export function TestimonialSection() {
                 
                 <blockquote className="space-y-4">
                   <p className="text-2xl font-semibold leading-relaxed text-foreground">
-                    "LeadLah's shadcn components made our marketing site feel as polished as the dashboard—no extra CSS work."
+                    &quot;LeadLah&apos;s shadcn components made our marketing site feel as polished as the dashboard—no extra CSS work.&quot;
                   </p>
                   
                   <footer className="flex items-center gap-4 pt-4">

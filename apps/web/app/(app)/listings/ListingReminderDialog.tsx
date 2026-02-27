@@ -151,7 +151,7 @@ export function ListingReminderDialog({ listingId, listingName }: ListingReminde
               <CheckCircle2 className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
             </div>
             <p className="mt-4 text-lg font-medium text-foreground">Reminder Created!</p>
-            <p className="text-sm text-muted-foreground">You'll be notified at the scheduled time.</p>
+            <p className="text-sm text-muted-foreground">You&apos;ll be notified at the scheduled time.</p>
           </motion.div>
         ) : (
           <div className="p-6 pt-2">

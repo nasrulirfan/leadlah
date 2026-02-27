@@ -9,9 +9,12 @@ function first(param: string | string[] | undefined) {
   return Array.isArray(param) ? param[0] : param;
 }
 
-export default function ResetPasswordPage(props: { searchParams: SearchParams }) {
-  const token = first(props.searchParams.token);
-  const error = first(props.searchParams.error);
+export default async function ResetPasswordPage(props: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const searchParams = await props.searchParams;
+  const token = first(searchParams.token);
+  const error = first(searchParams.error);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -22,4 +25,3 @@ export default function ResetPasswordPage(props: { searchParams: SearchParams })
     </div>
   );
 }
-
