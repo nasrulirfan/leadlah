@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useActionState,
   useEffect,
   useMemo,
   useRef,
@@ -9,7 +10,7 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
 import { CheckCircle2, Loader2, UploadCloud, XCircle } from "lucide-react";
 import type { UserProfile } from "@leadlah/core";
 
@@ -53,7 +54,7 @@ const languageOptions = [
 
 export function ProfileForm({ profile }: ProfileFormProps) {
   const initialProfileState: ProfileFormState = { status: "idle" };
-  const [state, formAction] = useFormState(updateProfile, initialProfileState);
+  const [state, formAction] = useActionState(updateProfile, initialProfileState);
   const [avatarPreview, setAvatarPreview] = useState(profile.avatarUrl ?? "");
   const [timezone, setTimezone] = useState(profile.timezone);
   const [language, setLanguage] = useState(profile.language);

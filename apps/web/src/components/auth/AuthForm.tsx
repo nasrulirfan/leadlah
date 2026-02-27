@@ -1,7 +1,6 @@
 "use client";
 
-import { useFormState } from "react-dom";
-import { useState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import { signInWithEmail, signUpWithEmail } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
@@ -35,8 +34,8 @@ export function AuthForm() {
   const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [timezone, setTimezone] = useState("Asia/Kuala_Lumpur");
   const [language, setLanguage] = useState("English (Malaysia)");
-  const [signInState, signInAction] = useFormState<ActionState, FormData>(signInWithEmail, initialState);
-  const [signUpState, signUpAction] = useFormState<ActionState, FormData>(signUpWithEmail, initialState);
+  const [signInState, signInAction] = useActionState<ActionState, FormData>(signInWithEmail, initialState);
+  const [signUpState, signUpAction] = useActionState<ActionState, FormData>(signUpWithEmail, initialState);
 
   const currentState = mode === "sign-in" ? signInState : signUpState;
   const action = mode === "sign-in" ? signInAction : signUpAction;
@@ -47,18 +46,16 @@ export function AuthForm() {
         <button
           type="button"
           onClick={() => setMode("sign-in")}
-          className={`flex-1 rounded-full px-4 py-2 transition ${
-            mode === "sign-in" ? "bg-background text-foreground shadow-sm" : "hover:text-foreground"
-          }`}
+          className={`flex-1 rounded-full px-4 py-2 transition ${mode === "sign-in" ? "bg-background text-foreground shadow-sm" : "hover:text-foreground"
+            }`}
         >
           Sign in
         </button>
         <button
           type="button"
           onClick={() => setMode("sign-up")}
-          className={`flex-1 rounded-full px-4 py-2 transition ${
-            mode === "sign-up" ? "bg-background text-foreground shadow-sm" : "hover:text-foreground"
-          }`}
+          className={`flex-1 rounded-full px-4 py-2 transition ${mode === "sign-up" ? "bg-background text-foreground shadow-sm" : "hover:text-foreground"
+            }`}
         >
           Create account
         </button>
