@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   typedRoutes: true,
-  serverExternalPackages: ["pg", "puppeteer"],
+  serverExternalPackages: ["pg", "pdfkit"],
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "**" }

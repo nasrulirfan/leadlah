@@ -2,10 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { existsSync } from "fs";
 import { readFile } from "fs/promises";
 import path from "path";
-import puppeteer from "puppeteer";
 import type { CalculatorReceipt } from "@leadlah/core";
 
-import { generateCalculatorReceiptHtml } from "@/lib/pdf/generate-calculator-receipt-html";
+import { generateCalculatorReceiptPdfBuffer } from "@/lib/pdf/generate-calculator-receipt-pdf";
 import { fetchProfile } from "@/data/profile";
 import { auth, ensureAuthReady } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -13,8 +12,8 @@ import { headers } from "next/headers";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-let leadlahMarkDataUriCache: string | undefined;
-let leadlahMarkDataUriLoaded = false;
+let leadlahMarkBufferCache: Buffer | undefined;
+let leadlahMarkBufferLoaded = false;
 
 type AllowableType = CalculatorReceipt["calculationType"];
 const allowedTypes: AllowableType[] = [
@@ -52,46 +51,19 @@ export async function POST(req: NextRequest) {
         normalized.agencyLogoUrl,
     };
 
-    const leadlahMarkDataUri = await getLeadlahMarkDataUri();
-    const html = generateCalculatorReceiptHtml(receipt, { leadlahMarkDataUri });
-
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    const leadlahMarkBuffer = await getLeadlahMarkBuffer();
+    const pdfBuffer = await generateCalculatorReceiptPdfBuffer(receipt, {
+      leadlahMarkBuffer,
+      agencyLogoUrl: receipt.agencyLogoUrl,
     });
 
-    try {
-      const page = await browser.newPage();
-      await page.setViewport({
-        width: 794,
-        height: 1123,
-        deviceScaleFactor: 2,
-      });
-      await page.setContent(html, { waitUntil: "networkidle0" });
-      await page.emulateMediaType("screen");
-      const pdf = await page.pdf({
-        format: "A4",
-        printBackground: true,
-        preferCSSPageSize: true,
-        margin: {
-          top: "0",
-          bottom: "0",
-          left: "0",
-          right: "0",
-        },
-      });
-
-      const pdfBody = Uint8Array.from(pdf).buffer as ArrayBuffer;
-
-      return new NextResponse(pdfBody, {
-        headers: {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename=${buildFileName(receipt)}`,
-        },
-      });
-    } finally {
-      await browser.close();
-    }
+    return new NextResponse(pdfBuffer, {
+      headers: {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${buildFileName(receipt)}"`,
+      },
+    });
   } catch (error) {
     const message =
       error instanceof Error
@@ -102,26 +74,25 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function getLeadlahMarkDataUri(): Promise<string | undefined> {
-  if (leadlahMarkDataUriLoaded) {
-    return leadlahMarkDataUriCache;
+async function getLeadlahMarkBuffer(): Promise<Buffer | undefined> {
+  if (leadlahMarkBufferLoaded) {
+    return leadlahMarkBufferCache;
   }
 
-  leadlahMarkDataUriLoaded = true;
+  leadlahMarkBufferLoaded = true;
   const assetPath = resolveBrandAssetPath("brand/leadlah-symbol.png");
   if (!assetPath) {
     return undefined;
   }
 
   try {
-    const buffer = await readFile(assetPath);
-    leadlahMarkDataUriCache = `data:image/png;base64,${buffer.toString("base64")}`;
+    leadlahMarkBufferCache = await readFile(assetPath);
   } catch (error) {
     console.warn("[calculators.pdf] Unable to load LeadLah logo asset:", error);
-    leadlahMarkDataUriCache = undefined;
+    leadlahMarkBufferCache = undefined;
   }
 
-  return leadlahMarkDataUriCache;
+  return leadlahMarkBufferCache;
 }
 
 function resolveBrandAssetPath(assetPath: string): string | undefined {
