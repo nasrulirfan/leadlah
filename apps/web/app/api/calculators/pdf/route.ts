@@ -80,7 +80,7 @@ async function getLeadlahMarkBuffer(): Promise<Buffer | undefined> {
   }
 
   leadlahMarkBufferLoaded = true;
-  const assetPath = resolveBrandAssetPath("brand/leadlah-symbol.png");
+  const assetPath = resolveBrandAssetPath("brand/leadlah-symbol-white.png");
   if (!assetPath) {
     return undefined;
   }

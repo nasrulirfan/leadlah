@@ -742,26 +742,26 @@ function renderKeyValueSection(
     rows.length === 0
       ? 16 + 46
       : (() => {
-          const [key, rawValue] = rows[0];
-          const label = formatLabel(key);
-          const formattedValue = formatValue(key, rawValue);
+        const [key, rawValue] = rows[0];
+        const label = formatLabel(key);
+        const formattedValue = formatValue(key, rawValue);
 
-          doc.font("Helvetica-Bold").fontSize(9);
-          const labelTextHeight = doc.heightOfString(label, {
-            width: labelColumnWidth - rowPaddingX * 2,
-          });
+        doc.font("Helvetica-Bold").fontSize(9);
+        const labelTextHeight = doc.heightOfString(label, {
+          width: labelColumnWidth - rowPaddingX * 2,
+        });
 
-          doc.font("Helvetica-Bold").fontSize(9);
-          const valueTextHeight = doc.heightOfString(formattedValue, {
-            width: valueColumnWidth - rowPaddingX * 2,
-            align: "right",
-          });
+        doc.font("Helvetica-Bold").fontSize(9);
+        const valueTextHeight = doc.heightOfString(formattedValue, {
+          width: valueColumnWidth - rowPaddingX * 2,
+          align: "right",
+        });
 
-          const firstRowHeight =
-            Math.max(labelTextHeight, valueTextHeight) + rowPaddingY * 2;
+        const firstRowHeight =
+          Math.max(labelTextHeight, valueTextHeight) + rowPaddingY * 2;
 
-          return 16 + headerHeight + firstRowHeight + 8;
-        })();
+        return 16 + headerHeight + firstRowHeight + 8;
+      })();
 
   let cursor = ensureVerticalSpace(doc, {
     cursorTop,
@@ -795,112 +795,166 @@ function renderKeyValueSection(
     return cursor + 46;
   }
 
-  const headerGradient = doc.linearGradient(contentLeft, cursor, contentLeft + contentWidth, cursor + headerHeight);
-  headerGradient.stop(0, "#f8fafc").stop(1, "#f1f5f9");
-
-  drawSoftShadow(doc, contentLeft, cursor, contentWidth, headerHeight, layout.cardRadius);
-  doc.roundedRect(contentLeft, cursor, contentWidth, headerHeight, layout.cardRadius).fill(headerGradient);
-
-  doc.save();
-  doc.strokeOpacity(1);
-  doc.strokeColor(palette.borderSubtle);
-  doc.lineWidth(1);
-  doc.roundedRect(contentLeft, cursor, contentWidth, headerHeight, layout.cardRadius).stroke();
-  doc.restore();
-
-  doc.font("Helvetica-Bold").fontSize(8).fillColor(palette.textPrimary);
-  doc.text("ITEM", contentLeft + rowPaddingX, cursor + 8, {
-    width: labelColumnWidth - rowPaddingX * 2,
-  });
-  doc.text("VALUE", contentLeft + labelColumnWidth, cursor + 8, {
-    width: valueColumnWidth - rowPaddingX,
-    align: "right",
-  });
-
-  cursor += headerHeight;
-
-  for (let index = 0; index < rows.length; index++) {
-    const [key, rawValue] = rows[index];
+  // ── Pre-compute every row height so we can size the card ──────────
+  const rowHeights: number[] = [];
+  for (const [key, rawValue] of rows) {
     const label = formatLabel(key);
     const formattedValue = formatValue(key, rawValue);
 
     doc.font("Helvetica-Bold").fontSize(9);
-    const labelTextHeight = doc.heightOfString(label, {
+    const lh = doc.heightOfString(label, {
       width: labelColumnWidth - rowPaddingX * 2,
     });
 
     doc.font("Helvetica-Bold").fontSize(9);
-    const valueTextHeight = doc.heightOfString(formattedValue, {
+    const vh = doc.heightOfString(formattedValue, {
       width: valueColumnWidth - rowPaddingX * 2,
       align: "right",
     });
 
-    const rowHeight = Math.max(labelTextHeight, valueTextHeight) + rowPaddingY * 2;
+    rowHeights.push(Math.max(lh, vh) + rowPaddingY * 2);
+  }
 
-    const safeCursor = ensureVerticalSpace(doc, {
-      cursorTop: cursor,
-      requiredHeight: rowHeight + 2,
-      contentBottom,
-      receipt,
-      reference,
-    });
-    if (safeCursor !== cursor) {
-      cursor = safeCursor;
+  // ── Helper: draw the full table card for a batch of rows ─────────
+  const renderTableCard = (
+    startIndex: number,
+    endIndex: number,
+    cardTop: number,
+  ): number => {
+    const batchHeights = rowHeights.slice(startIndex, endIndex);
+    const bodyHeight = batchHeights.reduce((s, h) => s + h, 0);
+    const totalHeight = headerHeight + bodyHeight;
+    const radius = layout.cardRadius;
 
-      const headerGradientNewPage = doc.linearGradient(contentLeft, cursor, contentLeft + contentWidth, cursor + headerHeight);
-      headerGradientNewPage.stop(0, "#f8fafc").stop(1, "#f1f5f9");
-      drawSoftShadow(doc, contentLeft, cursor, contentWidth, headerHeight, layout.cardRadius);
-      doc.roundedRect(contentLeft, cursor, contentWidth, headerHeight, layout.cardRadius).fill(headerGradientNewPage);
-      doc.save();
-      doc.strokeOpacity(1);
-      doc.strokeColor(palette.borderSubtle);
-      doc.lineWidth(1);
-      doc.roundedRect(contentLeft, cursor, contentWidth, headerHeight, layout.cardRadius).stroke();
-      doc.restore();
-      doc.font("Helvetica-Bold").fontSize(8).fillColor(palette.textPrimary);
-      doc.text("ITEM", contentLeft + rowPaddingX, cursor + 8, {
-        width: labelColumnWidth - rowPaddingX * 2,
-      });
-      doc.text("VALUE", contentLeft + labelColumnWidth, cursor + 8, {
-        width: valueColumnWidth - rowPaddingX,
-        align: "right",
-      });
-      cursor += headerHeight;
+    // 1. Soft shadow behind the card
+    drawSoftShadow(doc, contentLeft, cardTop, contentWidth, totalHeight, radius);
+
+    // 2. White base fill for the entire card (prevents page bg bleed)
+    doc.save();
+    doc.fillOpacity(1);
+    doc.fillColor(palette.surface);
+    doc.roundedRect(contentLeft, cardTop, contentWidth, totalHeight, radius).fill();
+    doc.restore();
+
+    // 3. Header gradient fill — clip to the card so it respects top corners
+    doc.save();
+    doc.roundedRect(contentLeft, cardTop, contentWidth, totalHeight, radius).clip();
+    const hdrGrad = doc.linearGradient(
+      contentLeft, cardTop,
+      contentLeft + contentWidth, cardTop + headerHeight,
+    );
+    hdrGrad.stop(0, "#f8fafc").stop(1, "#f1f5f9");
+    doc.rect(contentLeft, cardTop, contentWidth, headerHeight).fill(hdrGrad);
+    doc.restore();
+
+    // 4. Alternating row fills — clip to the card so last row respects bottom corners
+    let rowY = cardTop + headerHeight;
+    doc.save();
+    doc.roundedRect(contentLeft, cardTop, contentWidth, totalHeight, radius).clip();
+    for (let i = startIndex; i < endIndex; i++) {
+      const rh = rowHeights[i];
+      const isAlt = (i - startIndex) % 2 === 1;
+      if (isAlt) {
+        doc.fillOpacity(1);
+        doc.fillColor(palette.surfaceMuted);
+        doc.rect(contentLeft, rowY, contentWidth, rh).fill();
+      }
+      rowY += rh;
     }
+    doc.restore();
 
-    const isEvenRow = index % 2 === 1;
-    if (isEvenRow) {
-      doc.save();
-      doc.fillOpacity(1);
-      doc.fillColor(palette.surfaceMuted);
-      doc.rect(contentLeft, cursor, contentWidth, rowHeight).fill();
-      doc.restore();
-    }
-
+    // 5. Outer border — single rounded rect
     doc.save();
     doc.strokeOpacity(1);
     doc.strokeColor(palette.borderSubtle);
     doc.lineWidth(1);
-    doc.moveTo(contentLeft, cursor).lineTo(contentLeft, cursor + rowHeight).stroke();
-    doc
-      .moveTo(contentLeft + contentWidth, cursor)
-      .lineTo(contentLeft + contentWidth, cursor + rowHeight)
-      .stroke();
-    doc.moveTo(contentLeft, cursor + rowHeight).lineTo(contentLeft + contentWidth, cursor + rowHeight).stroke();
+    doc.roundedRect(contentLeft, cardTop, contentWidth, totalHeight, radius).stroke();
     doc.restore();
 
-    doc.font("Helvetica-Bold").fontSize(9).fillColor(palette.textSecondary);
-    doc.text(label, contentLeft + rowPaddingX, cursor + rowPaddingY, {
+    // 6. Internal horizontal separators (header separator + between rows)
+    doc.save();
+    doc.strokeOpacity(1);
+    doc.strokeColor(palette.borderSubtle);
+    doc.lineWidth(0.5);
+    let sepY = cardTop + headerHeight;
+    // separator below header
+    doc.moveTo(contentLeft, sepY).lineTo(contentLeft + contentWidth, sepY).stroke();
+    for (let i = startIndex; i < endIndex - 1; i++) {
+      sepY += rowHeights[i];
+      doc.moveTo(contentLeft, sepY).lineTo(contentLeft + contentWidth, sepY).stroke();
+    }
+    doc.restore();
+
+    // 7. Header text
+    doc.font("Helvetica-Bold").fontSize(8).fillColor(palette.textPrimary);
+    doc.text("ITEM", contentLeft + rowPaddingX, cardTop + 8, {
       width: labelColumnWidth - rowPaddingX * 2,
     });
-
-    doc.font("Helvetica-Bold").fontSize(9).fillColor(palette.textPrimary);
-    doc.text(formattedValue, contentLeft + labelColumnWidth + rowPaddingX / 2, cursor + rowPaddingY, {
+    doc.text("VALUE", contentLeft + labelColumnWidth, cardTop + 8, {
       width: valueColumnWidth - rowPaddingX,
       align: "right",
     });
 
-    cursor += rowHeight;
+    // 8. Row text
+    let textY = cardTop + headerHeight;
+    for (let i = startIndex; i < endIndex; i++) {
+      const [key, rawValue] = rows[i];
+      const label = formatLabel(key);
+      const formattedValue = formatValue(key, rawValue);
+
+      doc.font("Helvetica-Bold").fontSize(9).fillColor(palette.textSecondary);
+      doc.text(label, contentLeft + rowPaddingX, textY + rowPaddingY, {
+        width: labelColumnWidth - rowPaddingX * 2,
+      });
+
+      doc.font("Helvetica-Bold").fontSize(9).fillColor(palette.textPrimary);
+      doc.text(formattedValue, contentLeft + labelColumnWidth + rowPaddingX / 2, textY + rowPaddingY, {
+        width: valueColumnWidth - rowPaddingX,
+        align: "right",
+      });
+
+      textY += rowHeights[i];
+    }
+
+    return cardTop + totalHeight;
+  };
+
+  // ── Batch rows by page, then render each batch as one card ───────
+  let batchStart = 0;
+  while (batchStart < rows.length) {
+    // Determine how many rows fit on the current page
+    let available = contentBottom - cursor - headerHeight;
+    let batchEnd = batchStart;
+    while (batchEnd < rows.length && available >= rowHeights[batchEnd]) {
+      available -= rowHeights[batchEnd];
+      batchEnd++;
+    }
+
+    // If we can't even fit one row, add a new page
+    if (batchEnd === batchStart) {
+      cursor = ensureVerticalSpace(doc, {
+        cursorTop: cursor,
+        requiredHeight: headerHeight + rowHeights[batchStart] + 4,
+        contentBottom,
+        receipt,
+        reference,
+      });
+      batchEnd = batchStart + 1;
+    }
+
+    cursor = renderTableCard(batchStart, batchEnd, cursor);
+    batchStart = batchEnd;
+
+    // If there are remaining rows, move to the next page
+    if (batchStart < rows.length) {
+      cursor = ensureVerticalSpace(doc, {
+        cursorTop: cursor + 4,
+        requiredHeight: headerHeight + rowHeights[batchStart] + 4,
+        contentBottom,
+        receipt,
+        reference,
+      });
+    }
   }
 
   return cursor;
