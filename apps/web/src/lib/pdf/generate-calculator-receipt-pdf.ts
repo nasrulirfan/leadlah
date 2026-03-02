@@ -1,5 +1,8 @@
 import PDFDocument from "pdfkit";
 import type { CalculatorReceipt } from "@leadlah/core";
+import { lookup } from "dns/promises";
+import { existsSync } from "fs";
+import path from "path";
 
 type BrandAssets = {
   leadlahMarkBuffer?: Buffer;
@@ -34,9 +37,40 @@ const currencyKeyPattern =
   /(amount|fee|price|cost|rent|loan|stamp|installment|gdv|total|duty|payment)/i;
 const percentKeyPattern = /(percent|percentage|yield|margin|rate)/i;
 
-const allowedRemoteLogoProtocols = /^https?:\/\//i;
 const maxRemoteLogoBytes = 512 * 1024; // 512 KB
 const remoteLogoTimeoutMs = 5_000;
+const remoteLogoMaxRedirects = 3;
+
+type HostAllowRule =
+  | { type: "exact"; host: string }
+  | { type: "suffix"; host: string };
+
+const agencyLogoHostAllowRules = parseHostAllowRules(
+  process.env.LEADLAH_AGENCY_LOGO_ALLOWED_HOSTS,
+  [
+    { type: "suffix", host: "r2.dev" },
+    { type: "suffix", host: "r2.cloudflarestorage.com" },
+  ],
+);
+
+type ReceiptFonts = {
+  regular: string;
+  emphasis: string;
+  italic: string;
+  emphasisItalic: string;
+  strokeEmphasis: boolean;
+  strokeEmphasisItalic: boolean;
+};
+
+type ReceiptFontSources = {
+  regular?: string;
+  emphasis?: string;
+  italic?: string;
+  emphasisItalic?: string;
+};
+
+let receiptFontSourcesResolved = false;
+let receiptFontSourcesCache: ReceiptFontSources = {};
 
 const palette = {
   primaryStart: "#f43f5e",
@@ -62,6 +96,305 @@ const layout = {
   footerHeight: 56,
 };
 
+function registerReceiptFonts(doc: PDFKit.PDFDocument): ReceiptFonts {
+  const { regular, emphasis, italic, emphasisItalic } = getReceiptFontSources();
+  if (!regular) {
+    return {
+      regular: "Helvetica",
+      emphasis: "Helvetica-Bold",
+      italic: "Helvetica-Oblique",
+      emphasisItalic: "Helvetica-BoldOblique",
+      strokeEmphasis: false,
+      strokeEmphasisItalic: false,
+    };
+  }
+
+  doc.registerFont("Receipt-Regular", regular);
+  const regularName = "Receipt-Regular";
+
+  let emphasisName = regularName;
+  let strokeEmphasis = true;
+  if (emphasis) {
+    doc.registerFont("Receipt-Emphasis", emphasis);
+    emphasisName = "Receipt-Emphasis";
+    strokeEmphasis = false;
+  }
+
+  let italicName = regularName;
+  if (italic) {
+    doc.registerFont("Receipt-Italic", italic);
+    italicName = "Receipt-Italic";
+  }
+
+  let emphasisItalicName = emphasisName;
+  let strokeEmphasisItalic = strokeEmphasis;
+  if (emphasisItalic) {
+    doc.registerFont("Receipt-EmphasisItalic", emphasisItalic);
+    emphasisItalicName = "Receipt-EmphasisItalic";
+    strokeEmphasisItalic = false;
+  } else if (italicName !== emphasisName) {
+    emphasisItalicName = italicName;
+    strokeEmphasisItalic = true;
+  }
+
+  return {
+    regular: regularName,
+    emphasis: emphasisName,
+    italic: italicName,
+    emphasisItalic: emphasisItalicName,
+    strokeEmphasis,
+    strokeEmphasisItalic,
+  };
+}
+
+function getReceiptFontSources(): ReceiptFontSources {
+  if (receiptFontSourcesResolved) {
+    return receiptFontSourcesCache;
+  }
+
+  receiptFontSourcesResolved = true;
+
+  receiptFontSourcesCache = {
+    regular: resolveFirstExistingFile([
+      "app/fonts/Inter-Regular.ttf",
+      "app/fonts/Inter_18pt-Regular.ttf",
+      "app/fonts/Inter_24pt-Regular.ttf",
+      "app/fonts/Inter_28pt-Regular.ttf",
+      "app/fonts/Inter-Regular.woff2",
+      "app/fonts/Inter-Regular.woff",
+      "app/fonts/Inter-Regular.otf",
+    ]),
+    emphasis: resolveFirstExistingFile([
+      "app/fonts/Inter-SemiBold.ttf",
+      "app/fonts/Inter-Bold.ttf",
+      "app/fonts/Inter_18pt-SemiBold.ttf",
+      "app/fonts/Inter_18pt-Bold.ttf",
+      "app/fonts/Inter_24pt-SemiBold.ttf",
+      "app/fonts/Inter_24pt-Bold.ttf",
+      "app/fonts/Inter_28pt-SemiBold.ttf",
+      "app/fonts/Inter_28pt-Bold.ttf",
+      "app/fonts/Inter-SemiBold.woff2",
+      "app/fonts/Inter-Bold.woff2",
+      "app/fonts/Inter-SemiBold.woff",
+      "app/fonts/Inter-Bold.woff",
+      "app/fonts/Inter-SemiBold.otf",
+      "app/fonts/Inter-Bold.otf",
+    ]),
+    italic: resolveFirstExistingFile([
+      "app/fonts/Inter-Italic.ttf",
+      "app/fonts/Inter_18pt-Italic.ttf",
+      "app/fonts/Inter_24pt-Italic.ttf",
+      "app/fonts/Inter_28pt-Italic.ttf",
+      "app/fonts/Inter-Italic.woff2",
+      "app/fonts/Inter-Italic.woff",
+      "app/fonts/Inter-Italic.otf",
+    ]),
+    emphasisItalic: resolveFirstExistingFile([
+      "app/fonts/Inter-SemiBoldItalic.ttf",
+      "app/fonts/Inter-BoldItalic.ttf",
+      "app/fonts/Inter_18pt-SemiBoldItalic.ttf",
+      "app/fonts/Inter_18pt-BoldItalic.ttf",
+      "app/fonts/Inter_24pt-SemiBoldItalic.ttf",
+      "app/fonts/Inter_24pt-BoldItalic.ttf",
+      "app/fonts/Inter_28pt-SemiBoldItalic.ttf",
+      "app/fonts/Inter_28pt-BoldItalic.ttf",
+      "app/fonts/Inter-SemiBoldItalic.woff2",
+      "app/fonts/Inter-BoldItalic.woff2",
+      "app/fonts/Inter-SemiBoldItalic.woff",
+      "app/fonts/Inter-BoldItalic.woff",
+      "app/fonts/Inter-SemiBoldItalic.otf",
+      "app/fonts/Inter-BoldItalic.otf",
+    ]),
+  };
+
+  return receiptFontSourcesCache;
+}
+
+function resolveFirstExistingFile(paths: string[]): string | undefined {
+  for (const relativePath of paths) {
+    const resolved = resolveWebAppFilePath(relativePath);
+    if (resolved) {
+      return resolved;
+    }
+  }
+
+  return undefined;
+}
+
+function resolveWebAppFilePath(relativePath: string): string | undefined {
+  const candidates = [
+    path.join(process.cwd(), relativePath),
+    path.join(process.cwd(), "apps", "web", relativePath),
+  ];
+
+  return candidates.find((candidate) => existsSync(candidate));
+}
+
+function parseHostAllowRules(
+  rawValue: string | undefined,
+  defaults: HostAllowRule[],
+): HostAllowRule[] {
+  const raw = rawValue?.trim();
+  if (!raw) {
+    return defaults;
+  }
+
+  const rules: HostAllowRule[] = [];
+  const seen = new Set<string>();
+
+  const items = raw.split(/[,\n]/g);
+  for (const item of items) {
+    const trimmed = item.trim();
+    if (!trimmed) {
+      continue;
+    }
+
+    let ruleType: HostAllowRule["type"] = "exact";
+    let token = trimmed;
+
+    if (token.startsWith("*.")) {
+      ruleType = "suffix";
+      token = token.slice(2);
+    } else if (token.startsWith(".")) {
+      ruleType = "suffix";
+      token = token.slice(1);
+    }
+
+    const hostname = normalizeAllowlistedHostname(token);
+    if (!hostname) {
+      continue;
+    }
+
+    if (ruleType === "suffix" && !hostname.includes(".")) {
+      continue;
+    }
+
+    const key = `${ruleType}:${hostname}`;
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    rules.push(
+      ruleType === "suffix"
+        ? { type: "suffix", host: hostname }
+        : { type: "exact", host: hostname },
+    );
+  }
+
+  return rules.length ? rules : defaults;
+}
+
+function normalizeAllowlistedHostname(value: string): string | undefined {
+  const raw = value.trim();
+  if (!raw || raw === "*") {
+    return undefined;
+  }
+
+  if (raw.includes("://")) {
+    try {
+      return normalizeAllowlistedHostname(new URL(raw).hostname);
+    } catch {
+      return undefined;
+    }
+  }
+
+  const withoutPath = raw.split("/")[0] ?? "";
+  const withoutPort = withoutPath.includes(":")
+    ? withoutPath.split(":")[0]
+    : withoutPath;
+  const hostname = withoutPort.trim().toLowerCase().replace(/\.+$/, "");
+  if (!hostname) {
+    return undefined;
+  }
+
+  if (hostname === "localhost") {
+    return undefined;
+  }
+
+  if (!/^[a-z0-9.-]+$/.test(hostname)) {
+    return undefined;
+  }
+
+  return hostname;
+}
+
+function hostnameMatchesAllowRules(
+  hostname: string,
+  rules: HostAllowRule[],
+): boolean {
+  const normalized = hostname.trim().toLowerCase();
+  if (!normalized) {
+    return false;
+  }
+
+  return rules.some((rule) => {
+    if (rule.type === "exact") {
+      return normalized === rule.host;
+    }
+
+    if (normalized === rule.host) {
+      return true;
+    }
+
+    return normalized.endsWith(`.${rule.host}`);
+  });
+}
+
+type ReceiptTextStyle = Exclude<
+  keyof ReceiptFonts,
+  "strokeEmphasis" | "strokeEmphasisItalic"
+>;
+
+function getEmphasisStrokeWidth(fontSize: number): number {
+  return Math.max(0.2, Math.min(0.7, fontSize * 0.03));
+}
+
+function drawReceiptText(
+  doc: PDFKit.PDFDocument,
+  params: {
+    fonts: ReceiptFonts;
+    style: ReceiptTextStyle;
+    fontSize: number;
+    color: string;
+    text: string;
+    x?: number;
+    y?: number;
+    options?: PDFKit.Mixins.TextOptions;
+  },
+) {
+  const { fonts, style, fontSize, color, text, x, y, options } = params;
+
+  doc.font(fonts[style]).fontSize(fontSize).fillColor(color);
+
+  const shouldStroke =
+    (style === "emphasis" && fonts.strokeEmphasis) ||
+    (style === "emphasisItalic" && fonts.strokeEmphasisItalic);
+  if (!shouldStroke) {
+    if (typeof x === "number" && typeof y === "number") {
+      doc.text(text, x, y, options);
+      return;
+    }
+
+    doc.text(text, options);
+    return;
+  }
+
+  const textOptions: PDFKit.Mixins.TextOptions = options
+    ? { ...options, fill: true, stroke: true }
+    : { fill: true, stroke: true };
+
+  doc.save();
+  doc.strokeColor(color);
+  doc.lineWidth(getEmphasisStrokeWidth(fontSize));
+  if (typeof x === "number" && typeof y === "number") {
+    doc.text(text, x, y, textOptions);
+  } else {
+    doc.text(text, textOptions);
+  }
+  doc.restore();
+}
+
 export async function generateCalculatorReceiptPdfBuffer(
   receipt: CalculatorReceipt,
   options: GenerateCalculatorReceiptPdfOptions = {},
@@ -78,6 +411,7 @@ export async function generateCalculatorReceiptPdfBuffer(
     },
   });
 
+  const fonts = registerReceiptFonts(doc);
   const pdfBufferPromise = streamToBuffer(doc);
 
   const pageWidth = doc.page.width;
@@ -89,13 +423,14 @@ export async function generateCalculatorReceiptPdfBuffer(
   const contentBottom = pageHeight - layout.pagePaddingBottom;
 
   const reference = buildReference(receipt);
-  const agencyLogoBuffer = await loadAgencyLogoBuffer(options.agencyLogoUrl);
+  const agencyLogoPromise = loadAgencyLogoBuffer(options.agencyLogoUrl);
 
   drawPageChrome(doc);
 
   let cursorTop = contentTop;
 
   cursorTop = renderHeader(doc, receipt, {
+    fonts,
     contentLeft,
     cursorTop,
     contentWidth,
@@ -107,7 +442,9 @@ export async function generateCalculatorReceiptPdfBuffer(
   cursorTop = renderDivider(doc, { contentLeft, cursorTop, contentWidth });
   cursorTop += 14;
 
+  const agencyLogoBuffer = await agencyLogoPromise;
   cursorTop = renderParties(doc, receipt, {
+    fonts,
     contentLeft,
     cursorTop,
     contentWidth,
@@ -119,6 +456,7 @@ export async function generateCalculatorReceiptPdfBuffer(
   const highlights = buildHighlights(receipt.outputs);
   if (highlights.length > 0) {
     cursorTop = renderHighlights(doc, {
+      fonts,
       contentLeft,
       cursorTop,
       contentWidth,
@@ -131,6 +469,7 @@ export async function generateCalculatorReceiptPdfBuffer(
   }
 
   cursorTop = renderKeyValueSection(doc, {
+    fonts,
     title: "Inputs",
     record: receipt.inputs,
     emptyCopy: "No calculator inputs were provided.",
@@ -145,6 +484,7 @@ export async function generateCalculatorReceiptPdfBuffer(
   cursorTop += layout.sectionGap;
 
   renderKeyValueSection(doc, {
+    fonts,
     title: "Outputs",
     record: receipt.outputs,
     emptyCopy: "No calculation results were provided.",
@@ -156,17 +496,17 @@ export async function generateCalculatorReceiptPdfBuffer(
     reference,
   });
 
-  addFooters(doc, { reference });
+  addFooters(doc, { reference, fonts });
 
   doc.end();
 
   return pdfBufferPromise;
 }
 
-function streamToBuffer(doc: PDFDocument): Promise<Buffer> {
+function streamToBuffer(doc: PDFKit.PDFDocument): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
-    doc.on("data", (chunk) => {
+    doc.on("data", (chunk: Buffer | Uint8Array) => {
       chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
     });
     doc.on("end", () => resolve(Buffer.concat(chunks)));
@@ -174,7 +514,7 @@ function streamToBuffer(doc: PDFDocument): Promise<Buffer> {
   });
 }
 
-function drawPageChrome(doc: PDFDocument) {
+function drawPageChrome(doc: PDFKit.PDFDocument) {
   const pageWidth = doc.page.width;
   const pageHeight = doc.page.height;
 
@@ -203,7 +543,10 @@ function drawPageChrome(doc: PDFDocument) {
   doc.restore();
 }
 
-function addFooters(doc: PDFDocument, { reference }: { reference: string }) {
+function addFooters(
+  doc: PDFKit.PDFDocument,
+  { reference, fonts }: { reference: string; fonts: ReceiptFonts },
+) {
   const range = doc.bufferedPageRange();
   const totalPages = range.count;
 
@@ -227,20 +570,28 @@ function addFooters(doc: PDFDocument, { reference }: { reference: string }) {
 
     const footerTextTop = footerTop + 14;
 
-    doc.font("Helvetica-Bold").fontSize(8).fillColor(palette.textSecondary);
-    doc.text("LeadLah", contentLeft, footerTextTop, { continued: true });
-    doc.font("Helvetica").fontSize(8).fillColor(palette.textMuted);
+    drawReceiptText(doc, {
+      fonts,
+      style: "emphasis",
+      fontSize: 8,
+      color: palette.textSecondary,
+      text: "LeadLah",
+      x: contentLeft,
+      y: footerTextTop,
+      options: { continued: true },
+    });
+    doc.font(fonts.regular).fontSize(8).fillColor(palette.textMuted);
     doc.text(" · support@leadlah.com", { continued: false });
 
     const pageLabel = `Page ${index + 1} of ${totalPages}`;
-    doc.font("Helvetica").fontSize(8).fillColor(palette.textMuted);
+    doc.font(fonts.regular).fontSize(8).fillColor(palette.textMuted);
     doc.text(pageLabel, contentLeft, footerTextTop + 12, {
       width: contentRight - contentLeft,
       align: "left",
     });
 
     const rightLines = [`Ref: ${reference}`, `© ${new Date().getFullYear()} LeadLah`];
-    doc.font("Helvetica").fontSize(8).fillColor(palette.textMuted);
+    doc.font(fonts.regular).fontSize(8).fillColor(palette.textMuted);
     doc.text(rightLines.join("\n"), contentLeft, footerTextTop, {
       width: contentRight - contentLeft,
       align: "right",
@@ -251,9 +602,10 @@ function addFooters(doc: PDFDocument, { reference }: { reference: string }) {
 }
 
 function renderHeader(
-  doc: PDFDocument,
+  doc: PDFKit.PDFDocument,
   receipt: CalculatorReceipt,
   params: {
+    fonts: ReceiptFonts;
     contentLeft: number;
     cursorTop: number;
     contentWidth: number;
@@ -261,8 +613,14 @@ function renderHeader(
     leadlahMarkBuffer?: Buffer;
   },
 ): number {
-  const { contentLeft, cursorTop, contentWidth, reference, leadlahMarkBuffer } =
-    params;
+  const {
+    fonts,
+    contentLeft,
+    cursorTop,
+    contentWidth,
+    reference,
+    leadlahMarkBuffer,
+  } = params;
 
   const issuedAtDisplay = dateTimeFormatter.format(receipt.issuedAt);
   const issuedAtFriendly = friendlyDateFormatter.format(receipt.issuedAt);
@@ -308,26 +666,40 @@ function renderHeader(
     );
     doc.restore();
   } else {
-    doc.font("Helvetica-Bold").fontSize(10).fillColor("#ffffff");
-    doc.text("LL", leftColumnLeft, cursorTop + 12, {
-      width: markSize,
-      align: "center",
+    drawReceiptText(doc, {
+      fonts,
+      style: "emphasis",
+      fontSize: 10,
+      color: "#ffffff",
+      text: "LL",
+      x: leftColumnLeft,
+      y: cursorTop + 12,
+      options: {
+        width: markSize,
+        align: "center",
+      },
     });
   }
 
   const brandTextLeft = leftColumnLeft + markSize + 10;
-  doc.font("Helvetica-Bold").fontSize(14).fillColor(palette.textPrimary);
-  doc.text("LeadLah", brandTextLeft, cursorTop + 2, {
-    width: leftColumnWidth - (markSize + 10),
+  drawReceiptText(doc, {
+    fonts,
+    style: "emphasis",
+    fontSize: 14,
+    color: palette.textPrimary,
+    text: "LeadLah",
+    x: brandTextLeft,
+    y: cursorTop + 2,
+    options: { width: leftColumnWidth - (markSize + 10) },
   });
-  doc.font("Helvetica").fontSize(8).fillColor(palette.textSecondary);
+  doc.font(fonts.regular).fontSize(8).fillColor(palette.textSecondary);
   doc.text("Property Agent OS for Malaysia", brandTextLeft, cursorTop + 20, {
     width: leftColumnWidth - (markSize + 10),
   });
   doc.restore();
 
   const badgeText = "OFFICIAL RECEIPT";
-  doc.font("Helvetica-Bold").fontSize(7);
+  doc.font(fonts.emphasis).fontSize(7);
   const badgePaddingX = 10;
   const badgePaddingY = 4;
   const badgeTextWidth = doc.widthOfString(badgeText);
@@ -344,24 +716,42 @@ function renderHeader(
 
   drawSoftShadow(doc, badgeLeft, badgeTop, badgeWidth, badgeHeight, 10);
   doc.roundedRect(badgeLeft, badgeTop, badgeWidth, badgeHeight, 10).fill(badgeGradient);
-  doc.fillColor("#ffffff");
-  doc.text(badgeText, badgeLeft, badgeTop + badgePaddingY, {
-    width: badgeWidth,
-    align: "center",
+  drawReceiptText(doc, {
+    fonts,
+    style: "emphasis",
+    fontSize: 7,
+    color: "#ffffff",
+    text: badgeText,
+    x: badgeLeft,
+    y: badgeTop + badgePaddingY,
+    options: {
+      width: badgeWidth,
+      align: "center",
+    },
   });
 
   const titleTop = badgeTop + badgeHeight + 8;
-  doc.font("Helvetica-Bold").fontSize(18).fillColor(palette.textPrimary);
-  doc.text("Calculator Receipt", rightColumnLeft, titleTop, {
-    width: rightColumnWidth,
-    align: "right",
+  drawReceiptText(doc, {
+    fonts,
+    style: "emphasis",
+    fontSize: 18,
+    color: palette.textPrimary,
+    text: "Calculator Receipt",
+    x: rightColumnLeft,
+    y: titleTop,
+    options: { width: rightColumnWidth, align: "right" },
   });
 
   const subtitleTop = titleTop + 22;
-  doc.font("Helvetica-Bold").fontSize(10).fillColor(palette.textSecondary);
-  doc.text(receipt.calculationType, rightColumnLeft, subtitleTop, {
-    width: rightColumnWidth,
-    align: "right",
+  drawReceiptText(doc, {
+    fonts,
+    style: "emphasis",
+    fontSize: 10,
+    color: palette.textSecondary,
+    text: receipt.calculationType,
+    x: rightColumnLeft,
+    y: subtitleTop,
+    options: { width: rightColumnWidth, align: "right" },
   });
 
   const metaCardTop = subtitleTop + 16;
@@ -382,37 +772,52 @@ function renderHeader(
   const metaRowLeft = metaCardLeft + 10;
   const metaRowRight = metaCardLeft + metaCardWidth - 10;
 
-  doc.font("Helvetica").fontSize(8).fillColor(palette.textMuted);
+  doc.font(fonts.regular).fontSize(8).fillColor(palette.textMuted);
   doc.text("Reference", metaRowLeft, metaCardTop + 10, {
     width: metaKeyWidth,
     align: "left",
   });
-  doc.font("Helvetica-Bold").fontSize(8).fillColor(palette.textPrimary);
-  doc.text(reference, metaRowRight - metaValueWidth, metaCardTop + 10, {
-    width: metaValueWidth,
-    align: "right",
+  drawReceiptText(doc, {
+    fonts,
+    style: "emphasis",
+    fontSize: 8,
+    color: palette.textPrimary,
+    text: reference,
+    x: metaRowRight - metaValueWidth,
+    y: metaCardTop + 10,
+    options: { width: metaValueWidth, align: "right" },
   });
 
-  doc.font("Helvetica").fontSize(8).fillColor(palette.textMuted);
+  doc.font(fonts.regular).fontSize(8).fillColor(palette.textMuted);
   doc.text("Issued", metaRowLeft, metaCardTop + 24, {
     width: metaKeyWidth,
     align: "left",
   });
-  doc.font("Helvetica-Bold").fontSize(8).fillColor(palette.textPrimary);
-  doc.text(issuedAtDisplay, metaRowRight - metaValueWidth, metaCardTop + 24, {
-    width: metaValueWidth,
-    align: "right",
+  drawReceiptText(doc, {
+    fonts,
+    style: "emphasis",
+    fontSize: 8,
+    color: palette.textPrimary,
+    text: issuedAtDisplay,
+    x: metaRowRight - metaValueWidth,
+    y: metaCardTop + 24,
+    options: { width: metaValueWidth, align: "right" },
   });
 
-  doc.font("Helvetica").fontSize(8).fillColor(palette.textMuted);
+  doc.font(fonts.regular).fontSize(8).fillColor(palette.textMuted);
   doc.text("Date", metaRowLeft, metaCardTop + 38, {
     width: metaKeyWidth,
     align: "left",
   });
-  doc.font("Helvetica-Bold").fontSize(8).fillColor(palette.textPrimary);
-  doc.text(issuedAtFriendly, metaRowRight - metaValueWidth, metaCardTop + 38, {
-    width: metaValueWidth,
-    align: "right",
+  drawReceiptText(doc, {
+    fonts,
+    style: "emphasis",
+    fontSize: 8,
+    color: palette.textPrimary,
+    text: issuedAtFriendly,
+    x: metaRowRight - metaValueWidth,
+    y: metaCardTop + 38,
+    options: { width: metaValueWidth, align: "right" },
   });
 
   const headerBottom = Math.max(cursorTop + markSize, metaCardTop + metaCardHeight);
@@ -420,7 +825,7 @@ function renderHeader(
 }
 
 function renderDivider(
-  doc: PDFDocument,
+  doc: PDFKit.PDFDocument,
   params: { contentLeft: number; cursorTop: number; contentWidth: number },
 ): number {
   const { contentLeft, cursorTop, contentWidth } = params;
@@ -441,39 +846,45 @@ function renderDivider(
 }
 
 function renderParties(
-  doc: PDFDocument,
+  doc: PDFKit.PDFDocument,
   receipt: CalculatorReceipt,
   params: {
+    fonts: ReceiptFonts;
     contentLeft: number;
     cursorTop: number;
     contentWidth: number;
     agencyLogoBuffer?: Buffer;
   },
 ): number {
-  const { contentLeft, cursorTop, contentWidth, agencyLogoBuffer } = params;
+  const { fonts, contentLeft, cursorTop, contentWidth, agencyLogoBuffer } =
+    params;
 
   const gap = 10;
   const cardWidth = (contentWidth - gap) / 2;
-  const cardHeight = 88;
+  const baseCardHeight = 88;
+  const agentCardHeight = 104; // taller to fit separator + agent row cleanly
 
   const customerName = receipt.customerName?.trim() || "Valued Client";
   const initials = buildInitials(receipt.agentName);
+  const tallestCard = Math.max(baseCardHeight, agentCardHeight);
 
   renderPartyCard(doc, {
+    fonts,
     left: contentLeft,
     top: cursorTop,
     width: cardWidth,
-    height: cardHeight,
+    height: tallestCard,
     title: "Prepared For",
     value: customerName,
     sub: "Client / Purchaser",
   });
 
   renderPartyCard(doc, {
+    fonts,
     left: contentLeft + cardWidth + gap,
     top: cursorTop,
     width: cardWidth,
-    height: cardHeight,
+    height: tallestCard,
     title: "Prepared By",
     value: receipt.agentName,
     sub: receipt.renNumber,
@@ -484,12 +895,13 @@ function renderParties(
     },
   });
 
-  return cursorTop + cardHeight;
+  return cursorTop + tallestCard;
 }
 
 function renderPartyCard(
-  doc: PDFDocument,
+  doc: PDFKit.PDFDocument,
   params: {
+    fonts: ReceiptFonts;
     left: number;
     top: number;
     width: number;
@@ -500,7 +912,8 @@ function renderPartyCard(
     agentRow?: { initials: string; name: string; logo?: Buffer };
   },
 ) {
-  const { left, top, width, height, title, value, sub, agentRow } = params;
+  const { fonts, left, top, width, height, title, value, sub, agentRow } =
+    params;
 
   drawCard(doc, left, top, width, height, {
     fill: palette.surface,
@@ -511,7 +924,7 @@ function renderPartyCard(
   });
 
   const pillText = title.toUpperCase();
-  doc.font("Helvetica-Bold").fontSize(8);
+  doc.font(fonts.emphasis).fontSize(8);
   const pillPaddingX = 8;
   const pillPaddingY = 3;
   const pillTextWidth = doc.widthOfString(pillText);
@@ -522,25 +935,41 @@ function renderPartyCard(
   doc.fillOpacity(1);
   doc.fillColor(palette.surfaceWarm);
   doc.roundedRect(left + 12, top + 12, pillWidth, pillHeight, 4).fill();
-  doc.fillColor(palette.textMuted);
-  doc.text(pillText, left + 12, top + 12 + pillPaddingY, {
-    width: pillWidth,
-    align: "center",
+  drawReceiptText(doc, {
+    fonts,
+    style: "emphasis",
+    fontSize: 8,
+    color: palette.textMuted,
+    text: pillText,
+    x: left + 12,
+    y: top + 12 + pillPaddingY,
+    options: {
+      width: pillWidth,
+      align: "center",
+    },
   });
   doc.restore();
 
-  doc.font("Helvetica-Bold").fontSize(12).fillColor(palette.textPrimary);
-  doc.text(value, left + 12, top + 34, { width: width - 24 });
+  drawReceiptText(doc, {
+    fonts,
+    style: "emphasis",
+    fontSize: 12,
+    color: palette.textPrimary,
+    text: value,
+    x: left + 12,
+    y: top + 34,
+    options: { width: width - 24 },
+  });
 
-  doc.font("Helvetica").fontSize(9).fillColor(palette.textSecondary);
-  doc.text(sub, left + 12, top + 50, { width: width - 24 });
+  doc.font(fonts.regular).fontSize(9).fillColor(palette.textSecondary);
+  doc.text(sub, left + 12, top + 52, { width: width - 24 });
 
   if (!agentRow) {
     return;
   }
 
-  const rowTop = top + 62;
-  const separatorY = rowTop - 2;
+  const separatorY = top + 68;
+  const rowTop = separatorY + 8;
 
   doc.save();
   doc.strokeOpacity(1);
@@ -553,7 +982,7 @@ function renderPartyCard(
 
   const avatarSize = 18;
   const avatarLeft = left + 12;
-  const avatarTop = rowTop + 4;
+  const avatarTop = rowTop;
 
   if (agentRow.logo) {
     doc.save();
@@ -579,24 +1008,46 @@ function renderPartyCard(
       .stop(1, palette.primaryEnd);
     doc.roundedRect(avatarLeft, avatarTop, avatarSize, avatarSize, 5).fill(avatarGradient);
 
-    doc.font("Helvetica-Bold").fontSize(8).fillColor("#ffffff");
-    doc.text(agentRow.initials, avatarLeft, avatarTop + 5, {
-      width: avatarSize,
-      align: "center",
+    drawReceiptText(doc, {
+      fonts,
+      style: "emphasis",
+      fontSize: 8,
+      color: "#ffffff",
+      text: agentRow.initials,
+      x: avatarLeft,
+      y: avatarTop + 5,
+      options: {
+        width: avatarSize,
+        align: "center",
+      },
     });
   }
 
-  doc.font("Helvetica-Bold").fontSize(9).fillColor(palette.textPrimary);
-  doc.text(agentRow.name, avatarLeft + avatarSize + 8, avatarTop + 4, {
-    width: width - 24 - avatarSize - 8,
+  drawReceiptText(doc, {
+    fonts,
+    style: "emphasis",
+    fontSize: 9,
+    color: palette.textPrimary,
+    text: agentRow.name,
+    x: avatarLeft + avatarSize + 8,
+    y: avatarTop + 4,
+    options: {
+      width: width - 24 - avatarSize - 8,
+    },
   });
 }
 
 function renderSectionTitle(
-  doc: PDFDocument,
-  params: { title: string; left: number; top: number; width: number },
+  doc: PDFKit.PDFDocument,
+  params: {
+    fonts: ReceiptFonts;
+    title: string;
+    left: number;
+    top: number;
+    width: number;
+  },
 ): number {
-  const { title, left, top, width } = params;
+  const { fonts, title, left, top, width } = params;
 
   const barWidth = 3;
   const barHeight = 14;
@@ -608,15 +1059,24 @@ function renderSectionTitle(
 
   doc.roundedRect(left, top + 1, barWidth, barHeight, 1.5).fill(barGradient);
 
-  doc.font("Helvetica-Bold").fontSize(9).fillColor(palette.textPrimary);
-  doc.text(title.toUpperCase(), left + barWidth + 8, top, { width: width - (barWidth + 8) });
+  drawReceiptText(doc, {
+    fonts,
+    style: "emphasis",
+    fontSize: 9,
+    color: palette.textPrimary,
+    text: title.toUpperCase(),
+    x: left + barWidth + 8,
+    y: top,
+    options: { width: width - (barWidth + 8) },
+  });
 
   return top + 16;
 }
 
 function renderHighlights(
-  doc: PDFDocument,
+  doc: PDFKit.PDFDocument,
   params: {
+    fonts: ReceiptFonts;
     contentLeft: number;
     cursorTop: number;
     contentWidth: number;
@@ -627,6 +1087,7 @@ function renderHighlights(
   },
 ): number {
   const {
+    fonts,
     contentLeft,
     cursorTop,
     contentWidth,
@@ -643,6 +1104,7 @@ function renderHighlights(
 
   const requiredHeight = 16 + cardHeight;
   let cursor = ensureVerticalSpace(doc, {
+    fonts,
     cursorTop,
     requiredHeight,
     contentBottom,
@@ -652,6 +1114,7 @@ function renderHighlights(
 
   cursor = renderSectionTitle(doc, {
     title: "Summary",
+    fonts,
     left: contentLeft,
     top: cursor,
     width: contentWidth,
@@ -670,14 +1133,30 @@ function renderHighlights(
       drawSoftShadow(doc, left, top, cardWidth, cardHeight, 12);
       doc.roundedRect(left, top, cardWidth, cardHeight, 12).fill(gradient);
 
-      doc.font("Helvetica-Bold").fontSize(7).fillColor("#ffffff");
-      doc.text(item.label.toUpperCase(), left + 12, top + 12, {
-        width: cardWidth - 24,
+      drawReceiptText(doc, {
+        fonts,
+        style: "emphasis",
+        fontSize: 7,
+        color: "#ffffff",
+        text: item.label.toUpperCase(),
+        x: left + 12,
+        y: top + 12,
+        options: {
+          width: cardWidth - 24,
+        },
       });
 
-      doc.font("Helvetica-Bold").fontSize(14).fillColor("#ffffff");
-      doc.text(item.value, left + 12, top + 26, {
-        width: cardWidth - 24,
+      drawReceiptText(doc, {
+        fonts,
+        style: "emphasis",
+        fontSize: 14,
+        color: "#ffffff",
+        text: item.value,
+        x: left + 12,
+        y: top + 26,
+        options: {
+          width: cardWidth - 24,
+        },
       });
       return;
     }
@@ -690,14 +1169,30 @@ function renderHighlights(
       shadow: true,
     });
 
-    doc.font("Helvetica-Bold").fontSize(7).fillColor(palette.textMuted);
-    doc.text(item.label.toUpperCase(), left + 12, top + 12, {
-      width: cardWidth - 24,
+    drawReceiptText(doc, {
+      fonts,
+      style: "emphasis",
+      fontSize: 7,
+      color: palette.textMuted,
+      text: item.label.toUpperCase(),
+      x: left + 12,
+      y: top + 12,
+      options: {
+        width: cardWidth - 24,
+      },
     });
 
-    doc.font("Helvetica-Bold").fontSize(14).fillColor(palette.textPrimary);
-    doc.text(item.value, left + 12, top + 26, {
-      width: cardWidth - 24,
+    drawReceiptText(doc, {
+      fonts,
+      style: "emphasis",
+      fontSize: 14,
+      color: palette.textPrimary,
+      text: item.value,
+      x: left + 12,
+      y: top + 26,
+      options: {
+        width: cardWidth - 24,
+      },
     });
   });
 
@@ -705,8 +1200,9 @@ function renderHighlights(
 }
 
 function renderKeyValueSection(
-  doc: PDFDocument,
+  doc: PDFKit.PDFDocument,
   params: {
+    fonts: ReceiptFonts;
     title: string;
     record: Record<string, number | string | boolean>;
     emptyCopy: string;
@@ -719,6 +1215,7 @@ function renderKeyValueSection(
   },
 ): number {
   const {
+    fonts,
     title,
     record,
     emptyCopy,
@@ -746,12 +1243,12 @@ function renderKeyValueSection(
         const label = formatLabel(key);
         const formattedValue = formatValue(key, rawValue);
 
-        doc.font("Helvetica-Bold").fontSize(9);
+        doc.font(fonts.emphasis).fontSize(9);
         const labelTextHeight = doc.heightOfString(label, {
           width: labelColumnWidth - rowPaddingX * 2,
         });
 
-        doc.font("Helvetica-Bold").fontSize(9);
+        doc.font(fonts.emphasis).fontSize(9);
         const valueTextHeight = doc.heightOfString(formattedValue, {
           width: valueColumnWidth - rowPaddingX * 2,
           align: "right",
@@ -764,6 +1261,7 @@ function renderKeyValueSection(
       })();
 
   let cursor = ensureVerticalSpace(doc, {
+    fonts,
     cursorTop,
     requiredHeight,
     contentBottom,
@@ -773,6 +1271,7 @@ function renderKeyValueSection(
 
   cursor = renderSectionTitle(doc, {
     title,
+    fonts,
     left: contentLeft,
     top: cursor,
     width: contentWidth,
@@ -786,7 +1285,7 @@ function renderKeyValueSection(
       radius: layout.cardRadius,
       shadow: true,
     });
-    doc.font("Helvetica").fontSize(9).fillColor(palette.textMuted);
+    doc.font(fonts.regular).fontSize(9).fillColor(palette.textMuted);
     doc.text(emptyCopy, contentLeft, cursor + 16, {
       width: contentWidth,
       align: "center",
@@ -801,12 +1300,12 @@ function renderKeyValueSection(
     const label = formatLabel(key);
     const formattedValue = formatValue(key, rawValue);
 
-    doc.font("Helvetica-Bold").fontSize(9);
+    doc.font(fonts.emphasis).fontSize(9);
     const lh = doc.heightOfString(label, {
       width: labelColumnWidth - rowPaddingX * 2,
     });
 
-    doc.font("Helvetica-Bold").fontSize(9);
+    doc.font(fonts.emphasis).fontSize(9);
     const vh = doc.heightOfString(formattedValue, {
       width: valueColumnWidth - rowPaddingX * 2,
       align: "right",
@@ -886,13 +1385,30 @@ function renderKeyValueSection(
     doc.restore();
 
     // 7. Header text
-    doc.font("Helvetica-Bold").fontSize(8).fillColor(palette.textPrimary);
-    doc.text("ITEM", contentLeft + rowPaddingX, cardTop + 8, {
-      width: labelColumnWidth - rowPaddingX * 2,
+    drawReceiptText(doc, {
+      fonts,
+      style: "emphasis",
+      fontSize: 8,
+      color: palette.textPrimary,
+      text: "ITEM",
+      x: contentLeft + rowPaddingX,
+      y: cardTop + 8,
+      options: {
+        width: labelColumnWidth - rowPaddingX * 2,
+      },
     });
-    doc.text("VALUE", contentLeft + labelColumnWidth, cardTop + 8, {
-      width: valueColumnWidth - rowPaddingX,
-      align: "right",
+    drawReceiptText(doc, {
+      fonts,
+      style: "emphasis",
+      fontSize: 8,
+      color: palette.textPrimary,
+      text: "VALUE",
+      x: contentLeft + labelColumnWidth,
+      y: cardTop + 8,
+      options: {
+        width: valueColumnWidth - rowPaddingX,
+        align: "right",
+      },
     });
 
     // 8. Row text
@@ -902,15 +1418,31 @@ function renderKeyValueSection(
       const label = formatLabel(key);
       const formattedValue = formatValue(key, rawValue);
 
-      doc.font("Helvetica-Bold").fontSize(9).fillColor(palette.textSecondary);
-      doc.text(label, contentLeft + rowPaddingX, textY + rowPaddingY, {
-        width: labelColumnWidth - rowPaddingX * 2,
+      drawReceiptText(doc, {
+        fonts,
+        style: "emphasis",
+        fontSize: 9,
+        color: palette.textSecondary,
+        text: label,
+        x: contentLeft + rowPaddingX,
+        y: textY + rowPaddingY,
+        options: {
+          width: labelColumnWidth - rowPaddingX * 2,
+        },
       });
 
-      doc.font("Helvetica-Bold").fontSize(9).fillColor(palette.textPrimary);
-      doc.text(formattedValue, contentLeft + labelColumnWidth + rowPaddingX / 2, textY + rowPaddingY, {
-        width: valueColumnWidth - rowPaddingX,
-        align: "right",
+      drawReceiptText(doc, {
+        fonts,
+        style: "emphasis",
+        fontSize: 9,
+        color: palette.textPrimary,
+        text: formattedValue,
+        x: contentLeft + labelColumnWidth + rowPaddingX / 2,
+        y: textY + rowPaddingY,
+        options: {
+          width: valueColumnWidth - rowPaddingX,
+          align: "right",
+        },
       });
 
       textY += rowHeights[i];
@@ -933,6 +1465,7 @@ function renderKeyValueSection(
     // If we can't even fit one row, add a new page
     if (batchEnd === batchStart) {
       cursor = ensureVerticalSpace(doc, {
+        fonts,
         cursorTop: cursor,
         requiredHeight: headerHeight + rowHeights[batchStart] + 4,
         contentBottom,
@@ -948,6 +1481,7 @@ function renderKeyValueSection(
     // If there are remaining rows, move to the next page
     if (batchStart < rows.length) {
       cursor = ensureVerticalSpace(doc, {
+        fonts,
         cursorTop: cursor + 4,
         requiredHeight: headerHeight + rowHeights[batchStart] + 4,
         contentBottom,
@@ -961,8 +1495,9 @@ function renderKeyValueSection(
 }
 
 function ensureVerticalSpace(
-  doc: PDFDocument,
+  doc: PDFKit.PDFDocument,
   params: {
+    fonts: ReceiptFonts;
     cursorTop: number;
     requiredHeight: number;
     contentBottom: number;
@@ -970,7 +1505,8 @@ function ensureVerticalSpace(
     reference: string;
   },
 ): number {
-  const { cursorTop, requiredHeight, contentBottom, receipt, reference } = params;
+  const { fonts, cursorTop, requiredHeight, contentBottom, receipt, reference } =
+    params;
   if (cursorTop + requiredHeight <= contentBottom) {
     return cursorTop;
   }
@@ -996,12 +1532,20 @@ function ensureVerticalSpace(
     shadow: true,
   });
 
-  doc.font("Helvetica-Bold").fontSize(9).fillColor(palette.textPrimary);
-  doc.text(`${receipt.calculationType} Receipt`, contentLeft + 10, newTop + 5, {
-    width: contentWidth - 20,
-    align: "left",
+  drawReceiptText(doc, {
+    fonts,
+    style: "emphasis",
+    fontSize: 9,
+    color: palette.textPrimary,
+    text: `${receipt.calculationType} Receipt`,
+    x: contentLeft + 10,
+    y: newTop + 5,
+    options: {
+      width: contentWidth - 20,
+      align: "left",
+    },
   });
-  doc.font("Helvetica").fontSize(8).fillColor(palette.textMuted);
+  doc.font(fonts.regular).fontSize(8).fillColor(palette.textMuted);
   doc.text(`Ref: ${reference}`, contentLeft + 10, newTop + 5, {
     width: contentWidth - 20,
     align: "right",
@@ -1011,7 +1555,7 @@ function ensureVerticalSpace(
 }
 
 function drawSoftShadow(
-  doc: PDFDocument,
+  doc: PDFKit.PDFDocument,
   left: number,
   top: number,
   width: number,
@@ -1026,7 +1570,7 @@ function drawSoftShadow(
 }
 
 function drawCard(
-  doc: PDFDocument,
+  doc: PDFKit.PDFDocument,
   left: number,
   top: number,
   width: number,
@@ -1133,33 +1677,60 @@ function buildInitials(name: string): string {
   );
 }
 
-async function loadAgencyLogoBuffer(url: string | undefined): Promise<Buffer | undefined> {
-  if (!url || !allowedRemoteLogoProtocols.test(url)) {
+async function loadAgencyLogoBuffer(
+  url: string | undefined,
+): Promise<Buffer | undefined> {
+  if (!url) {
     return undefined;
   }
 
-  let parsed: URL;
+  let currentUrl: URL;
   try {
-    parsed = new URL(url);
+    currentUrl = new URL(url);
   } catch {
     return undefined;
   }
 
-  if (!isAllowedRemoteHostname(parsed.hostname)) {
-    return undefined;
-  }
+  for (let redirects = 0; redirects <= remoteLogoMaxRedirects; redirects++) {
+    if (!(await isAllowedAgencyLogoUrl(currentUrl))) {
+      return undefined;
+    }
 
-  try {
-    const response = await fetch(url, {
-      signal: AbortSignal.timeout(remoteLogoTimeoutMs),
-      redirect: "follow",
-    });
+    let response: Response;
+    try {
+      response = await fetch(currentUrl, {
+        method: "GET",
+        cache: "no-store",
+        redirect: "manual",
+        headers: {
+          Accept: "image/png,image/jpeg,image/jpg,image/*;q=0.8",
+        },
+        signal: AbortSignal.timeout(remoteLogoTimeoutMs),
+      });
+    } catch {
+      return undefined;
+    }
+
+    if (isRedirectStatus(response.status)) {
+      const location = response.headers.get("location");
+      if (!location) {
+        return undefined;
+      }
+
+      try {
+        currentUrl = new URL(location, currentUrl);
+        continue;
+      } catch {
+        return undefined;
+      }
+    }
 
     if (!response.ok) {
       return undefined;
     }
 
-    const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
+    const contentType =
+      response.headers.get("content-type")?.toLowerCase() ?? "";
     const isSupportedImage =
       contentType.startsWith("image/png") ||
       contentType.startsWith("image/jpeg") ||
@@ -1179,22 +1750,86 @@ async function loadAgencyLogoBuffer(url: string | undefined): Promise<Buffer | u
     }
 
     return buffer;
+  }
+
+  return undefined;
+}
+
+async function isAllowedAgencyLogoUrl(url: URL): Promise<boolean> {
+  if (url.protocol !== "https:") {
+    return false;
+  }
+
+  if (url.username || url.password) {
+    return false;
+  }
+
+  const hostname = url.hostname.trim().toLowerCase();
+  if (!hostname || hostname === "localhost") {
+    return false;
+  }
+
+  if (isIpLiteral(hostname)) {
+    return false;
+  }
+
+  if (!hostnameMatchesAllowRules(hostname, agencyLogoHostAllowRules)) {
+    return false;
+  }
+
+  return await hostnameResolvesToPublicIps(hostname);
+}
+
+function isRedirectStatus(status: number): boolean {
+  return [301, 302, 303, 307, 308].includes(status);
+}
+
+function isIpLiteral(hostname: string): boolean {
+  if (/^(\d{1,3}\.){3}\d{1,3}$/.test(hostname)) {
+    return true;
+  }
+  return hostname.includes(":");
+}
+
+async function hostnameResolvesToPublicIps(hostname: string): Promise<boolean> {
+  try {
+    const results = await lookup(hostname, { all: true, verbatim: true });
+    return results.length > 0 && results.every((result) => isPublicIp(result.address));
   } catch {
-    return undefined;
+    return false;
   }
 }
 
-function isAllowedRemoteHostname(hostname: string): boolean {
-  const normalized = hostname.trim().toLowerCase();
-  if (!normalized || normalized === "localhost") {
+function isPublicIp(address: string): boolean {
+  const normalized = address.trim().toLowerCase();
+  if (!normalized) {
     return false;
   }
 
-  if (isPrivateIpv4(normalized) || isPrivateIpv6(normalized)) {
+  const looksLikeIpv4 = /^(\d{1,3}\.){3}\d{1,3}$/.test(normalized);
+  const looksLikeIpv6 = normalized.includes(":");
+  if (!looksLikeIpv4 && !looksLikeIpv6) {
     return false;
   }
 
-  return true;
+  if (looksLikeIpv4) {
+    return !isPrivateIpv4(normalized);
+  }
+
+  return !isPrivateIpv6(normalized);
+}
+
+function extractEmbeddedIpv4FromIpv6(address: string): string | undefined {
+  if (!address.includes(".")) {
+    return undefined;
+  }
+
+  const last = address.split(":").pop()?.trim();
+  if (!last) {
+    return undefined;
+  }
+
+  return /^(\d{1,3}\.){3}\d{1,3}$/.test(last) ? last : undefined;
 }
 
 function isPrivateIpv4(hostname: string): boolean {
@@ -1208,23 +1843,74 @@ function isPrivateIpv4(hostname: string): boolean {
     return false;
   }
 
-  const [a, b] = parts;
-  if (a === 10) return true;
-  if (a === 127) return true;
-  if (a === 0) return true;
-  if (a === 169 && b === 254) return true;
-  if (a === 192 && b === 168) return true;
-  if (a === 172 && b >= 16 && b <= 31) return true;
+  const [a, b, c] = parts;
+
+  // RFC 6890 special-purpose address registry + common private ranges.
+  if (a === 0) return true; // "this network"
+  if (a === 10) return true; // RFC1918
+  if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT 100.64.0.0/10
+  if (a === 127) return true; // loopback
+  if (a === 169 && b === 254) return true; // link-local
+  if (a === 172 && b >= 16 && b <= 31) return true; // RFC1918
+  if (a === 192 && b === 168) return true; // RFC1918
+  if (a === 192 && b === 0 && c === 0) return true; // RFC6890
+  if (a === 192 && b === 0 && c === 2) return true; // TEST-NET-1
+  if (a === 192 && b === 88 && c === 99) return true; // 6to4 relay anycast
+  if (a === 198 && (b === 18 || b === 19)) return true; // benchmarking
+  if (a === 198 && b === 51 && c === 100) return true; // TEST-NET-2
+  if (a === 203 && b === 0 && c === 113) return true; // TEST-NET-3
+  if (a >= 224) return true; // multicast + reserved
 
   return false;
 }
 
 function isPrivateIpv6(hostname: string): boolean {
   const normalized = hostname.toLowerCase();
+  if (normalized === "::") return true;
   if (normalized === "::1") return true;
-  if (normalized.startsWith("fc") || normalized.startsWith("fd")) return true;
-  if (normalized.startsWith("fe80")) return true;
+  if (normalized.startsWith("::ffff:")) {
+    const embeddedIpv4 =
+      extractEmbeddedIpv4FromIpv6(normalized) ??
+      extractHexMappedIpv4(normalized.slice("::ffff:".length));
+    if (embeddedIpv4) {
+      return isPrivateIpv4(embeddedIpv4);
+    }
+  }
+
+  if (normalized.startsWith("fc") || normalized.startsWith("fd")) return true; // unique local
+  if (normalized.startsWith("fe80")) return true; // link-local
+  if (normalized.startsWith("ff")) return true; // multicast
+  if (normalized.startsWith("2001:db8")) return true; // documentation
   return false;
+}
+
+function extractHexMappedIpv4(value: string): string | undefined {
+  const parts = value.split(":").filter(Boolean);
+  if (parts.length < 2) {
+    return undefined;
+  }
+
+  const highRaw = parts[parts.length - 2];
+  const lowRaw = parts[parts.length - 1];
+  if (!highRaw || !lowRaw) {
+    return undefined;
+  }
+
+  const high = Number.parseInt(highRaw, 16);
+  const low = Number.parseInt(lowRaw, 16);
+  if (!Number.isFinite(high) || !Number.isFinite(low)) {
+    return undefined;
+  }
+  if (high < 0 || high > 0xffff || low < 0 || low > 0xffff) {
+    return undefined;
+  }
+
+  const ip = (high << 16) | low;
+  const a = (ip >>> 24) & 255;
+  const b = (ip >>> 16) & 255;
+  const c = (ip >>> 8) & 255;
+  const d = ip & 255;
+  return `${a}.${b}.${c}.${d}`;
 }
 
 async function readResponseBodyWithLimit(

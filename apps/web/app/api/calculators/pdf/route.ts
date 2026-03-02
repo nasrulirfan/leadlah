@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
       agencyLogoUrl: receipt.agencyLogoUrl,
     });
 
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(pdfBuffer as unknown as BodyInit, {
       headers: {
         "Cache-Control": "no-store",
         "Content-Type": "application/pdf",
